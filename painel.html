@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EVA - Painel de Atendimento</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --accent: #f093fb;
+            --success: #48bb78;
+            --danger: #f56565;
+            --warning: #ed8936;
+            --info: #4299e1;
+            --light: #f7fafc;
+            --dark: #2d3748;
+            --gray: #718096;
+            --border: #e2e8f0;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--dark);
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 280px;
+            background: white;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .logo-section {
+            padding: 2rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .logo-text h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-text p {
+            font-size: 11px;
+            color: var(--gray);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .nav-menu {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: var(--light);
+            color: var(--primary);
+        }
+
+        .nav-item.ativo {
+            border-left-color: var(--primary);
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-item.contador {
+            background: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+            padding: 0;
+        }
+
+        .user-section {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--dark);
+        }
+
+        .user-status {
+            font-size: 11px;
+            color: var(--gray);
+        }
+
+        .btn-logout {
+            background: var(--light);
+            border: none;
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--danger);
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--light);
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .stat-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--light);
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .stat-badge.danger {
+            border-left-color: var(--danger);
+        }
+
+        .stat-badge.success {
+            border-left-color: var(--success);
+        }
+
+        .stat-number {
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--dark);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* CONTENT AREA */
+        .content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-bottom: 2px solid var(--border);
+            padding: 0 2rem;
+        }
+
+        .tab {
+            padding: 1.25rem 0;
+            margin: 0 1.5rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--gray);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-size: 15px;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+        }
+
+        .tab.ativo {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab i {
+            margin-right: 0.5rem;
+        }
+
+        .tab-count {
+            background: var(--danger);
+            color: white;
+            border-radius: 20px;
+            padding: 0.2rem 0.6rem;
+            font-size: 11px;
+            margin-left: 0.5rem;
+        }
+
+        /* TAB CONTENT */
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            display: none;
+        }
+
+        .tab-content.ativo {
+            display: block;
+        }
+
+        .conversas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .conversa-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 400px;
+        }
+
+        .conversa-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+
+        .conversa-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .conversa-numero {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 0.5rem;
+        }
+
+        .conversa-tempo {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .conversa-badge {
+            background: rgba(255,255,255,0.3);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .conversa-body {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            background: #f9fafb;
+        }
+
+        .mensagem {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .mensagem-cliente {
+            background: #e0e7ff;
+            border-left: 4px solid var(--primary);
+        }
+
+        .mensagem-eva {
+            background: #dbeafe;
+            border-left: 4px solid var(--info);
+        }
+
+        .mensagem-label {
+            font-weight: 700;
+            opacity: 0.8;
+            margin-bottom: 0.25rem;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .conversa-footer {
+            padding: 1.5rem;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            flex: 0.8;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+            transform: scale(1.02);
+        }
+
+        /* STATS GRID */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .stat-card-icon {
+            font-size: 32px;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card-label {
+            font-size: 13px;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.ativo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            max-width: 650px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--dark);
+        }
+
+        .modal-chat {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: #f9fafb;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .modal-chat .mensagem {
+            margin-bottom: 1rem;
+        }
+
+        .input-area {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-area textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .input-area textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .modal-buttons .btn {
+            flex: 1;
+        }
+
+        /* LOADING */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray);
+        }
+
+        .loading.ativo {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+
+            .conversas-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                padding: 0 1rem;
+            }
+
+            .logo-section {
+                flex: 1;
+                padding: 1rem 0;
+                border-bottom: none;
+                border-right: 1px solid var(--border);
+            }
+
+            .nav-menu {
+                display: none;
+            }
+
+            .user-section {
+                flex: 1;
+                padding: 1rem;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .header-stats {
+                width: 100%;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .conversas-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="logo-section">
+                <div class="logo">
+                    <div class="logo-icon">🤖</div>
+                    <div class="logo-text">
+                        <h1>EVA</h1>
+                        <p>Hotel AI</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-menu">
+                <div class="nav-item ativo" onclick="mudarTab('abertos')">
+                    <i class="fas fa-inbox"></i>
+                    <span>Abertos</span>
+                    <span class="nav-item contador" id="contador-nav-abertos">0</span>
+                </div>
+                <div class="nav-item" onclick="mudarTab('fechados')">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Fechados</span>
+                    <span class="nav-item contador" id="contador-nav-fechados">0</span>
+                </div>
+                <div class="nav-item" onclick="mudarTab('relatorios')">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Relatórios</span>
+                </div>
+            </div>
+
+            <div class="user-section">
+                <div class="user-avatar" id="avatar">👤</div>
+                <div class="user-info">
+                    <div class="user-name" id="usuario-nome">Usuário</div>
+                    <div class="user-status">Online</div>
+                </div>
+                <button class="btn-logout" onclick="fazerLogout()" title="Sair">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <div class="header">
+                <div class="header-title">
+                    <i class="fas fa-comments"></i> Atendimentos
+                </div>
+                <div class="header-stats">
+                    <div class="stat-badge danger">
+                        <span class="stat-number" id="stat-abertos">0</span>
+                        <div class="stat-label">Abertos</div>
+                    </div>
+                    <div class="stat-badge success">
+                        <span class="stat-number" id="stat-fechados">0</span>
+                        <div class="stat-label">Fechados</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="tabs">
+                    <button class="tab ativo" onclick="mudarTab('abertos')">
+                        <i class="fas fa-inbox"></i> Abertos
+                        <span class="tab-count" id="tab-count-abertos">0</span>
+                    </button>
+                    <button class="tab" onclick="mudarTab('fechados')">
+                        <i class="fas fa-check-circle"></i> Fechados
+                        <span class="tab-count" id="tab-count-fechados">0</span>
+                    </button>
+                    <button class="tab" onclick="mudarTab('relatorios')">
+                        <i class="fas fa-chart-bar"></i> Relatórios
+                    </button>
+                </div>
+
+                <!-- Aba: Abertos -->
+                <div id="aba-abertos" class="tab-content ativo">
+                    <div class="loading ativo" id="loading-abertos">
+                        <div class="spinner"></div>
+                        <p>Carregando conversas abertas...</p>
+                    </div>
+                    <div class="conversas-grid" id="grid-abertos"></div>
+                </div>
+
+                <!-- Aba: Fechados -->
+                <div id="aba-fechados" class="tab-content">
+                    <div class="loading ativo" id="loading-fechados">
+                        <div class="spinner"></div>
+                        <p>Carregando conversas fechadas...</p>
+                    </div>
+                    <div class="conversas-grid" id="grid-fechados"></div>
+                </div>
+
+                <!-- Aba: Relatórios -->
+                <div id="aba-relatorios" class="tab-content">
+                    <div class="loading ativo" id="loading-relatorios">
+                        <div class="spinner"></div>
+                        <p>Gerando relatórios...</p>
+                    </div>
+                    <div id="conteudo-relatorios"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ver Conversa Completa -->
+    <div id="modal-conversa" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modal-titulo">Conversa com cliente</div>
+            
+            <div class="modal-chat" id="modal-chat"></div>
+
+            <div class="input-area">
+                <textarea id="observacoes" placeholder="Observações (opcional)..."></textarea>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="fecharAtendimentoModal()">
+                    <i class="fas fa-check"></i> Fechar Atendimento
+                </button>
+                <button class="btn" style="background: var(--light); color: var(--dark);" onclick="fecharModal()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        // =====================================================================
+        // VARIÁVEIS GLOBAIS
+        // =====================================================================
+        let usuarioLogado = null;
+        let conversaAtual = null;
+        const API_URL = "/api";
+
+        // =====================================================================
+        // INICIALIZAÇÃO
+        // =====================================================================
+        document.addEventListener("DOMContentLoaded", () => {
+            verificarLogin();
+            carregarConversas();
+            setInterval(carregarConversas, 5000);
+        });
+
+        // =====================================================================
+        // LOGIN
+        // =====================================================================
+        function verificarLogin() {
+            const usuario = localStorage.getItem("eva-usuario");
+            
+            if (!usuario) {
+                mostrarTelaLogin();
+                return false;
+            }
+
+            usuarioLogado = JSON.parse(usuario);
+            document.getElementById("usuario-nome").textContent = usuarioLogado.nome;
+            document.getElementById("avatar").textContent = usuarioLogado.nome[0].toUpperCase();
+            
+            return true;
+        }
+
+        function mostrarTelaLogin() {
+            document.body.innerHTML = `
+                <div style="height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div style="max-width: 400px; width: 90%; background: white; padding: 3rem; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <div style="text-align: center; margin-bottom: 2rem;">
+                            <div style="font-size: 64px; margin-bottom: 1rem;">🤖</div>
+                            <h2 style="color: #667eea; font-size: 28px; font-weight: 700;">EVA</h2>
+                            <p style="color: #718096; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">Hotel AI</p>
+                        </div>
+                        
+                        <input type="email" id="email" placeholder="Email" style="width: 100%; padding: 12px 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: inherit;">
+                        
+                        <input type="password" id="senha" placeholder="Senha" style="width: 100%; padding: 12px 16px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: inherit;">
+                        
+                        <button onclick="fazerLogin()" style="width: 100%; padding: 12px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 16px; transition: all 0.3s;">
+                            <i class="fas fa-sign-in-alt"></i> Entrar
+                        </button>
+
+                        <p style="margin-top: 1.5rem; text-align: center; color: #a0aec0; font-size: 12px;">
+                            Demo: Use qualquer email/senha
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function fazerLogin() {
+            const email = document.getElementById("email").value;
+            const senha = document.getElementById("senha").value;
+
+            if (!email || !senha) {
+                alert("Preencha email e senha!");
+                return;
+            }
+
+            const usuario = {
+                id: 1,
+                nome: email.split("@")[0],
+                email: email,
+            };
+
+            localStorage.setItem("eva-usuario", JSON.stringify(usuario));
+            location.reload();
+        }
+
+        function fazerLogout() {
+            localStorage.removeItem("eva-usuario");
+            location.reload();
+        }
+
+        // =====================================================================
+        // TABS
+        // =====================================================================
+        function mudarTab(tab) {
+            document.querySelectorAll(".tab-content").forEach(el => {
+                el.classList.remove("ativo");
+            });
+            document.querySelectorAll(".tab").forEach(el => {
+                el.classList.remove("ativo");
+            });
+            document.querySelectorAll(".nav-item").forEach(el => {
+                el.classList.remove("ativo");
+            });
+
+            document.getElementById(`aba-${tab}`).classList.add("ativo");
+            event.target.closest(".tab")?.classList.add("ativo");
+            document.querySelector(`[onclick="mudarTab('${tab}')"]`)?.classList.add("ativo");
+
+            if (tab === "relatorios") {
+                carregarRelatorios();
+            }
+        }
+
+        // =====================================================================
+        // CONVERSAS
+        // =====================================================================
+        async function carregarConversas() {
+            try {
+                const resAbertos = await fetch(`${API_URL}/conversas/abertas`);
+                const dataAbertos = await resAbertos.json();
+
+                const resFechados = await fetch(`${API_URL}/conversas/fechadas`);
+                const dataFechados = await resFechados.json();
+
+                renderizarConversas(dataAbertos.conversas || [], "abertos");
+                renderizarConversas(dataFechados.conversas || [], "fechados");
+
+                const totalAbertos = dataAbertos.total || 0;
+                const totalFechados = dataFechados.total || 0;
+
+                document.getElementById("tab-count-abertos").textContent = totalAbertos;
+                document.getElementById("tab-count-fechados").textContent = totalFechados;
+                document.getElementById("contador-nav-abertos").textContent = totalAbertos;
+                document.getElementById("contador-nav-fechados").textContent = totalFechados;
+                document.getElementById("stat-abertos").textContent = totalAbertos;
+                document.getElementById("stat-fechados").textContent = totalFechados;
+
+            } catch (erro) {
+                console.error("Erro ao carregar conversas:", erro);
+            }
+        }
+
+        function renderizarConversas(conversas, tipo) {
+            const grid = document.getElementById(`grid-${tipo}`);
+            const loading = document.getElementById(`loading-${tipo}`);
+
+            if (conversas.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #a0aec0;"><i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>Nenhuma conversa encontrada</div>';
+                loading.classList.remove("ativo");
+                return;
+            }
+
+            grid.innerHTML = conversas.map(c => `
+                <div class="conversa-card">
+                    <div class="conversa-header">
+                        <div>
+                            <div class="conversa-numero">
+                                <i class="fas fa-phone"></i> ${c.numero_cliente}
+                            </div>
+                            <div class="conversa-tempo">${formatarData(c.criado_em)}</div>
+                        </div>
+                        <div class="conversa-badge">
+                            ${c.total_mensagens || 0} msg
+                        </div>
+                    </div>
+
+                    <div class="conversa-body">
+                        ${c.ultima_mensagem ? `<div class="mensagem"><strong>Última:</strong> ${c.ultima_mensagem.substring(0, 100)}</div>` : '<p style="color: #a0aec0; text-align: center;">Sem mensagens</p>'}
+                    </div>
+
+                    <div class="conversa-footer">
+                        ${tipo === 'abertos' ? `
+                            <button class="btn btn-primary" onclick="abrirConversa(${c.id})">
+                                <i class="fas fa-eye"></i> Ver Chat
+                            </button>
+                            <button class="btn btn-danger" onclick="fecharAtendimentoRapido(${c.id})">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        ` : `
+                            <button class="btn btn-primary" onclick="abrirConversa(${c.id})">
+                                <i class="fas fa-history"></i> Visualizar
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `).join("");
+
+            loading.classList.remove("ativo");
+        }
+
+        // =====================================================================
+        // MODAL
+        // =====================================================================
+        async function abrirConversa(conversaId) {
+            try {
+                const res = await fetch(`${API_URL}/conversas/${conversaId}/mensagens`);
+                const data = await res.json();
+
+                if (!data.sucesso) {
+                    alert("Erro ao carregar conversa");
+                    return;
+                }
+
+                conversaAtual = conversaId;
+
+                const chatHtml = data.mensagens.map(m => `
+                    <div class="mensagem mensagem-${m.remetente}">
+                        <div class="mensagem-label">
+                            ${m.remetente === 'cliente' ? '👤 Cliente' : m.remetente === 'eva' ? '🤖 EVA' : '👨‍💼 ' + m.remetente}
+                        </div>
+                        ${m.conteudo}
+                        <div style="font-size: 11px; opacity: 0.6; margin-top: 0.5rem;">
+                            ${new Date(m.criado_em).toLocaleTimeString('pt-BR')}
+                        </div>
+                    </div>
+                `).join("");
+
+                document.getElementById("modal-titulo").textContent = `Conversa com ${data.mensagens[0]?.numero_cliente || 'Cliente'}`;
+                document.getElementById("modal-chat").innerHTML = chatHtml;
+                document.getElementById("observacoes").value = "";
+                document.getElementById("modal-chat").scrollTop = document.getElementById("modal-chat").scrollHeight;
+
+                document.getElementById("modal-conversa").classList.add("ativo");
+
+            } catch (erro) {
+                console.error("Erro:", erro);
+            }
+        }
+
+        function fecharModal() {
+            document.getElementById("modal-conversa").classList.remove("ativo");
+            conversaAtual = null;
+        }
+
+        async function fecharAtendimentoModal() {
+            if (!conversaAtual) return;
+
+            const observacoes = document.getElementById("observacoes").value;
+
+            try {
+                const res = await fetch(`${API_URL}/conversas/${conversaAtual}/fechar`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        observacoes,
+                        usuario_id: usuarioLogado.id,
+                    }),
+                });
+
+                const data = await res.json();
+
+                if (data.sucesso) {
+                    fecharModal();
+                    await carregarConversas();
+                }
+            } catch (erro) {
+                console.error("Erro:", erro);
+            }
+        }
+
+        async function fecharAtendimentoRapido(conversaId) {
+            if (!confirm("Fechar este atendimento?")) return;
+
+            try {
+                const res = await fetch(`${API_URL}/conversas/${conversaId}/fechar`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        observacoes: "Fechado pelo painel",
+                        usuario_id: usuarioLogado.id,
+                    }),
+                });
+
+                const data = await res.json();
+
+                if (data.sucesso) {
+                    await carregarConversas();
+                }
+            } catch (erro) {
+                console.error("Erro:", erro);
+            }
+        }
+
+        // =====================================================================
+        // RELATÓRIOS
+        // =====================================================================
+        async function carregarRelatorios() {
+            try {
+                const res = await fetch(`${API_URL}/relatorios`);
+                const data = await res.json();
+
+                const r = data.relatorios;
+
+                document.getElementById("conteudo-relatorios").innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-icon">💬</div>
+                            <div class="stat-card-number">${r.totalConversas}</div>
+                            <div class="stat-card-label">Total de Conversas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-icon">📬</div>
+                            <div class="stat-card-number" style="color: #ed8936;">${r.abertos}</div>
+                            <div class="stat-card-label">Conversas Abertas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-icon">✅</div>
+                            <div class="stat-card-number" style="color: #48bb78;">${r.fechados}</div>
+                            <div class="stat-card-label">Conversas Fechadas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-icon">⏱️</div>
+                            <div class="stat-card-number" style="color: #4299e1;">${r.tempoMedioMinutos}</div>
+                            <div class="stat-card-label">Tempo Médio (min)</div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById("loading-relatorios").classList.remove("ativo");
+            } catch (erro) {
+                console.error("Erro:", erro);
+            }
+        }
+
+        // =====================================================================
+        // UTILITÁRIOS
+        // =====================================================================
+        function formatarData(data) {
+            const d = new Date(data);
+            return d.toLocaleString('pt-BR', { 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+    </script>
+</body>
+</html>
