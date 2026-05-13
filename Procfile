@@ -1,1 +1,1 @@
-web: python backend.py
+backend_novo.py
