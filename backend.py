@@ -7,9 +7,9 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 import logging
+import sqlite3
+import json
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from twilio.rest import Client as TwilioClient
 from anthropic import Anthropic
 
@@ -22,7 +22,6 @@ TWILIO_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE = os.getenv("TWILIO_PHONE_NUMBER")
 CLAUDE_KEY = os.getenv("ANTHROPIC_API_KEY")
-DB_URL = os.getenv("DATABASE_URL")
 PORT = int(os.getenv("PORT", 3000))
 NODE_ENV = os.getenv("NODE_ENV", "development")
 
@@ -40,12 +39,15 @@ app.add_middleware(
 )
 
 # ============================================
-# BANCO DE DADOS
+# BANCO DE DADOS (SQLite)
 # ============================================
+
+DB_PATH = "/tmp/eva.db"
 
 def get_db_connection():
     try:
-        conn = psycopg2.connect(DB_URL)
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
         return conn
     except Exception as e:
         logger.error(f"Erro ao conectar no BD: {e}")
@@ -61,26 +63,13 @@ def init_db():
     cur = conn.cursor()
     
     try:
-        # Tabela de usuários
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                senha VARCHAR(255) NOT NULL,
-                nome VARCHAR(255) NOT NULL,
-                hotel VARCHAR(255),
-                ativo BOOLEAN DEFAULT true,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        
         # Tabela de conversas (chats)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS conversas (
-                id SERIAL PRIMARY KEY,
-                numero_cliente VARCHAR(20) NOT NULL,
-                numero_hotel VARCHAR(20) NOT NULL,
-                status VARCHAR(50) DEFAULT 'aberto',
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                numero_cliente TEXT NOT NULL,
+                numero_hotel TEXT NOT NULL,
+                status TEXT DEFAULT 'aberto',
                 usuario_id INTEGER,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 fechado_em TIMESTAMP,
@@ -91,11 +80,12 @@ def init_db():
         # Tabela de mensagens
         cur.execute("""
             CREATE TABLE IF NOT EXISTS mensagens (
-                id SERIAL PRIMARY KEY,
-                conversa_id INTEGER REFERENCES conversas(id) ON DELETE CASCADE,
-                remetente VARCHAR(50) NOT NULL,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversa_id INTEGER NOT NULL,
+                remetente TEXT NOT NULL,
                 conteudo TEXT NOT NULL,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (conversa_id) REFERENCES conversas(id)
             );
         """)
         
@@ -155,14 +145,14 @@ def buscar_conversa_aberta(numero_cliente: str):
     if not conn:
         return None
     
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = conn.cursor()
     try:
         cur.execute(
-            "SELECT id FROM conversas WHERE numero_cliente = %s AND status = %s LIMIT 1",
+            "SELECT id FROM conversas WHERE numero_cliente = ? AND status = ? LIMIT 1",
             (numero_cliente, "aberto")
         )
         row = cur.fetchone()
-        return row["id"] if row else None
+        return row[0] if row else None
     finally:
         cur.close()
         conn.close()
@@ -176,12 +166,11 @@ def salvar_conversa(numero_cliente: str, numero_hotel: str):
     cur = conn.cursor()
     try:
         cur.execute(
-            "INSERT INTO conversas (numero_cliente, numero_hotel, status) VALUES (%s, %s, %s) RETURNING id",
+            "INSERT INTO conversas (numero_cliente, numero_hotel, status) VALUES (?, ?, ?)",
             (numero_cliente, numero_hotel, "aberto")
         )
-        conversa_id = cur.fetchone()[0]
         conn.commit()
-        return conversa_id
+        return cur.lastrowid
     finally:
         cur.close()
         conn.close()
@@ -195,7 +184,7 @@ def salvar_mensagem(conversa_id: int, remetente: str, conteudo: str):
     cur = conn.cursor()
     try:
         cur.execute(
-            "INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)",
+            "INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (?, ?, ?)",
             (conversa_id, remetente, conteudo)
         )
         conn.commit()
@@ -259,22 +248,21 @@ async def conversas_abertas():
     if not conn:
         return {"sucesso": False, "conversas": [], "total": 0}
     
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = conn.cursor()
     try:
         cur.execute("""
             SELECT 
                 c.id,
                 c.numero_cliente,
                 c.criado_em,
-                COUNT(m.id) as total_mensagens,
+                (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens,
                 (SELECT conteudo FROM mensagens WHERE conversa_id = c.id ORDER BY criado_em DESC LIMIT 1) as ultima_mensagem
             FROM conversas c
-            LEFT JOIN mensagens m ON c.id = m.conversa_id
             WHERE c.status = 'aberto'
-            GROUP BY c.id
             ORDER BY c.criado_em DESC
         """)
-        conversas = cur.fetchall()
+        rows = cur.fetchall()
+        conversas = [dict(row) for row in rows]
         return {"sucesso": True, "conversas": conversas, "total": len(conversas)}
     finally:
         cur.close()
@@ -287,7 +275,7 @@ async def conversas_fechadas():
     if not conn:
         return {"sucesso": False, "conversas": [], "total": 0}
     
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = conn.cursor()
     try:
         cur.execute("""
             SELECT 
@@ -295,14 +283,13 @@ async def conversas_fechadas():
                 c.numero_cliente,
                 c.criado_em,
                 c.fechado_em,
-                COUNT(m.id) as total_mensagens
+                (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens
             FROM conversas c
-            LEFT JOIN mensagens m ON c.id = m.conversa_id
             WHERE c.status = 'fechado'
-            GROUP BY c.id
             ORDER BY c.fechado_em DESC
         """)
-        conversas = cur.fetchall()
+        rows = cur.fetchall()
+        conversas = [dict(row) for row in rows]
         return {"sucesso": True, "conversas": conversas, "total": len(conversas)}
     finally:
         cur.close()
@@ -315,13 +302,14 @@ async def mensagens_conversa(conversa_id: int):
     if not conn:
         return {"sucesso": False, "mensagens": []}
     
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = conn.cursor()
     try:
         cur.execute(
-            "SELECT * FROM mensagens WHERE conversa_id = %s ORDER BY criado_em ASC",
+            "SELECT * FROM mensagens WHERE conversa_id = ? ORDER BY criado_em ASC",
             (conversa_id,)
         )
-        mensagens = cur.fetchall()
+        rows = cur.fetchall()
+        mensagens = [dict(row) for row in rows]
         return {"sucesso": True, "mensagens": mensagens}
     finally:
         cur.close()
@@ -339,16 +327,16 @@ async def fechar_atendimento(conversa_id: int, request: Request):
         if not conn:
             return JSONResponse({"sucesso": False, "erro": "BD indisponível"}, status_code=500)
         
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur = conn.cursor()
         
         # Busca número do cliente
-        cur.execute("SELECT numero_cliente FROM conversas WHERE id = %s", (conversa_id,))
+        cur.execute("SELECT numero_cliente FROM conversas WHERE id = ?", (conversa_id,))
         row = cur.fetchone()
-        numero_cliente = row["numero_cliente"] if row else None
+        numero_cliente = row[0] if row else None
         
         # Marca como fechado no banco
         cur.execute(
-            "UPDATE conversas SET status = %s, fechado_em = NOW(), usuario_id = %s WHERE id = %s",
+            "UPDATE conversas SET status = ?, fechado_em = CURRENT_TIMESTAMP, usuario_id = ? WHERE id = ?",
             ("fechado", usuario_id, conversa_id)
         )
         conn.commit()
@@ -376,23 +364,24 @@ async def relatorios():
     if not conn:
         return {"sucesso": False, "relatorios": {}}
     
-    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur = conn.cursor()
     try:
         cur.execute("SELECT COUNT(*) as total FROM conversas")
-        total = cur.fetchone()["total"]
+        total = cur.fetchone()[0]
         
-        cur.execute("SELECT COUNT(*) as total FROM conversas WHERE status = %s", ("aberto",))
-        abertos = cur.fetchone()["total"]
+        cur.execute("SELECT COUNT(*) as total FROM conversas WHERE status = ?", ("aberto",))
+        abertos = cur.fetchone()[0]
         
-        cur.execute("SELECT COUNT(*) as total FROM conversas WHERE status = %s", ("fechado",))
-        fechados = cur.fetchone()["total"]
+        cur.execute("SELECT COUNT(*) as total FROM conversas WHERE status = ?", ("fechado",))
+        fechados = cur.fetchone()[0]
         
+        # Calcula tempo médio (em minutos)
         cur.execute("""
-            SELECT AVG(EXTRACT(EPOCH FROM (fechado_em - criado_em))/60) as minutos_medio
+            SELECT AVG((julianday(fechado_em) - julianday(criado_em)) * 24 * 60) as minutos_medio
             FROM conversas WHERE status = 'fechado'
         """)
         tempo_row = cur.fetchone()
-        tempo_medio = int(tempo_row["minutos_medio"] or 0) if tempo_row else 0
+        tempo_medio = int(tempo_row[0] or 0) if tempo_row[0] else 0
         
         return {
             "sucesso": True,
