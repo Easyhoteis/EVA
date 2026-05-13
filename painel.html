@@ -588,7 +588,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* RESPONSIVE */
         @media (max-width: 1024px) {
             .sidebar {
                 width: 240px;
@@ -649,7 +648,7 @@
 </head>
 <body>
     <div class="main-container">
-        <!-- SIDEBAR -->
+        <!-- SIDEBAR COM MENU -->
         <div class="sidebar">
             <div class="logo-section">
                 <div class="logo">
@@ -690,7 +689,7 @@
             </div>
         </div>
 
-        <!-- MAIN CONTENT -->
+        <!-- CONTEÚDO PRINCIPAL -->
         <div class="main-content">
             <div class="header">
                 <div class="header-title">
@@ -723,7 +722,7 @@
                     </button>
                 </div>
 
-                <!-- Aba: Abertos -->
+                <!-- TAB: Abertos -->
                 <div id="aba-abertos" class="tab-content ativo">
                     <div class="loading ativo" id="loading-abertos">
                         <div class="spinner"></div>
@@ -732,7 +731,7 @@
                     <div class="conversas-grid" id="grid-abertos"></div>
                 </div>
 
-                <!-- Aba: Fechados -->
+                <!-- TAB: Fechados -->
                 <div id="aba-fechados" class="tab-content">
                     <div class="loading ativo" id="loading-fechados">
                         <div class="spinner"></div>
@@ -741,7 +740,7 @@
                     <div class="conversas-grid" id="grid-fechados"></div>
                 </div>
 
-                <!-- Aba: Relatórios -->
+                <!-- TAB: Relatórios -->
                 <div id="aba-relatorios" class="tab-content">
                     <div class="loading ativo" id="loading-relatorios">
                         <div class="spinner"></div>
@@ -753,7 +752,7 @@
         </div>
     </div>
 
-    <!-- Modal: Ver Conversa Completa -->
+    <!-- MODAL PARA VER CONVERSA COMPLETA -->
     <div id="modal-conversa" class="modal">
         <div class="modal-content">
             <div class="modal-header" id="modal-titulo">Conversa com cliente</div>
@@ -777,25 +776,22 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script>
-        // =====================================================================
-        // VARIÁVEIS GLOBAIS
-        // =====================================================================
         let usuarioLogado = null;
         let conversaAtual = null;
         const API_URL = "/api";
 
-        // =====================================================================
-        // INICIALIZAÇÃO
-        // =====================================================================
+        // Verifica login ao carregar
         document.addEventListener("DOMContentLoaded", () => {
             verificarLogin();
             carregarConversas();
+            // Atualiza conversas a cada 5 segundos
             setInterval(carregarConversas, 5000);
         });
 
-        // =====================================================================
+        // ============================================
         // LOGIN
-        // =====================================================================
+        // ============================================
+
         function verificarLogin() {
             const usuario = localStorage.getItem("eva-usuario");
             
@@ -812,6 +808,7 @@
         }
 
         function mostrarTelaLogin() {
+            // Tela de login simples
             document.body.innerHTML = `
                 <div style="height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                     <div style="max-width: 400px; width: 90%; background: white; padding: 3rem; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
@@ -846,6 +843,7 @@
                 return;
             }
 
+            // Salva usuário na sessão
             const usuario = {
                 id: 1,
                 nome: email.split("@")[0],
@@ -861,10 +859,12 @@
             location.reload();
         }
 
-        // =====================================================================
-        // TABS
-        // =====================================================================
+        // ============================================
+        // NAVEGAÇÃO ENTRE ABAS
+        // ============================================
+
         function mudarTab(tab) {
+            // Remove classe ativo de todos
             document.querySelectorAll(".tab-content").forEach(el => {
                 el.classList.remove("ativo");
             });
@@ -875,29 +875,36 @@
                 el.classList.remove("ativo");
             });
 
+            // Adiciona classe ativo ao selecionado
             document.getElementById(`aba-${tab}`).classList.add("ativo");
             event.target.closest(".tab")?.classList.add("ativo");
             document.querySelector(`[onclick="mudarTab('${tab}')"]`)?.classList.add("ativo");
 
+            // Se for relatórios, carrega dados
             if (tab === "relatorios") {
                 carregarRelatorios();
             }
         }
 
-        // =====================================================================
-        // CONVERSAS
-        // =====================================================================
+        // ============================================
+        // CARREGAR CONVERSAS
+        // ============================================
+
         async function carregarConversas() {
             try {
+                // Busca conversas abertas
                 const resAbertos = await fetch(`${API_URL}/conversas/abertas`);
                 const dataAbertos = await resAbertos.json();
 
+                // Busca conversas fechadas
                 const resFechados = await fetch(`${API_URL}/conversas/fechadas`);
                 const dataFechados = await resFechados.json();
 
+                // Renderiza nos grids
                 renderizarConversas(dataAbertos.conversas || [], "abertos");
                 renderizarConversas(dataFechados.conversas || [], "fechados");
 
+                // Atualiza contadores
                 const totalAbertos = dataAbertos.total || 0;
                 const totalFechados = dataFechados.total || 0;
 
@@ -923,6 +930,7 @@
                 return;
             }
 
+            // Monta cards das conversas
             grid.innerHTML = conversas.map(c => `
                 <div class="conversa-card">
                     <div class="conversa-header">
@@ -961,11 +969,13 @@
             loading.classList.remove("ativo");
         }
 
-        // =====================================================================
+        // ============================================
         // MODAL
-        // =====================================================================
+        // ============================================
+
         async function abrirConversa(conversaId) {
             try {
+                // Busca mensagens da conversa
                 const res = await fetch(`${API_URL}/conversas/${conversaId}/mensagens`);
                 const data = await res.json();
 
@@ -976,6 +986,7 @@
 
                 conversaAtual = conversaId;
 
+                // Renderiza mensagens no modal
                 const chatHtml = data.mensagens.map(m => `
                     <div class="mensagem mensagem-${m.remetente}">
                         <div class="mensagem-label">
@@ -1006,6 +1017,7 @@
         }
 
         async function fecharAtendimentoModal() {
+            // Fecha atendimento com observações
             if (!conversaAtual) return;
 
             const observacoes = document.getElementById("observacoes").value;
@@ -1032,6 +1044,7 @@
         }
 
         async function fecharAtendimentoRapido(conversaId) {
+            // Fecha rápido sem modal
             if (!confirm("Fechar este atendimento?")) return;
 
             try {
@@ -1054,16 +1067,19 @@
             }
         }
 
-        // =====================================================================
+        // ============================================
         // RELATÓRIOS
-        // =====================================================================
+        // ============================================
+
         async function carregarRelatorios() {
             try {
+                // Busca estatísticas
                 const res = await fetch(`${API_URL}/relatorios`);
                 const data = await res.json();
 
                 const r = data.relatorios;
 
+                // Renderiza cards de relatórios
                 document.getElementById("conteudo-relatorios").innerHTML = `
                     <div class="stats-grid">
                         <div class="stat-card">
@@ -1095,9 +1111,10 @@
             }
         }
 
-        // =====================================================================
+        // ============================================
         // UTILITÁRIOS
-        // =====================================================================
+        // ============================================
+
         function formatarData(data) {
             const d = new Date(data);
             return d.toLocaleString('pt-BR', { 
