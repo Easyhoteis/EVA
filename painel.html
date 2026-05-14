@@ -7,199 +7,62 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         :root {
-            --primary: #667eea;
-            --secondary: #764ba2;
-            --success: #48bb78;
-            --danger: #f56565;
-            --warning: #ed8936;
-            --info: #4299e1;
-            --light: #f7fafc;
-            --dark: #2d3748;
-            --gray: #718096;
-            --border: #e2e8f0;
+            --primary: #667eea; --secondary: #764ba2;
+            --success: #48bb78; --danger: #f56565;
+            --warning: #ed8936; --info: #4299e1;
+            --light: #f7fafc; --dark: #2d3748;
+            --gray: #718096; --border: #e2e8f0;
         }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--light);
-            color: var(--dark);
-            min-height: 100vh;
-        }
-
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--light); color: var(--dark); min-height: 100vh; }
         .main { display: flex; height: 100vh; }
-
-        .sidebar {
-            width: 260px;
-            background: white;
-            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-        }
-
+        .sidebar { width: 260px; background: white; box-shadow: 2px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
         .logo-section { padding: 1.5rem; border-bottom: 1px solid var(--border); }
         .logo { display: flex; align-items: center; gap: 1rem; }
-        .logo-icon {
-            width: 45px; height: 45px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 24px;
-        }
-        .logo h1 {
-            font-size: 22px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .logo p {
-            font-size: 10px; color: var(--gray);
-            text-transform: uppercase; letter-spacing: 1px;
-        }
-
+        .logo-icon { width: 45px; height: 45px; border-radius: 10px; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; }
+        .logo h1 { font-size: 22px; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo p { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; }
         .nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
-        .nav-item {
-            padding: 0.85rem 1.5rem;
-            cursor: pointer;
-            border-left: 4px solid transparent;
-            display: flex; align-items: center; gap: 1rem;
-            color: var(--gray); font-weight: 500; font-size: 14px;
-            transition: all 0.3s;
-        }
+        .nav-item { padding: 0.85rem 1.5rem; cursor: pointer; border-left: 4px solid transparent; display: flex; align-items: center; gap: 1rem; color: var(--gray); font-weight: 500; font-size: 14px; transition: all 0.3s; }
         .nav-item:hover { background: var(--light); color: var(--primary); }
-        .nav-item.ativo {
-            border-left-color: var(--primary);
-            background: rgba(102, 126, 234, 0.1);
-            color: var(--primary);
-        }
+        .nav-item.ativo { border-left-color: var(--primary); background: rgba(102, 126, 234, 0.1); color: var(--primary); }
         .nav-item i { width: 20px; text-align: center; }
-        .badge {
-            background: var(--danger); color: white;
-            font-size: 11px; padding: 2px 8px;
-            border-radius: 10px; margin-left: auto;
-        }
-
-        .user-section {
-            padding: 1rem;
-            border-top: 1px solid var(--border);
-            display: flex; align-items: center; gap: 1rem;
-        }
-        .user-avatar {
-            width: 35px; height: 35px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: bold;
-        }
+        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
+        .user-section { padding: 1rem; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .user-avatar { width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
         .user-info { flex: 1; }
         .user-name { font-weight: 600; font-size: 13px; }
         .user-status { font-size: 11px; color: var(--gray); }
-        .btn-logout {
-            background: var(--light); border: none;
-            padding: 0.4rem; border-radius: 6px;
-            cursor: pointer; color: var(--danger);
-        }
-
+        .btn-logout { background: var(--light); border: none; padding: 0.4rem; border-radius: 6px; cursor: pointer; color: var(--danger); }
         .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .header {
-            background: white; padding: 1.25rem 2rem;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.05);
-            display: flex; justify-content: space-between; align-items: center;
-        }
+        .header { background: white; padding: 1.25rem 2rem; box-shadow: 0 1px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .header h2 { font-size: 22px; font-weight: 700; }
         .header-actions { display: flex; gap: 1rem; align-items: center; }
-
-        .status-zapi {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
+        .status-zapi { padding: 0.5rem 1rem; border-radius: 20px; font-size: 12px; font-weight: 600; }
         .status-zapi.online { background: #c6f6d5; color: #22543d; }
         .status-zapi.offline { background: #fed7d7; color: #742a2a; }
-
-        .limite-info {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            background: var(--light);
-            color: var(--dark);
-        }
+        .limite-info { padding: 0.5rem 1rem; border-radius: 20px; font-size: 12px; font-weight: 600; background: var(--light); color: var(--dark); }
         .limite-info.alerta { background: #feebc8; color: #7c2d12; }
         .limite-info.bloqueado { background: #fed7d7; color: #742a2a; }
-
         .page-content { flex: 1; overflow-y: auto; padding: 2rem; }
         .page { display: none; }
         .page.ativo { display: block; }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
-        }
-        .grid-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            overflow: hidden;
-            transition: all 0.3s;
-        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; transition: all 0.3s; }
         .card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-
-        .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            text-align: center;
-        }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; }
         .stat-icon { font-size: 28px; margin-bottom: 0.5rem; }
         .stat-num { font-size: 28px; font-weight: 700; color: var(--dark); }
         .stat-label { font-size: 12px; color: var(--gray); text-transform: uppercase; margin-top: 0.5rem; }
-
-        .conversa-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            overflow: hidden;
-            display: flex; flex-direction: column;
-            height: 320px;
-        }
-        .conversa-header {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white; padding: 1rem 1.25rem;
-            display: flex; justify-content: space-between;
-        }
+        .conversa-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; height: 320px; }
+        .conversa-header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 1rem 1.25rem; display: flex; justify-content: space-between; }
         .conversa-numero { font-weight: 700; font-size: 16px; }
         .conversa-nome { font-size: 12px; opacity: 0.9; margin-top: 2px; }
         .conversa-tempo { font-size: 11px; opacity: 0.9; }
-        .conversa-body {
-            flex: 1; padding: 1rem;
-            overflow-y: auto; background: #fafbfc;
-            font-size: 13px;
-        }
-        .conversa-footer {
-            padding: 1rem; background: white;
-            border-top: 1px solid var(--border);
-            display: flex; gap: 0.5rem;
-        }
-
-        .btn {
-            padding: 0.65rem 1.25rem;
-            border: none; border-radius: 8px;
-            cursor: pointer; font-weight: 600; font-size: 13px;
-            display: inline-flex; align-items: center; gap: 0.5rem;
-            transition: all 0.3s;
-        }
+        .conversa-body { flex: 1; padding: 1rem; overflow-y: auto; background: #fafbfc; font-size: 13px; }
+        .conversa-footer { padding: 1rem; background: white; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
+        .btn { padding: 0.65rem 1.25rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s; }
         .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
         .btn-primary:hover { transform: scale(1.03); }
         .btn-success { background: var(--success); color: white; }
@@ -208,217 +71,98 @@
         .btn-info { background: var(--info); color: white; }
         .btn-sm { padding: 0.4rem 0.8rem; font-size: 12px; }
         .btn-block { width: 100%; }
-
-        .table-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            overflow: hidden;
-        }
+        .table-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border); }
-        th {
-            background: var(--light);
-            font-weight: 600; font-size: 12px;
-            text-transform: uppercase; color: var(--gray);
-        }
+        th { background: var(--light); font-weight: 600; font-size: 12px; text-transform: uppercase; color: var(--gray); }
         tr:hover { background: #f9fafb; }
-
         .form-group { margin-bottom: 1rem; }
-        .form-group label {
-            display: block; margin-bottom: 0.5rem;
-            font-weight: 600; font-size: 13px;
-        }
-        input, select, textarea {
-            width: 100%; padding: 0.75rem;
-            border: 1px solid var(--border); border-radius: 8px;
-            font-family: inherit; font-size: 14px;
-        }
-        input:focus, select:focus, textarea:focus {
-            outline: none; border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 13px; }
+        input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
         textarea { resize: vertical; min-height: 100px; }
-
-        .modal {
-            display: none;
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            justify-content: center; align-items: center;
-            backdrop-filter: blur(4px);
-        }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal.ativo { display: flex; }
-        .modal-content {
-            background: white; padding: 2rem;
-            border-radius: 12px;
-            max-width: 600px; width: 90%;
-            max-height: 90vh; overflow-y: auto;
-        }
+        .modal-content { background: white; padding: 2rem; border-radius: 12px; max-width: 650px; width: 90%; max-height: 90vh; overflow-y: auto; }
         .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 1.5rem; }
         .modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
-
-        .toolbar {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 1.5rem;
-            gap: 1rem; flex-wrap: wrap;
-        }
-        .search-box {
-            flex: 1; max-width: 400px;
-            position: relative;
-        }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+        .search-box { flex: 1; max-width: 400px; position: relative; }
         .search-box input { padding-left: 2.5rem; }
-        .search-box i {
-            position: absolute; left: 1rem;
-            top: 50%; transform: translateY(-50%);
-            color: var(--gray);
-        }
-
-        .mensagem {
-            margin-bottom: 0.75rem;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            font-size: 13px;
-        }
+        .search-box i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--gray); }
+        .mensagem { margin-bottom: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 13px; }
         .mensagem-cliente { background: #e0e7ff; border-left: 3px solid var(--primary); }
         .mensagem-eva { background: #dbeafe; border-left: 3px solid var(--info); }
-        .mensagem-label {
-            font-weight: 700; font-size: 11px;
-            text-transform: uppercase;
-            margin-bottom: 0.25rem; opacity: 0.7;
-        }
-        .modal-chat {
-            height: 400px; overflow-y: auto;
-            padding: 1rem; background: #f9fafb;
-            border-radius: 8px; margin-bottom: 1rem;
-        }
-
-        .checkbox-list {
-            max-height: 300px; overflow-y: auto;
-            border: 1px solid var(--border);
-            border-radius: 8px; padding: 1rem;
-        }
-        .checkbox-item {
-            display: flex; align-items: center; gap: 0.75rem;
-            padding: 0.5rem; border-radius: 6px;
-            cursor: pointer;
-        }
+        .mensagem-label { font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 0.25rem; opacity: 0.7; }
+        .modal-chat { height: 400px; overflow-y: auto; padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; }
+        .checkbox-list { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+        .checkbox-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; border-radius: 6px; cursor: pointer; }
         .checkbox-item:hover { background: var(--light); }
         .checkbox-item input { width: auto; }
-
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 11px; font-weight: 600;
-        }
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 11px; font-weight: 600; }
         .status-pendente { background: #feebc8; color: #7c2d12; }
         .status-enviando { background: #bee3f8; color: #2c5282; }
         .status-finalizada { background: #c6f6d5; color: #22543d; }
         .status-erro { background: #fed7d7; color: #742a2a; }
         .status-enviado { background: #c6f6d5; color: #22543d; }
         .status-falhou { background: #fed7d7; color: #742a2a; }
-        .status-pausado { background: #e9d8fd; color: #44337a; }
-
-        .empty {
-            text-align: center;
-            padding: 3rem;
-            color: var(--gray);
-        }
-        .empty i {
-            font-size: 48px;
-            opacity: 0.3;
-            margin-bottom: 1rem;
-            display: block;
-        }
-
-        .progress {
-            width: 100%; height: 8px;
-            background: var(--border);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 0.5rem;
-        }
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            transition: width 0.3s;
-        }
-
-        /* Anti-Ban */
-        .antiban-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            padding: 2rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .antiban-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-        }
-
-        .uso-diario {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
-        }
-
-        .uso-grande {
-            font-size: 48px;
-            font-weight: 700;
-        }
-
-        .uso-progress {
-            width: 100%;
-            height: 12px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 6px;
-            margin-top: 1rem;
-            overflow: hidden;
-        }
-
-        .uso-progress-bar {
-            height: 100%;
-            background: white;
-            transition: width 0.3s;
-        }
-
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 26px;
-        }
-
+        .empty { text-align: center; padding: 3rem; color: var(--gray); }
+        .empty i { font-size: 48px; opacity: 0.3; margin-bottom: 1rem; display: block; }
+        .progress { width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 0.5rem; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.3s; }
+        .antiban-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 2rem; margin-bottom: 1.5rem; }
+        .antiban-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .uso-diario { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 1.5rem; }
+        .uso-grande { font-size: 48px; font-weight: 700; }
+        .uso-progress { width: 100%; height: 12px; background: rgba(255,255,255,0.3); border-radius: 6px; margin-top: 1rem; overflow: hidden; }
+        .uso-progress-bar { height: 100%; background: white; transition: width 0.3s; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 26px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
-            width: 20px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 26px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--success); }
         input:checked + .slider:before { transform: translateX(24px); }
+
+        /* Upload de imagem */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--light);
+        }
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(102, 126, 234, 0.05);
+        }
+        .upload-area i { font-size: 32px; color: var(--gray); margin-bottom: 0.5rem; }
+        .upload-area p { color: var(--gray); font-size: 13px; }
+        .imagem-preview {
+            margin-top: 1rem;
+            position: relative;
+            display: inline-block;
+        }
+        .imagem-preview img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .imagem-preview button {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+        }
 
         @media (max-width: 768px) {
             .main { flex-direction: column; }
@@ -435,53 +179,39 @@
             <div class="logo-section">
                 <div class="logo">
                     <div class="logo-icon">🤖</div>
-                    <div>
-                        <h1>EVA</h1>
-                        <p>Hotel AI</p>
-                    </div>
+                    <div><h1>EVA</h1><p>Hotel AI</p></div>
                 </div>
             </div>
-
             <div class="nav">
                 <div class="nav-item ativo" onclick="mudarPagina('conversas')">
-                    <i class="fas fa-comments"></i>
-                    <span>Conversas</span>
+                    <i class="fas fa-comments"></i><span>Conversas</span>
                     <span class="badge" id="badge-conversas">0</span>
                 </div>
                 <div class="nav-item" onclick="mudarPagina('contatos')">
-                    <i class="fas fa-address-book"></i>
-                    <span>Contatos</span>
+                    <i class="fas fa-address-book"></i><span>Contatos</span>
                 </div>
                 <div class="nav-item" onclick="mudarPagina('templates')">
-                    <i class="fas fa-file-alt"></i>
-                    <span>Templates</span>
+                    <i class="fas fa-file-alt"></i><span>Templates</span>
                 </div>
                 <div class="nav-item" onclick="mudarPagina('campanhas')">
-                    <i class="fas fa-paper-plane"></i>
-                    <span>Disparos</span>
+                    <i class="fas fa-paper-plane"></i><span>Disparos</span>
                 </div>
                 <div class="nav-item" onclick="mudarPagina('antiban')">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Anti-Ban</span>
+                    <i class="fas fa-shield-alt"></i><span>Anti-Ban</span>
                 </div>
                 <div class="nav-item" onclick="mudarPagina('relatorios')">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Relatórios</span>
+                    <i class="fas fa-chart-bar"></i><span>Relatórios</span>
                 </div>
             </div>
-
             <div class="user-section">
                 <div class="user-avatar" id="avatar">D</div>
                 <div class="user-info">
                     <div class="user-name" id="usuario-nome">Usuário</div>
                     <div class="user-status">Online</div>
                 </div>
-                <button class="btn-logout" onclick="fazerLogout()">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
+                <button class="btn-logout" onclick="fazerLogout()"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </div>
-
         <div class="content">
             <div class="header">
                 <h2 id="pagina-titulo">Conversas</h2>
@@ -494,15 +224,10 @@
                     </div>
                 </div>
             </div>
-
             <div class="page-content">
-                <!-- CONVERSAS -->
                 <div id="page-conversas" class="page ativo">
                     <div class="toolbar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Buscar conversa...">
-                        </div>
+                        <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..."></div>
                         <div>
                             <button class="btn btn-primary btn-sm" onclick="mudarTabConversa('abertos')" id="tab-abertos">
                                 <i class="fas fa-inbox"></i> Abertos <span id="count-abertos">0</span>
@@ -514,182 +239,77 @@
                     </div>
                     <div class="grid" id="grid-conversas"></div>
                 </div>
-
-                <!-- CONTATOS -->
                 <div id="page-contatos" class="page">
                     <div class="toolbar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Buscar contato..." id="busca-contatos" onkeyup="filtrarContatos()">
-                        </div>
+                        <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..." id="busca-contatos" onkeyup="filtrarContatos()"></div>
                         <div style="display:flex;gap:0.5rem">
-                            <button class="btn btn-info btn-sm" onclick="abrirModalImportar()">
-                                <i class="fas fa-upload"></i> Importar CSV
-                            </button>
-                            <button class="btn btn-primary btn-sm" onclick="abrirModalContato()">
-                                <i class="fas fa-plus"></i> Novo Contato
-                            </button>
+                            <button class="btn btn-info btn-sm" onclick="abrirModalImportar()"><i class="fas fa-upload"></i> Importar CSV</button>
+                            <button class="btn btn-primary btn-sm" onclick="abrirModalContato()"><i class="fas fa-plus"></i> Novo</button>
                         </div>
                     </div>
                     <div class="table-container">
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Número</th>
-                                    <th>Email</th>
-                                    <th>Tags</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Nome</th><th>Número</th><th>Email</th><th>Tags</th><th>Ações</th></tr></thead>
                             <tbody id="tabela-contatos"></tbody>
                         </table>
                     </div>
                 </div>
-
-                <!-- TEMPLATES -->
                 <div id="page-templates" class="page">
                     <div class="toolbar">
-                        <h3>Templates de Mensagem</h3>
-                        <button class="btn btn-primary btn-sm" onclick="abrirModalTemplate()">
-                            <i class="fas fa-plus"></i> Novo Template
-                        </button>
+                        <h3>Templates</h3>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModalTemplate()"><i class="fas fa-plus"></i> Novo Template</button>
                     </div>
                     <div class="grid" id="grid-templates"></div>
                 </div>
-
-                <!-- CAMPANHAS -->
                 <div id="page-campanhas" class="page">
                     <div class="toolbar">
-                        <h3>Campanhas de Disparo</h3>
-                        <button class="btn btn-primary btn-sm" onclick="abrirModalCampanha()">
-                            <i class="fas fa-paper-plane"></i> Nova Campanha
-                        </button>
+                        <h3>Campanhas</h3>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModalCampanha()"><i class="fas fa-paper-plane"></i> Nova Campanha</button>
                     </div>
                     <div class="table-container">
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Total</th>
-                                    <th>Enviadas</th>
-                                    <th>Falhadas</th>
-                                    <th>Status</th>
-                                    <th>Progresso</th>
-                                    <th>Criada</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Nome</th><th>Total</th><th>Enviadas</th><th>Falhadas</th><th>Status</th><th>Progresso</th><th>Criada</th></tr></thead>
                             <tbody id="tabela-campanhas"></tbody>
                         </table>
                     </div>
                 </div>
-
-                <!-- ANTI-BAN -->
                 <div id="page-antiban" class="page">
                     <div class="uso-diario">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start">
                             <div>
                                 <p style="font-size:14px;opacity:0.9;text-transform:uppercase;letter-spacing:1px">Uso Diário</p>
                                 <div class="uso-grande" id="uso-grande">0 / 100</div>
-                                <p style="font-size:13px;opacity:0.9;margin-top:0.5rem" id="uso-texto">Você pode enviar mais 100 mensagens hoje</p>
+                                <p style="font-size:13px;opacity:0.9;margin-top:0.5rem" id="uso-texto">Pode enviar mais 100 hoje</p>
                             </div>
                             <div style="font-size:48px">🛡️</div>
                         </div>
-                        <div class="uso-progress">
-                            <div class="uso-progress-bar" id="uso-progress-bar" style="width:0%"></div>
-                        </div>
+                        <div class="uso-progress"><div class="uso-progress-bar" id="uso-progress-bar" style="width:0%"></div></div>
                     </div>
-
                     <div class="antiban-card">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
                             <h3>⚙️ Configurações Anti-Ban</h3>
                             <div style="display:flex;align-items:center;gap:1rem">
-                                <span style="font-size:13px">Sistema ativo</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="antiban-ativo" checked>
-                                    <span class="slider"></span>
-                                </label>
+                                <span style="font-size:13px">Ativo</span>
+                                <label class="switch"><input type="checkbox" id="antiban-ativo" checked><span class="slider"></span></label>
                             </div>
                         </div>
-
                         <div class="antiban-grid">
-                            <div class="form-group">
-                                <label>📊 Limite Diário (mensagens)</label>
-                                <input type="number" id="config-limite-diario" min="1" max="1000" value="100">
-                                <small style="color:var(--gray);font-size:12px">Recomendado: 50-150 para começar</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>⏱️ Limite por Hora</label>
-                                <input type="number" id="config-limite-hora" min="1" max="200" value="30">
-                                <small style="color:var(--gray);font-size:12px">Máximo de envios por hora</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>🕐 Delay Mínimo (segundos)</label>
-                                <input type="number" id="config-delay-min" min="1" max="60" value="3">
-                                <small style="color:var(--gray);font-size:12px">Tempo mínimo entre mensagens</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>🕐 Delay Máximo (segundos)</label>
-                                <input type="number" id="config-delay-max" min="1" max="120" value="7">
-                                <small style="color:var(--gray);font-size:12px">Tempo máximo entre mensagens</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>⏸️ Pausa a cada X envios</label>
-                                <input type="number" id="config-pausa-cada" min="10" max="100" value="30">
-                                <small style="color:var(--gray);font-size:12px">Pausa estratégica</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>⏸️ Tempo de Pausa (segundos)</label>
-                                <input type="number" id="config-pausa-segundos" min="30" max="600" value="60">
-                                <small style="color:var(--gray);font-size:12px">Duração da pausa estratégica</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>🌅 Horário Início</label>
-                                <input type="time" id="config-horario-inicio" value="08:00">
-                                <small style="color:var(--gray);font-size:12px">Início dos disparos</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>🌙 Horário Fim</label>
-                                <input type="time" id="config-horario-fim" value="20:00">
-                                <small style="color:var(--gray);font-size:12px">Final dos disparos</small>
-                            </div>
+                            <div class="form-group"><label>📊 Limite Diário</label><input type="number" id="config-limite-diario" value="100"></div>
+                            <div class="form-group"><label>⏱️ Limite por Hora</label><input type="number" id="config-limite-hora" value="30"></div>
+                            <div class="form-group"><label>🕐 Delay Mín (seg)</label><input type="number" id="config-delay-min" value="3"></div>
+                            <div class="form-group"><label>🕐 Delay Máx (seg)</label><input type="number" id="config-delay-max" value="7"></div>
+                            <div class="form-group"><label>⏸️ Pausa a cada</label><input type="number" id="config-pausa-cada" value="30"></div>
+                            <div class="form-group"><label>⏸️ Pausa (seg)</label><input type="number" id="config-pausa-segundos" value="60"></div>
+                            <div class="form-group"><label>🌅 Início</label><input type="time" id="config-horario-inicio" value="08:00"></div>
+                            <div class="form-group"><label>🌙 Fim</label><input type="time" id="config-horario-fim" value="20:00"></div>
                         </div>
-
-                        <div style="margin-top:1.5rem;display:flex;gap:1rem">
-                            <button class="btn btn-success" onclick="salvarConfigAntiban()">
-                                <i class="fas fa-save"></i> Salvar Configurações
-                            </button>
-                            <button class="btn btn-warning" onclick="usarConfigSegura()">
-                                <i class="fas fa-shield-alt"></i> Usar Config Segura
-                            </button>
-                            <button class="btn btn-info" onclick="usarConfigAgressiva()">
-                                <i class="fas fa-rocket"></i> Config Agressiva
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="antiban-card">
-                        <h3 style="margin-bottom:1rem">📋 Dicas Anti-Ban</h3>
-                        <div style="font-size:14px;line-height:1.8;color:var(--gray)">
-                            <p>✅ <strong>Aqueça o número:</strong> Comece com 10-20 mensagens/dia na primeira semana</p>
-                            <p>✅ <strong>Personalize sempre:</strong> Use {nome} nas mensagens</p>
-                            <p>✅ <strong>Varie horários:</strong> Não envie tudo no mesmo horário</p>
-                            <p>✅ <strong>Conteúdo de valor:</strong> Evite só promoções</p>
-                            <p>❌ <strong>NÃO faça spam:</strong> Apenas para clientes que conhecem você</p>
-                            <p>❌ <strong>NÃO envie de madrugada</strong></p>
-                            <p>❌ <strong>NÃO use listas compradas</strong></p>
+                        <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap">
+                            <button class="btn btn-success" onclick="salvarConfigAntiban()"><i class="fas fa-save"></i> Salvar</button>
+                            <button class="btn btn-warning" onclick="usarConfigSegura()"><i class="fas fa-shield-alt"></i> Config Segura</button>
+                            <button class="btn btn-info" onclick="usarConfigAgressiva()"><i class="fas fa-rocket"></i> Agressiva</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- RELATÓRIOS -->
                 <div id="page-relatorios" class="page">
                     <div class="grid-stats" id="stats-cards"></div>
                 </div>
@@ -697,22 +317,14 @@
         </div>
     </div>
 
-    <!-- MODAIS -->
     <div class="modal" id="modal-conversa">
         <div class="modal-content">
             <div class="modal-title" id="modal-conversa-titulo">Conversa</div>
             <div class="modal-chat" id="modal-chat"></div>
-            <div class="form-group">
-                <label>Observações</label>
-                <textarea id="modal-observacoes"></textarea>
-            </div>
+            <div class="form-group"><label>Observações</label><textarea id="modal-observacoes"></textarea></div>
             <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="fecharAtendimentoModal()">
-                    <i class="fas fa-check"></i> Fechar Atendimento
-                </button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-conversa')">
-                    Cancelar
-                </button>
+                <button class="btn btn-primary btn-block" onclick="fecharAtendimentoModal()"><i class="fas fa-check"></i> Fechar Atendimento</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-conversa')">Cancelar</button>
             </div>
         </div>
     </div>
@@ -720,50 +332,25 @@
     <div class="modal" id="modal-contato">
         <div class="modal-content">
             <div class="modal-title">Novo Contato</div>
-            <div class="form-group">
-                <label>Nome *</label>
-                <input type="text" id="contato-nome">
-            </div>
-            <div class="form-group">
-                <label>Número (com DDI) *</label>
-                <input type="text" id="contato-numero" placeholder="5511999999999">
-            </div>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="contato-email">
-            </div>
-            <div class="form-group">
-                <label>Tags</label>
-                <input type="text" id="contato-tags" placeholder="vip, hospedado">
-            </div>
+            <div class="form-group"><label>Nome *</label><input type="text" id="contato-nome"></div>
+            <div class="form-group"><label>Número (com DDI) *</label><input type="text" id="contato-numero" placeholder="5511999999999"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="contato-email"></div>
+            <div class="form-group"><label>Tags</label><input type="text" id="contato-tags"></div>
             <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="salvarContato()">
-                    <i class="fas fa-save"></i> Salvar
-                </button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-contato')">
-                    Cancelar
-                </button>
+                <button class="btn btn-primary btn-block" onclick="salvarContato()"><i class="fas fa-save"></i> Salvar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-contato')">Cancelar</button>
             </div>
         </div>
     </div>
 
     <div class="modal" id="modal-importar">
         <div class="modal-content">
-            <div class="modal-title">Importar Contatos (CSV)</div>
-            <p style="margin-bottom:1rem;font-size:13px;color:var(--gray)">
-                CSV com colunas: <code>nome, numero, email</code>
-            </p>
-            <div class="form-group">
-                <label>Arquivo CSV</label>
-                <input type="file" id="arquivo-csv" accept=".csv">
-            </div>
+            <div class="modal-title">Importar CSV</div>
+            <p style="margin-bottom:1rem;font-size:13px;color:var(--gray)">Colunas: nome, numero, email</p>
+            <div class="form-group"><label>Arquivo</label><input type="file" id="arquivo-csv" accept=".csv"></div>
             <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="importarCSV()">
-                    <i class="fas fa-upload"></i> Importar
-                </button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-importar')">
-                    Cancelar
-                </button>
+                <button class="btn btn-primary btn-block" onclick="importarCSV()"><i class="fas fa-upload"></i> Importar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-importar')">Cancelar</button>
             </div>
         </div>
     </div>
@@ -771,34 +358,28 @@
     <div class="modal" id="modal-template">
         <div class="modal-content">
             <div class="modal-title">Novo Template</div>
-            <div class="form-group">
-                <label>Nome *</label>
-                <input type="text" id="template-nome">
-            </div>
+            <div class="form-group"><label>Nome *</label><input type="text" id="template-nome"></div>
             <div class="form-group">
                 <label>Categoria</label>
                 <select id="template-categoria">
                     <option value="geral">Geral</option>
+                    <option value="regional">Regional</option>
+                    <option value="lancamento">Lançamento</option>
+                    <option value="promocao">Promoção</option>
+                    <option value="aniversario">Aniversário</option>
                     <option value="reserva">Reserva</option>
                     <option value="lembrete">Lembrete</option>
-                    <option value="promocao">Promoção</option>
                     <option value="feedback">Feedback</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>Conteúdo *</label>
                 <textarea id="template-conteudo" placeholder="Olá {nome}!"></textarea>
-                <p style="font-size:12px;color:var(--gray);margin-top:0.5rem">
-                    Use <code>{nome}</code> para personalizar
-                </p>
+                <p style="font-size:12px;color:var(--gray);margin-top:0.5rem">Use {nome} pra personalizar</p>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="salvarTemplate()">
-                    <i class="fas fa-save"></i> Salvar
-                </button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-template')">
-                    Cancelar
-                </button>
+                <button class="btn btn-primary btn-block" onclick="salvarTemplate()"><i class="fas fa-save"></i> Salvar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-template')">Cancelar</button>
             </div>
         </div>
     </div>
@@ -806,16 +387,26 @@
     <div class="modal" id="modal-campanha">
         <div class="modal-content">
             <div class="modal-title">Nova Campanha</div>
-            <div class="form-group">
-                <label>Nome da Campanha *</label>
-                <input type="text" id="campanha-nome">
-            </div>
+            <div class="form-group"><label>Nome da Campanha *</label><input type="text" id="campanha-nome"></div>
             <div class="form-group">
                 <label>Template</label>
                 <select id="campanha-template" onchange="usarTemplate()">
                     <option value="">Selecione ou escreva manualmente</option>
                 </select>
             </div>
+            
+            <!-- UPLOAD DE IMAGEM -->
+            <div class="form-group">
+                <label>📸 Imagem (opcional)</label>
+                <div class="upload-area" onclick="document.getElementById('campanha-imagem').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p><strong>Clique para enviar imagem</strong></p>
+                    <p style="font-size:11px">JPG, PNG ou WEBP (máx 5MB)</p>
+                </div>
+                <input type="file" id="campanha-imagem" accept="image/*" style="display:none" onchange="uploadImagem(this)">
+                <div id="imagem-preview-container"></div>
+            </div>
+            
             <div class="form-group">
                 <label>Mensagem *</label>
                 <textarea id="campanha-mensagem"></textarea>
@@ -823,26 +414,16 @@
             <div class="form-group">
                 <label>Selecionar Contatos *</label>
                 <div style="margin-bottom:0.5rem">
-                    <button class="btn btn-sm btn-info" onclick="selecionarTodosContatos()">
-                        <i class="fas fa-check-double"></i> Selecionar Todos
-                    </button>
-                    <button class="btn btn-sm" style="background:#e2e8f0;color:var(--dark)" onclick="desmarcarTodosContatos()">
-                        <i class="fas fa-times"></i> Desmarcar
-                    </button>
+                    <button class="btn btn-sm btn-info" onclick="selecionarTodosContatos()"><i class="fas fa-check-double"></i> Todos</button>
+                    <button class="btn btn-sm" style="background:#e2e8f0;color:var(--dark)" onclick="desmarcarTodosContatos()"><i class="fas fa-times"></i> Desmarcar</button>
                     <span id="contatos-selecionados" style="margin-left:1rem;font-size:13px;color:var(--gray)">0 selecionados</span>
                 </div>
                 <div class="checkbox-list" id="lista-contatos-checkbox"></div>
             </div>
-            <div id="aviso-limite" style="display:none;padding:1rem;background:#feebc8;color:#7c2d12;border-radius:8px;margin-bottom:1rem">
-                ⚠️ <strong>Atenção:</strong> Verifique o limite anti-ban
-            </div>
+            <div id="aviso-limite" style="display:none;padding:1rem;background:#feebc8;color:#7c2d12;border-radius:8px;margin-bottom:1rem"></div>
             <div class="modal-actions">
-                <button class="btn btn-success btn-block" onclick="dispararCampanha()">
-                    <i class="fas fa-paper-plane"></i> Disparar
-                </button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-campanha')">
-                    Cancelar
-                </button>
+                <button class="btn btn-success btn-block" onclick="dispararCampanha()"><i class="fas fa-paper-plane"></i> Disparar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-campanha')">Cancelar</button>
             </div>
         </div>
     </div>
@@ -859,6 +440,7 @@
         let templates = [];
         let campanhas = [];
         let configAntiban = null;
+        let imagemUploadUrl = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             verificarLogin();
@@ -868,9 +450,7 @@
             setInterval(carregarConversas, 5000);
             setInterval(verificarStatusZapi, 30000);
             setInterval(atualizarLimiteInfo, 10000);
-            setInterval(() => {
-                if (paginaAtual === 'campanhas') carregarCampanhas();
-            }, 3000);
+            setInterval(() => { if (paginaAtual === 'campanhas') carregarCampanhas(); }, 3000);
         });
 
         function verificarLogin() {
@@ -883,19 +463,7 @@
         }
 
         function mostrarTelaLogin() {
-            document.body.innerHTML = `
-                <div style="height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2)">
-                    <div style="background:white;padding:3rem;border-radius:16px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-                        <div style="text-align:center;margin-bottom:2rem">
-                            <div style="font-size:60px">🤖</div>
-                            <h2 style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:32px">EVA</h2>
-                            <p style="color:#718096;font-size:11px;text-transform:uppercase;letter-spacing:2px">Hotel AI</p>
-                        </div>
-                        <input type="email" id="email" placeholder="Email" style="width:100%;padding:12px;margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px">
-                        <input type="password" id="senha" placeholder="Senha" style="width:100%;padding:12px;margin-bottom:20px;border:1px solid #e2e8f0;border-radius:8px">
-                        <button onclick="fazerLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">Entrar</button>
-                    </div>
-                </div>`;
+            document.body.innerHTML = `<div style="height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2)"><div style="background:white;padding:3rem;border-radius:16px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)"><div style="text-align:center;margin-bottom:2rem"><div style="font-size:60px">🤖</div><h2 style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:32px">EVA</h2><p style="color:#718096;font-size:11px;text-transform:uppercase;letter-spacing:2px">Hotel AI</p></div><input type="email" id="email" placeholder="Email" style="width:100%;padding:12px;margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px"><input type="password" id="senha" placeholder="Senha" style="width:100%;padding:12px;margin-bottom:20px;border:1px solid #e2e8f0;border-radius:8px"><button onclick="fazerLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">Entrar</button></div></div>`;
         }
 
         function fazerLogin() {
@@ -906,10 +474,7 @@
             location.reload();
         }
 
-        function fazerLogout() {
-            localStorage.removeItem("eva-usuario");
-            location.reload();
-        }
+        function fazerLogout() { localStorage.removeItem("eva-usuario"); location.reload(); }
 
         function mudarPagina(pagina) {
             paginaAtual = pagina;
@@ -921,7 +486,6 @@
                 conversas: 'Conversas', contatos: 'Contatos', templates: 'Templates',
                 campanhas: 'Disparos', antiban: 'Anti-Ban', relatorios: 'Relatórios'
             }[pagina];
-
             if (pagina === 'contatos') carregarContatos();
             if (pagina === 'templates') carregarTemplates();
             if (pagina === 'campanhas') carregarCampanhas();
@@ -945,9 +509,7 @@
             renderizarConversas();
         }
 
-        async function carregarTudo() {
-            await carregarConversas();
-        }
+        async function carregarTudo() { await carregarConversas(); }
 
         async function verificarStatusZapi() {
             try {
@@ -961,9 +523,7 @@
                     el.className = 'status-zapi offline';
                     el.innerHTML = '<i class="fas fa-circle"></i> Z-API: Desconectado';
                 }
-            } catch (e) {
-                document.getElementById('status-zapi').innerHTML = '<i class="fas fa-circle"></i> Z-API: Erro';
-            }
+            } catch (e) { document.getElementById('status-zapi').innerHTML = '<i class="fas fa-circle"></i> Z-API: Erro'; }
         }
 
         async function atualizarLimiteInfo() {
@@ -974,29 +534,19 @@
                     configAntiban = data.config;
                     const enviados = data.envios_hoje;
                     const limite = data.config.limite_diario;
-                    const disponivel = data.disponivel_hoje;
                     const percent = (enviados / limite * 100).toFixed(0);
-                    
                     const el = document.getElementById('limite-info');
                     document.getElementById('limite-texto').textContent = `${enviados} / ${limite} hoje`;
-                    
-                    if (percent >= 90) {
-                        el.className = 'limite-info bloqueado';
-                    } else if (percent >= 70) {
-                        el.className = 'limite-info alerta';
-                    } else {
-                        el.className = 'limite-info';
-                    }
+                    if (percent >= 90) el.className = 'limite-info bloqueado';
+                    else if (percent >= 70) el.className = 'limite-info alerta';
+                    else el.className = 'limite-info';
                 }
             } catch (e) {}
         }
 
         async function carregarConversas() {
             try {
-                const [resA, resF] = await Promise.all([
-                    fetch(`${API}/conversas/abertas`),
-                    fetch(`${API}/conversas/fechadas`)
-                ]);
+                const [resA, resF] = await Promise.all([fetch(`${API}/conversas/abertas`), fetch(`${API}/conversas/fechadas`)]);
                 const dataA = await resA.json();
                 const dataF = await resF.json();
                 conversasAbertas = dataA.conversas || [];
@@ -1025,9 +575,7 @@
                         </div>
                         <span style="background:rgba(255,255,255,0.3);padding:4px 10px;border-radius:12px;font-size:11px;height:fit-content">${c.total_mensagens || 0} msg</span>
                     </div>
-                    <div class="conversa-body">
-                        ${c.ultima_mensagem ? `<div class="mensagem"><strong>Última:</strong> ${c.ultima_mensagem.substring(0,150)}</div>` : '<p style="color:#a0aec0;text-align:center">Sem mensagens</p>'}
-                    </div>
+                    <div class="conversa-body">${c.ultima_mensagem ? `<div class="mensagem"><strong>Última:</strong> ${c.ultima_mensagem.substring(0,150)}</div>` : '<p style="color:#a0aec0;text-align:center">Sem mensagens</p>'}</div>
                     <div class="conversa-footer">
                         <button class="btn btn-primary btn-sm" style="flex:1" onclick="abrirConversa(${c.id})"><i class="fas fa-eye"></i> Ver Chat</button>
                         ${tabConversaAtual === 'abertos' ? `<button class="btn btn-danger btn-sm" onclick="fecharRapido(${c.id})"><i class="fas fa-check"></i></button>` : ''}
@@ -1037,29 +585,26 @@
         }
 
         async function abrirConversa(id) {
-            try {
-                const res = await fetch(`${API}/conversas/${id}/mensagens`);
-                const data = await res.json();
-                if (!data.sucesso) return;
-                conversaSelecionada = id;
-                const chat = data.mensagens.map(m => `
-                    <div class="mensagem mensagem-${m.remetente}">
-                        <div class="mensagem-label">${m.remetente === 'cliente' ? '👤 Cliente' : '🤖 EVA'}</div>
-                        ${m.conteudo}
-                        <div style="font-size:11px;opacity:0.6;margin-top:4px">${new Date(m.criado_em).toLocaleTimeString('pt-BR')}</div>
-                    </div>
-                `).join('');
-                document.getElementById('modal-chat').innerHTML = chat;
-                document.getElementById('modal-observacoes').value = '';
-                document.getElementById('modal-conversa').classList.add('ativo');
-            } catch (e) {}
+            const res = await fetch(`${API}/conversas/${id}/mensagens`);
+            const data = await res.json();
+            if (!data.sucesso) return;
+            conversaSelecionada = id;
+            const chat = data.mensagens.map(m => `
+                <div class="mensagem mensagem-${m.remetente}">
+                    <div class="mensagem-label">${m.remetente === 'cliente' ? '👤 Cliente' : '🤖 EVA'}</div>
+                    ${m.conteudo}
+                    <div style="font-size:11px;opacity:0.6;margin-top:4px">${new Date(m.criado_em).toLocaleTimeString('pt-BR')}</div>
+                </div>
+            `).join('');
+            document.getElementById('modal-chat').innerHTML = chat;
+            document.getElementById('modal-observacoes').value = '';
+            document.getElementById('modal-conversa').classList.add('ativo');
         }
 
         async function fecharAtendimentoModal() {
             if (!conversaSelecionada) return;
             await fetch(`${API}/conversas/${conversaSelecionada}/fechar`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ observacoes: document.getElementById('modal-observacoes').value, usuario_id: usuarioLogado.id })
             });
             fecharModal('modal-conversa');
@@ -1067,10 +612,9 @@
         }
 
         async function fecharRapido(id) {
-            if (!confirm('Fechar este atendimento?')) return;
+            if (!confirm('Fechar?')) return;
             await fetch(`${API}/conversas/${id}/fechar`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ observacoes: 'Fechado pelo painel', usuario_id: usuarioLogado.id })
             });
             carregarConversas();
@@ -1118,28 +662,20 @@
             };
             if (!dados.nome || !dados.numero) { alert('Preencha nome e número'); return; }
             const res = await fetch(`${API}/contatos`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dados)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
             });
             const data = await res.json();
-            if (data.sucesso) {
-                fecharModal('modal-contato');
-                carregarContatos();
-            } else {
-                alert(data.erro || 'Erro');
-            }
+            if (data.sucesso) { fecharModal('modal-contato'); carregarContatos(); }
+            else alert(data.erro || 'Erro');
         }
 
         async function deletarContato(id) {
-            if (!confirm('Deletar contato?')) return;
+            if (!confirm('Deletar?')) return;
             await fetch(`${API}/contatos/${id}`, { method: 'DELETE' });
             carregarContatos();
         }
 
-        function abrirModalImportar() {
-            document.getElementById('modal-importar').classList.add('ativo');
-        }
+        function abrirModalImportar() { document.getElementById('modal-importar').classList.add('ativo'); }
 
         async function importarCSV() {
             const file = document.getElementById('arquivo-csv').files[0];
@@ -1172,7 +708,7 @@
                 <div class="card" style="padding:1.5rem">
                     <h4>${t.nome}</h4>
                     <span class="status-badge status-finalizada">${t.categoria}</span>
-                    <p style="margin-top:1rem;font-size:13px;color:var(--gray);min-height:60px">${t.conteudo}</p>
+                    <p style="margin-top:1rem;font-size:13px;color:var(--gray);min-height:60px;white-space:pre-wrap">${t.conteudo.substring(0,200)}${t.conteudo.length > 200 ? '...' : ''}</p>
                     <button class="btn btn-danger btn-sm" onclick="deletarTemplate(${t.id})" style="margin-top:1rem"><i class="fas fa-trash"></i> Deletar</button>
                 </div>
             `).join('');
@@ -1192,16 +728,14 @@
             };
             if (!dados.nome || !dados.conteudo) { alert('Preencha tudo'); return; }
             await fetch(`${API}/templates`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dados)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
             });
             fecharModal('modal-template');
             carregarTemplates();
         }
 
         async function deletarTemplate(id) {
-            if (!confirm('Deletar template?')) return;
+            if (!confirm('Deletar?')) return;
             await fetch(`${API}/templates/${id}`, { method: 'DELETE' });
             carregarTemplates();
         }
@@ -1223,15 +757,12 @@
                 const progresso = c.total_contatos > 0 ? ((c.enviadas + c.falhadas) / c.total_contatos * 100) : 0;
                 return `
                     <tr>
-                        <td><strong>${c.nome}</strong></td>
+                        <td><strong>${c.nome}</strong>${c.imagem_url ? ' <i class="fas fa-image" style="color:var(--info)" title="Com imagem"></i>' : ''}</td>
                         <td>${c.total_contatos}</td>
                         <td style="color:var(--success)">${c.enviadas}</td>
                         <td style="color:var(--danger)">${c.falhadas}</td>
                         <td><span class="status-badge status-${c.status}">${c.status}</span></td>
-                        <td>
-                            <div class="progress"><div class="progress-bar" style="width:${progresso}%"></div></div>
-                            <small>${Math.round(progresso)}%</small>
-                        </td>
+                        <td><div class="progress"><div class="progress-bar" style="width:${progresso}%"></div></div><small>${Math.round(progresso)}%</small></td>
                         <td style="font-size:12px">${formatarData(c.criado_em)}</td>
                     </tr>
                 `;
@@ -1245,6 +776,8 @@
             
             document.getElementById('campanha-nome').value = '';
             document.getElementById('campanha-mensagem').value = '';
+            imagemUploadUrl = null;
+            document.getElementById('imagem-preview-container').innerHTML = '';
             
             const select = document.getElementById('campanha-template');
             select.innerHTML = '<option value="">Selecione ou escreva manualmente</option>' +
@@ -1269,6 +802,52 @@
             document.getElementById('modal-campanha').classList.add('ativo');
         }
 
+        async function uploadImagem(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Imagem muito grande (máx 5MB)');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const container = document.getElementById('imagem-preview-container');
+            container.innerHTML = '<p style="color:var(--gray);font-size:13px;margin-top:0.5rem">📤 Enviando imagem...</p>';
+            
+            try {
+                const res = await fetch(`${API}/upload/imagem`, { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if (data.sucesso) {
+                    imagemUploadUrl = data.url;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        container.innerHTML = `
+                            <div class="imagem-preview">
+                                <img src="${e.target.result}" alt="Preview">
+                                <button onclick="removerImagem()" title="Remover">✕</button>
+                            </div>
+                            <p style="color:var(--success);font-size:13px;margin-top:0.5rem">✅ Imagem carregada!</p>
+                        `;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    container.innerHTML = `<p style="color:var(--danger);font-size:13px">❌ ${data.erro || 'Erro no upload'}</p>`;
+                }
+            } catch (e) {
+                container.innerHTML = `<p style="color:var(--danger);font-size:13px">❌ Erro: ${e.message}</p>`;
+            }
+        }
+
+        function removerImagem() {
+            imagemUploadUrl = null;
+            document.getElementById('imagem-preview-container').innerHTML = '';
+            document.getElementById('campanha-imagem').value = '';
+        }
+
         function usarTemplate() {
             const id = document.getElementById('campanha-template').value;
             if (id) {
@@ -1290,17 +869,14 @@
         function atualizarContagemSelecionados() {
             const total = document.querySelectorAll('#lista-contatos-checkbox input:checked').length;
             document.getElementById('contatos-selecionados').textContent = `${total} selecionados`;
-            
-            // Mostra aviso se estourar o limite
             const aviso = document.getElementById('aviso-limite');
             if (configAntiban && total > 0) {
                 const limite = configAntiban.limite_diario;
                 const enviados = parseInt(document.getElementById('limite-texto').textContent.split('/')[0]);
                 const disponivel = limite - enviados;
-                
                 if (total > disponivel) {
                     aviso.style.display = 'block';
-                    aviso.innerHTML = `⚠️ <strong>Atenção:</strong> Você selecionou ${total} contatos, mas só pode enviar mais ${disponivel} hoje. Reduza a seleção ou aumente o limite.`;
+                    aviso.innerHTML = `⚠️ <strong>Atenção:</strong> ${total} selecionados, mas só pode enviar mais ${disponivel} hoje.`;
                 } else {
                     aviso.style.display = 'none';
                 }
@@ -1314,15 +890,15 @@
             const contato_ids = Array.from(document.querySelectorAll('#lista-contatos-checkbox input:checked')).map(i => parseInt(i.value));
             
             if (!nome || !mensagem) { alert('Preencha nome e mensagem'); return; }
-            if (contato_ids.length === 0) { alert('Selecione pelo menos um contato'); return; }
+            if (contato_ids.length === 0) { alert('Selecione contatos'); return; }
             
-            if (!confirm(`Disparar para ${contato_ids.length} contatos?\n\n⚙️ Sistema anti-ban ativo\n⏱️ Delay: 3-7s entre envios\n⏸️ Pausa estratégica a cada 30 envios`)) return;
+            const temImagem = imagemUploadUrl ? ' (com imagem)' : '';
+            if (!confirm(`Disparar${temImagem} para ${contato_ids.length} contatos?\n\nDelay anti-ban ativo.`)) return;
             
             try {
                 const res = await fetch(`${API}/campanhas`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome, mensagem, template_id, contato_ids })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, mensagem, template_id, contato_ids, imagem_url: imagemUploadUrl })
                 });
                 const data = await res.json();
                 if (data.sucesso) {
@@ -1336,31 +912,27 @@
         }
 
         async function carregarConfigAntiban() {
-            try {
-                const res = await fetch(`${API}/antiban/config`);
-                const data = await res.json();
-                if (data.sucesso && data.config) {
-                    const c = data.config;
-                    document.getElementById('config-limite-diario').value = c.limite_diario;
-                    document.getElementById('config-limite-hora').value = c.limite_por_hora;
-                    document.getElementById('config-delay-min').value = c.delay_min;
-                    document.getElementById('config-delay-max').value = c.delay_max;
-                    document.getElementById('config-pausa-cada').value = c.pausa_a_cada;
-                    document.getElementById('config-pausa-segundos').value = c.pausa_segundos;
-                    document.getElementById('config-horario-inicio').value = c.horario_inicio;
-                    document.getElementById('config-horario-fim').value = c.horario_fim;
-                    document.getElementById('antiban-ativo').checked = c.ativo === 1;
-                    
-                    // Atualiza uso diário
-                    const enviados = data.envios_hoje;
-                    const limite = c.limite_diario;
-                    const percent = (enviados / limite * 100).toFixed(0);
-                    
-                    document.getElementById('uso-grande').textContent = `${enviados} / ${limite}`;
-                    document.getElementById('uso-texto').textContent = `Você pode enviar mais ${data.disponivel_hoje} mensagens hoje`;
-                    document.getElementById('uso-progress-bar').style.width = `${Math.min(percent, 100)}%`;
-                }
-            } catch (e) {}
+            const res = await fetch(`${API}/antiban/config`);
+            const data = await res.json();
+            if (data.sucesso && data.config) {
+                const c = data.config;
+                document.getElementById('config-limite-diario').value = c.limite_diario;
+                document.getElementById('config-limite-hora').value = c.limite_por_hora;
+                document.getElementById('config-delay-min').value = c.delay_min;
+                document.getElementById('config-delay-max').value = c.delay_max;
+                document.getElementById('config-pausa-cada').value = c.pausa_a_cada;
+                document.getElementById('config-pausa-segundos').value = c.pausa_segundos;
+                document.getElementById('config-horario-inicio').value = c.horario_inicio;
+                document.getElementById('config-horario-fim').value = c.horario_fim;
+                document.getElementById('antiban-ativo').checked = c.ativo === 1;
+                
+                const enviados = data.envios_hoje;
+                const limite = c.limite_diario;
+                const percent = (enviados / limite * 100).toFixed(0);
+                document.getElementById('uso-grande').textContent = `${enviados} / ${limite}`;
+                document.getElementById('uso-texto').textContent = `Pode enviar mais ${data.disponivel_hoje} hoje`;
+                document.getElementById('uso-progress-bar').style.width = `${Math.min(percent, 100)}%`;
+            }
         }
 
         async function salvarConfigAntiban() {
@@ -1375,18 +947,11 @@
                 horario_fim: document.getElementById('config-horario-fim').value,
                 ativo: document.getElementById('antiban-ativo').checked
             };
-            
             const res = await fetch(`${API}/antiban/config`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dados)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
             });
             const data = await res.json();
-            if (data.sucesso) {
-                alert('✅ Configurações salvas!');
-                atualizarLimiteInfo();
-                carregarConfigAntiban();
-            }
+            if (data.sucesso) { alert('✅ Salvo!'); atualizarLimiteInfo(); carregarConfigAntiban(); }
         }
 
         function usarConfigSegura() {
@@ -1398,11 +963,11 @@
             document.getElementById('config-pausa-segundos').value = 120;
             document.getElementById('config-horario-inicio').value = '09:00';
             document.getElementById('config-horario-fim').value = '18:00';
-            alert('🛡️ Configuração SEGURA aplicada! Lembre de salvar.');
+            alert('🛡️ Config SEGURA aplicada! Salve.');
         }
 
         function usarConfigAgressiva() {
-            if (!confirm('⚠️ Configuração agressiva tem maior risco de ban!\n\nDeseja continuar?')) return;
+            if (!confirm('⚠️ Config agressiva tem maior risco!')) return;
             document.getElementById('config-limite-diario').value = 300;
             document.getElementById('config-limite-hora').value = 60;
             document.getElementById('config-delay-min').value = 2;
@@ -1411,7 +976,7 @@
             document.getElementById('config-pausa-segundos').value = 30;
             document.getElementById('config-horario-inicio').value = '08:00';
             document.getElementById('config-horario-fim').value = '22:00';
-            alert('🚀 Configuração AGRESSIVA aplicada! USE COM CUIDADO. Lembre de salvar.');
+            alert('🚀 AGRESSIVA aplicada! Salve com cuidado.');
         }
 
         async function carregarRelatorios() {
@@ -1419,13 +984,13 @@
             const data = await res.json();
             const r = data.relatorios;
             document.getElementById('stats-cards').innerHTML = `
-                <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-num">${r.totalConversas}</div><div class="stat-label">Total Conversas</div></div>
+                <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-num">${r.totalConversas}</div><div class="stat-label">Conversas</div></div>
                 <div class="stat-card"><div class="stat-icon">📬</div><div class="stat-num" style="color:var(--warning)">${r.abertos}</div><div class="stat-label">Abertas</div></div>
                 <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-num" style="color:var(--success)">${r.fechados}</div><div class="stat-label">Fechadas</div></div>
-                <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-num" style="color:var(--info)">${r.tempoMedioMinutos}</div><div class="stat-label">Tempo Médio (min)</div></div>
+                <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-num" style="color:var(--info)">${r.tempoMedioMinutos}</div><div class="stat-label">Tempo Médio</div></div>
                 <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-num">${r.totalContatos}</div><div class="stat-label">Contatos</div></div>
                 <div class="stat-card"><div class="stat-icon">📢</div><div class="stat-num">${r.totalCampanhas}</div><div class="stat-label">Campanhas</div></div>
-                <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-num" style="color:var(--success)">${r.totalEnviadas}</div><div class="stat-label">Total Enviadas</div></div>
+                <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-num" style="color:var(--success)">${r.totalEnviadas}</div><div class="stat-label">Enviadas</div></div>
                 <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-num" style="color:var(--primary)">${r.enviadosHoje}</div><div class="stat-label">Hoje</div></div>
             `;
         }
