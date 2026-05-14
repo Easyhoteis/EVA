@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
-import base64
+import hashlib
+import secrets
 from datetime import datetime, date
 from dotenv import load_dotenv
 import logging
@@ -15,83 +16,115 @@ import csv
 import io
 import random
 import requests
-from typing import Optional, List
-
 from anthropic import Anthropic
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 load_dotenv()
 
-ZAPI_INSTANCE = os.getenv("ZAPI_INSTANCE", "")
-ZAPI_TOKEN = os.getenv("ZAPI_TOKEN", "")
-ZAPI_CLIENT_TOKEN = os.getenv("ZAPI_CLIENT_TOKEN", "")
-ZAPI_URL = f"https://api.z-api.io/instances/{ZAPI_INSTANCE}/token/{ZAPI_TOKEN}"
 CLAUDE_KEY = os.getenv("ANTHROPIC_API_KEY")
 PORT = int(os.getenv("PORT", 3000))
 
-# Pasta pra salvar imagens
+# Configs Z-API podem vir do env OU do banco (admin cadastra)
+ZAPI_INSTANCE_ATEND = os.getenv("ZAPI_INSTANCE", "")
+ZAPI_TOKEN_ATEND = os.getenv("ZAPI_TOKEN", "")
+ZAPI_CLIENT_TOKEN_ATEND = os.getenv("ZAPI_CLIENT_TOKEN", "")
+
 UPLOAD_DIR = "/tmp/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-app = FastAPI(title="EVA Hotel Backend", version="4.0.0")
+app = FastAPI(title="EVA Hotel Backend", version="5.0.0")
 claude_client = Anthropic(api_key=CLAUDE_KEY)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Servir uploads
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 DB_PATH = "/tmp/eva.db"
 
-def get_db_connection():
+def get_db():
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         return conn
     except Exception as e:
-        logger.error(f"Erro ao conectar no BD: {e}")
+        logger.error(f"BD erro: {e}")
         return None
 
+def hash_senha(senha: str) -> str:
+    return hashlib.sha256(senha.encode()).hexdigest()
+
+def gerar_token() -> str:
+    return secrets.token_urlsafe(32)
+
 def init_db():
-    conn = get_db_connection()
-    if not conn:
-        return
-    
+    conn = get_db()
+    if not conn: return
     cur = conn.cursor()
     
     try:
+        # USUARIOS
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                senha_hash TEXT NOT NULL,
+                nome TEXT NOT NULL,
+                perfil TEXT NOT NULL,
+                ativo INTEGER DEFAULT 1,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ultimo_login TIMESTAMP
+            )
+        """)
+        
+        # SESSÕES
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS sessoes (
+                token TEXT PRIMARY KEY,
+                usuario_id INTEGER,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+            )
+        """)
+        
+        # LOGS
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id INTEGER,
+                acao TEXT NOT NULL,
+                detalhes TEXT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # CONVERSAS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS conversas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 numero_cliente TEXT NOT NULL,
                 nome_cliente TEXT,
                 status TEXT DEFAULT 'aberto',
-                usuario_id INTEGER,
+                fechado_por_id INTEGER,
+                fechado_por_nome TEXT,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 fechado_em TIMESTAMP,
                 observacoes TEXT
-            );
+            )
         """)
         
+        # MENSAGENS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS mensagens (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 conversa_id INTEGER NOT NULL,
                 remetente TEXT NOT NULL,
                 conteudo TEXT NOT NULL,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (conversa_id) REFERENCES conversas(id)
-            );
+                usuario_nome TEXT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
         """)
         
+        # CONTATOS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS contatos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,9 +134,10 @@ def init_db():
                 tags TEXT,
                 observacoes TEXT,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+            )
         """)
         
+        # TEMPLATES
         cur.execute("""
             CREATE TABLE IF NOT EXISTS templates (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,9 +145,10 @@ def init_db():
                 conteudo TEXT NOT NULL,
                 categoria TEXT,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+            )
         """)
         
+        # CAMPANHAS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS campanhas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,26 +160,29 @@ def init_db():
                 enviadas INTEGER DEFAULT 0,
                 falhadas INTEGER DEFAULT 0,
                 status TEXT DEFAULT 'pendente',
+                criado_por_id INTEGER,
+                criado_por_nome TEXT,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 iniciado_em TIMESTAMP,
                 finalizado_em TIMESTAMP
-            );
+            )
         """)
         
+        # ENVIOS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS envios (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 campanha_id INTEGER,
                 contato_id INTEGER,
                 numero TEXT,
+                nome TEXT,
                 status TEXT DEFAULT 'pendente',
                 resposta TEXT,
-                enviado_em TIMESTAMP,
-                FOREIGN KEY (campanha_id) REFERENCES campanhas(id),
-                FOREIGN KEY (contato_id) REFERENCES contatos(id)
-            );
+                enviado_em TIMESTAMP
+            )
         """)
         
+        # ANTI-BAN
         cur.execute("""
             CREATE TABLE IF NOT EXISTS config_antiban (
                 id INTEGER PRIMARY KEY DEFAULT 1,
@@ -156,179 +194,244 @@ def init_db():
                 pausa_segundos INTEGER DEFAULT 60,
                 horario_inicio TEXT DEFAULT '08:00',
                 horario_fim TEXT DEFAULT '20:00',
-                ativo BOOLEAN DEFAULT 1
-            );
+                ativo INTEGER DEFAULT 1
+            )
         """)
         
+        # ENVIOS DIÁRIOS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS envios_diarios (
                 data TEXT PRIMARY KEY,
                 total INTEGER DEFAULT 0
-            );
+            )
+        """)
+        
+        # CONFIG Z-API (2 contas)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS config_zapi (
+                tipo TEXT PRIMARY KEY,
+                instance_id TEXT,
+                token TEXT,
+                client_token TEXT
+            )
         """)
         
         conn.commit()
         
+        # Cria admin padrão
+        cur.execute("SELECT COUNT(*) FROM usuarios")
+        if cur.fetchone()[0] == 0:
+            cur.execute(
+                "INSERT INTO usuarios (email, senha_hash, nome, perfil) VALUES (?, ?, ?, ?)",
+                ("admin@easy.com", hash_senha("admin123"), "Administrador", "admin")
+            )
+            conn.commit()
+            logger.info("Usuário admin padrão criado: admin@easy.com / admin123")
+        
+        # Config anti-ban padrão
         cur.execute("SELECT COUNT(*) FROM config_antiban")
         if cur.fetchone()[0] == 0:
-            cur.execute("""
-                INSERT INTO config_antiban VALUES (1, 100, 30, 3, 7, 30, 60, '08:00', '20:00', 1)
-            """)
+            cur.execute("INSERT INTO config_antiban VALUES (1, 100, 30, 3, 7, 30, 60, '08:00', '20:00', 1)")
             conn.commit()
         
-        # Templates da Easy 10 anos
+        # Config Z-API (do env, se tiver)
+        cur.execute("SELECT COUNT(*) FROM config_zapi WHERE tipo = 'atendimento'")
+        if cur.fetchone()[0] == 0 and ZAPI_INSTANCE_ATEND:
+            cur.execute(
+                "INSERT INTO config_zapi (tipo, instance_id, token, client_token) VALUES (?, ?, ?, ?)",
+                ("atendimento", ZAPI_INSTANCE_ATEND, ZAPI_TOKEN_ATEND, ZAPI_CLIENT_TOKEN_ATEND)
+            )
+            conn.commit()
+        
+        # Templates Easy
         cur.execute("SELECT COUNT(*) FROM templates")
         if cur.fetchone()[0] == 0:
-            templates_easy = [
-                (
-                    "Regional - Easy 10 Anos",
-                    """Olá {nome}! 🏨
+            templates = [
+                ("Regional - Easy 10 Anos", """Olá {nome}! 🏨
 
 Confira os destaques da semana em [REGIÃO]:
 
-🌟 [Hotel 1] - [diferencial]
-🌟 [Hotel 2] - [diferencial]
-🌟 [Hotel 3] - [diferencial]
+🌟 [Hotel 1]
+🌟 [Hotel 2]
+🌟 [Hotel 3]
 
 🎉 Comemorando 10 anos da Easy, use o cupom EASY10 e ganhe 10% OFF!
 
 Reserve já: [link]
 
 ---
-Não quer mais receber? Responda SAIR""",
-                    "regional"
-                ),
-                (
-                    "Lançamento - Hotéis Parceiros",
-                    """Olá {nome}! ✨
+Não quer mais receber? Responda SAIR""", "regional"),
+                ("Lançamento - Hotéis Parceiros", """Olá {nome}! ✨
 
 NOVOS PARCEIROS chegaram à Easy!
 
-Este mês, novidades especiais:
-🆕 [Hotel 1] - [diferencial]
-🆕 [Hotel 2] - [diferencial]
-🆕 [Hotel 3] - [diferencial]
+🆕 [Hotel 1]
+🆕 [Hotel 2]
+🆕 [Hotel 3]
 
 🎊 10 anos Easy: cupom EASY10 = 10% OFF
-Em todos os novos parceiros!
 
 Conheça: [link]
 
 ---
-Não quer mais receber? Responda SAIR""",
-                    "lancamento"
-                ),
-                (
-                    "Promo - Ofertas Exclusivas",
-                    """Olá {nome}! 🔥
+Não quer mais receber? Responda SAIR""", "lancamento"),
+                ("Promo - Ofertas Exclusivas", """Olá {nome}! 🔥
 
-OFERTAS IMPERDÍVEIS da semana:
+OFERTAS IMPERDÍVEIS:
 
 💰 [Hotel 1] - de R$X por R$Y
 💰 [Hotel 2] - de R$X por R$Y
-💰 [Hotel 3] - de R$X por R$Y
 
 ✨ Use EASY10 e ganhe MAIS 10% OFF
-🎉 Em comemoração aos 10 anos da Easy
+🎉 10 anos da Easy
 
 Aproveite: [link]
 
 ---
-Não quer mais receber? Responda SAIR""",
-                    "promocao"
-                ),
-                (
-                    "Aniversário 10 Anos - Easy",
-                    """Olá {nome}! 🎉
+Não quer mais receber? Responda SAIR""", "promocao"),
+                ("Aniversário 10 Anos", """Olá {nome}! 🎉
 
 A EASY ESTÁ DE PARABÉNS! 🎂
 
-Há 10 anos transformando viagens em experiências inesquecíveis!
+10 anos transformando viagens em experiências!
 
-🎁 PRESENTE PRA VOCÊ:
-Cupom EASY10 com 10% OFF
-Válido em TODOS os hotéis parceiros!
+🎁 Cupom EASY10 com 10% OFF
+Em TODOS os hotéis parceiros!
 
 Use agora: [link]
 
-Obrigado por fazer parte dessa história! ❤️
+Obrigado! ❤️
 
 ---
-Não quer mais receber? Responda SAIR""",
-                    "aniversario"
-                ),
-                (
-                    "Confirmação de Reserva",
-                    """Olá {nome}! 
-
-Sua reserva foi confirmada com sucesso! ✅
-
-Detalhes:
-🏨 Hotel: [nome]
-📅 Check-in: [data]
-📅 Check-out: [data]
-🛏️ Acomodação: [tipo]
-
-Aguardamos sua chegada!
-
-Qualquer dúvida, estamos à disposição.""",
-                    "reserva"
-                ),
-                (
-                    "Lembrete Check-in",
-                    """Olá {nome}! 🏨
-
-Lembrando que seu check-in é AMANHÃ!
-
-📍 [Endereço do hotel]
-🕒 Horário: a partir das 14h
-
-Tenha uma ótima estadia! 
-
-A Easy está com você nessa jornada! 💙""",
-                    "lembrete"
-                ),
-                (
-                    "Pós-Estadia - Feedback",
-                    """Olá {nome}! 
-
-Esperamos que tenha tido uma ótima estadia! 
-
-Sua opinião é muito importante pra gente. 
-Como foi sua experiência?
-
-⭐⭐⭐⭐⭐ Excelente
-⭐⭐⭐⭐ Muito bom
-⭐⭐⭐ Bom
-⭐⭐ Regular
-⭐ Ruim
-
-Conte pra gente! 💙""",
-                    "feedback"
-                ),
+Não quer mais receber? Responda SAIR""", "aniversario"),
             ]
-            cur.executemany(
-                "INSERT INTO templates (nome, conteudo, categoria) VALUES (?, ?, ?)",
-                templates_easy
-            )
+            cur.executemany("INSERT INTO templates (nome, conteudo, categoria) VALUES (?, ?, ?)", templates)
             conn.commit()
         
         logger.info("BD inicializado")
-            
+        
     except Exception as e:
-        logger.error(f"Erro: {e}")
+        logger.error(f"Erro init_db: {e}")
     finally:
         cur.close()
         conn.close()
+
+# ============================================
+# AUTH
+# ============================================
+
+def validar_token(token: str):
+    if not token:
+        return None
+    conn = get_db()
+    if not conn: return None
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT u.id, u.email, u.nome, u.perfil, u.ativo 
+            FROM sessoes s JOIN usuarios u ON s.usuario_id = u.id
+            WHERE s.token = ?
+        """, (token,))
+        row = cur.fetchone()
+        if row and row['ativo']:
+            return dict(row)
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+def get_usuario(request: Request):
+    auth = request.headers.get("Authorization", "")
+    token = auth.replace("Bearer ", "") if auth else None
+    return validar_token(token)
+
+def registrar_log(usuario_id: int, acao: str, detalhes: str = ""):
+    conn = get_db()
+    if not conn: return
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO logs (usuario_id, acao, detalhes) VALUES (?, ?, ?)", (usuario_id, acao, detalhes))
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+# ============================================
+# Z-API
+# ============================================
+
+def get_zapi_config(tipo: str = "atendimento"):
+    # Pega config do banco
+    conn = get_db()
+    if not conn: return None
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM config_zapi WHERE tipo = ?", (tipo,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+    finally:
+        cur.close()
+        conn.close()
+
+def enviar_mensagem_zapi(numero: str, mensagem: str, tipo: str = "atendimento") -> dict:
+    config = get_zapi_config(tipo)
+    if not config:
+        return {"sucesso": False, "erro": f"Z-API {tipo} não configurada"}
+    
+    numero_limpo = numero.replace("+", "").replace(" ", "").replace("-", "")
+    url = f"https://api.z-api.io/instances/{config['instance_id']}/token/{config['token']}/send-text"
+    headers = {"Content-Type": "application/json", "Client-Token": config['client_token']}
+    
+    try:
+        response = requests.post(url, json={"phone": numero_limpo, "message": mensagem}, headers=headers, timeout=30)
+        if response.status_code == 200:
+            return {"sucesso": True, "data": response.json()}
+        return {"sucesso": False, "erro": response.text}
+    except Exception as e:
+        return {"sucesso": False, "erro": str(e)}
+
+def enviar_imagem_zapi(numero: str, imagem_url: str, legenda: str = "", tipo: str = "disparos") -> dict:
+    config = get_zapi_config(tipo)
+    if not config:
+        return {"sucesso": False, "erro": f"Z-API {tipo} não configurada"}
+    
+    numero_limpo = numero.replace("+", "").replace(" ", "").replace("-", "")
+    url = f"https://api.z-api.io/instances/{config['instance_id']}/token/{config['token']}/send-image"
+    headers = {"Content-Type": "application/json", "Client-Token": config['client_token']}
+    payload = {"phone": numero_limpo, "image": imagem_url}
+    if legenda:
+        payload["caption"] = legenda
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        if response.status_code == 200:
+            return {"sucesso": True, "data": response.json()}
+        return {"sucesso": False, "erro": response.text}
+    except Exception as e:
+        return {"sucesso": False, "erro": str(e)}
+
+def status_zapi(tipo: str = "atendimento") -> dict:
+    config = get_zapi_config(tipo)
+    if not config:
+        return {"conectado": False, "erro": "Não configurada"}
+    
+    url = f"https://api.z-api.io/instances/{config['instance_id']}/token/{config['token']}/status"
+    headers = {"Client-Token": config['client_token']}
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return {"conectado": True, "data": response.json()}
+        return {"conectado": False}
+    except Exception as e:
+        return {"conectado": False, "erro": str(e)}
 
 # ============================================
 # ANTI-BAN
 # ============================================
 
 def obter_config_antiban():
-    conn = get_db_connection()
-    if not conn:
-        return None
+    conn = get_db()
+    if not conn: return None
     cur = conn.cursor()
     try:
         cur.execute("SELECT * FROM config_antiban WHERE id = 1")
@@ -339,9 +442,8 @@ def obter_config_antiban():
         conn.close()
 
 def obter_envios_hoje():
-    conn = get_db_connection()
-    if not conn:
-        return 0
+    conn = get_db()
+    if not conn: return 0
     cur = conn.cursor()
     try:
         hoje = date.today().isoformat()
@@ -353,9 +455,8 @@ def obter_envios_hoje():
         conn.close()
 
 def incrementar_envio_diario():
-    conn = get_db_connection()
-    if not conn:
-        return
+    conn = get_db()
+    if not conn: return
     cur = conn.cursor()
     try:
         hoje = date.today().isoformat()
@@ -368,192 +469,319 @@ def incrementar_envio_diario():
         cur.close()
         conn.close()
 
-def verificar_pode_enviar():
+def pode_enviar():
     config = obter_config_antiban()
     if not config or not config['ativo']:
         return True, "OK"
-    
-    agora = datetime.now()
-    horario_atual = agora.strftime("%H:%M")
-    if horario_atual < config['horario_inicio'] or horario_atual > config['horario_fim']:
-        return False, f"Fora do horário"
-    
-    enviados_hoje = obter_envios_hoje()
-    if enviados_hoje >= config['limite_diario']:
-        return False, f"Limite diário atingido"
-    
+    agora = datetime.now().strftime("%H:%M")
+    if agora < config['horario_inicio'] or agora > config['horario_fim']:
+        return False, "Fora do horário"
+    if obter_envios_hoje() >= config['limite_diario']:
+        return False, "Limite atingido"
     return True, "OK"
 
 # ============================================
-# Z-API
+# CLAUDE IA
 # ============================================
 
-def enviar_mensagem_zapi(numero: str, mensagem: str) -> dict:
-    numero_limpo = numero.replace("+", "").replace(" ", "").replace("-", "")
-    
-    headers = {
-        "Content-Type": "application/json",
-        "Client-Token": ZAPI_CLIENT_TOKEN
-    }
-    
-    try:
-        response = requests.post(
-            f"{ZAPI_URL}/send-text",
-            json={"phone": numero_limpo, "message": mensagem},
-            headers=headers,
-            timeout=30
-        )
-        if response.status_code == 200:
-            return {"sucesso": True, "data": response.json()}
-        return {"sucesso": False, "erro": response.text}
-    except Exception as e:
-        return {"sucesso": False, "erro": str(e)}
-
-def enviar_imagem_zapi(numero: str, imagem_url: str, legenda: str = "") -> dict:
-    # Envia imagem via Z-API
-    numero_limpo = numero.replace("+", "").replace(" ", "").replace("-", "")
-    
-    headers = {
-        "Content-Type": "application/json",
-        "Client-Token": ZAPI_CLIENT_TOKEN
-    }
-    
-    payload = {
-        "phone": numero_limpo,
-        "image": imagem_url
-    }
-    
-    if legenda:
-        payload["caption"] = legenda
-    
-    try:
-        response = requests.post(
-            f"{ZAPI_URL}/send-image",
-            json=payload,
-            headers=headers,
-            timeout=60
-        )
-        if response.status_code == 200:
-            return {"sucesso": True, "data": response.json()}
-        return {"sucesso": False, "erro": response.text}
-    except Exception as e:
-        return {"sucesso": False, "erro": str(e)}
-
-def status_zapi() -> dict:
-    headers = {"Client-Token": ZAPI_CLIENT_TOKEN}
-    try:
-        response = requests.get(f"{ZAPI_URL}/status", headers=headers, timeout=10)
-        if response.status_code == 200:
-            return {"conectado": True, "data": response.json()}
-        return {"conectado": False}
-    except Exception as e:
-        return {"conectado": False, "erro": str(e)}
-
-# ============================================
-# CLAUDE
-# ============================================
-
-def obter_resposta_ia(mensagem_cliente: str, contexto_hotel: str = "Hotel"):
+def obter_resposta_ia(mensagem: str, contexto: str = "Hotel"):
     try:
         response = claude_client.messages.create(
             model="claude-3-5-haiku-20241022",
             max_tokens=200,
-            messages=[{
-                "role": "user",
-                "content": f"""Você é um assistente de atendimento ao cliente de um {contexto_hotel}.
-
+            messages=[{"role": "user", "content": f"""Você é um assistente de atendimento ao cliente de um {contexto}.
 Responda de forma breve, amigável e profissional. Máximo 2-3 linhas.
-
-Cliente disse: "{mensagem_cliente}"
-
-Responda:"""
-            }]
+Cliente disse: "{mensagem}"
+Responda:"""}]
         )
         return response.content[0].text
     except Exception as e:
         return "Desculpe, tive um problema. Vou chamar um atendente."
 
 # ============================================
-# BANCO
-# ============================================
-
-def buscar_conversa_aberta(numero_cliente: str):
-    conn = get_db_connection()
-    if not conn:
-        return None
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT id FROM conversas WHERE numero_cliente = ? AND status = ? LIMIT 1", (numero_cliente, "aberto"))
-        row = cur.fetchone()
-        return row[0] if row else None
-    finally:
-        cur.close()
-        conn.close()
-
-def salvar_conversa(numero_cliente: str, nome_cliente: str = None):
-    conn = get_db_connection()
-    if not conn:
-        return None
-    cur = conn.cursor()
-    try:
-        cur.execute("INSERT INTO conversas (numero_cliente, nome_cliente, status) VALUES (?, ?, ?)", (numero_cliente, nome_cliente, "aberto"))
-        conn.commit()
-        return cur.lastrowid
-    finally:
-        cur.close()
-        conn.close()
-
-def salvar_mensagem(conversa_id: int, remetente: str, conteudo: str):
-    conn = get_db_connection()
-    if not conn:
-        return
-    cur = conn.cursor()
-    try:
-        cur.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (?, ?, ?)", (conversa_id, remetente, conteudo))
-        conn.commit()
-    finally:
-        cur.close()
-        conn.close()
-
-# ============================================
-# ROTAS
+# ROTAS - AUTH
 # ============================================
 
 @app.get("/")
 async def root():
-    return {"mensagem": "EVA Hotel Backend", "status": "OK", "versao": "4.0.0"}
+    return {"mensagem": "EVA Hotel Backend", "versao": "5.0.0", "status": "OK"}
 
 @app.get("/painel")
 async def painel():
     return FileResponse("painel.html", media_type="text/html")
 
+@app.post("/api/login")
+async def login(request: Request):
+    try:
+        data = await request.json()
+        email = data.get("email", "").lower().strip()
+        senha = data.get("senha", "")
+        
+        if not email or not senha:
+            return JSONResponse({"sucesso": False, "erro": "Email e senha obrigatórios"}, status_code=400)
+        
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT * FROM usuarios WHERE email = ? AND ativo = 1", (email,))
+            user = cur.fetchone()
+            
+            if not user or user['senha_hash'] != hash_senha(senha):
+                return JSONResponse({"sucesso": False, "erro": "Email ou senha incorretos"}, status_code=401)
+            
+            # Gera token
+            token = gerar_token()
+            cur.execute("INSERT INTO sessoes (token, usuario_id) VALUES (?, ?)", (token, user['id']))
+            cur.execute("UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = ?", (user['id'],))
+            conn.commit()
+            
+            registrar_log(user['id'], "login", f"Login realizado")
+            
+            return {
+                "sucesso": True,
+                "token": token,
+                "usuario": {
+                    "id": user['id'],
+                    "nome": user['nome'],
+                    "email": user['email'],
+                    "perfil": user['perfil']
+                }
+            }
+        finally:
+            cur.close()
+            conn.close()
+    except Exception as e:
+        return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
+
+@app.post("/api/logout")
+async def logout(request: Request):
+    auth = request.headers.get("Authorization", "")
+    token = auth.replace("Bearer ", "") if auth else None
+    if token:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM sessoes WHERE token = ?", (token,))
+        conn.commit()
+        cur.close()
+        conn.close()
+    return {"sucesso": True}
+
+@app.get("/api/me")
+async def me(request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    return {"sucesso": True, "usuario": user}
+
+# ============================================
+# USUARIOS (admin)
+# ============================================
+
+@app.get("/api/usuarios")
+async def listar_usuarios(request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] != 'admin':
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, email, nome, perfil, ativo, criado_em, ultimo_login FROM usuarios ORDER BY nome ASC")
+        rows = cur.fetchall()
+        return {"sucesso": True, "usuarios": [dict(r) for r in rows]}
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/api/usuarios")
+async def criar_usuario(request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] != 'admin':
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
+    try:
+        data = await request.json()
+        email = data.get("email", "").lower().strip()
+        senha = data.get("senha", "")
+        nome = data.get("nome", "")
+        perfil = data.get("perfil", "atendente")
+        
+        if not email or not senha or not nome:
+            return JSONResponse({"sucesso": False, "erro": "Preencha todos os campos"}, status_code=400)
+        
+        if perfil not in ["admin", "atendente", "marketing"]:
+            return JSONResponse({"sucesso": False, "erro": "Perfil inválido"}, status_code=400)
+        
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                "INSERT INTO usuarios (email, senha_hash, nome, perfil) VALUES (?, ?, ?, ?)",
+                (email, hash_senha(senha), nome, perfil)
+            )
+            conn.commit()
+            registrar_log(user['id'], "criar_usuario", f"Criou {email} ({perfil})")
+            return {"sucesso": True, "id": cur.lastrowid}
+        except sqlite3.IntegrityError:
+            return JSONResponse({"sucesso": False, "erro": "Email já cadastrado"}, status_code=400)
+        finally:
+            cur.close()
+            conn.close()
+    except Exception as e:
+        return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
+
+@app.put("/api/usuarios/{user_id}")
+async def atualizar_usuario(user_id: int, request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] != 'admin':
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
+    try:
+        data = await request.json()
+        conn = get_db()
+        cur = conn.cursor()
+        
+        campos = []
+        valores = []
+        
+        if "nome" in data:
+            campos.append("nome = ?")
+            valores.append(data["nome"])
+        if "perfil" in data and data["perfil"] in ["admin", "atendente", "marketing"]:
+            campos.append("perfil = ?")
+            valores.append(data["perfil"])
+        if "ativo" in data:
+            campos.append("ativo = ?")
+            valores.append(1 if data["ativo"] else 0)
+        if "senha" in data and data["senha"]:
+            campos.append("senha_hash = ?")
+            valores.append(hash_senha(data["senha"]))
+        
+        if campos:
+            valores.append(user_id)
+            cur.execute(f"UPDATE usuarios SET {', '.join(campos)} WHERE id = ?", valores)
+            conn.commit()
+            registrar_log(user['id'], "atualizar_usuario", f"ID {user_id}")
+        
+        cur.close()
+        conn.close()
+        return {"sucesso": True}
+    except Exception as e:
+        return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
+
+@app.delete("/api/usuarios/{user_id}")
+async def deletar_usuario(user_id: int, request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] != 'admin':
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
+    if user_id == user['id']:
+        return JSONResponse({"sucesso": False, "erro": "Não pode deletar a si mesmo"}, status_code=400)
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
+    cur.execute("DELETE FROM sessoes WHERE usuario_id = ?", (user_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    registrar_log(user['id'], "deletar_usuario", f"ID {user_id}")
+    return {"sucesso": True}
+
+# ============================================
+# CONFIG Z-API
+# ============================================
+
+@app.get("/api/config/zapi")
+async def get_config_zapi(request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] != 'admin':
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM config_zapi")
+    rows = cur.fetchall()
+    configs = {row['tipo']: dict(row) for row in rows}
+    cur.close()
+    conn.close()
+    return {"sucesso": True, "configs": configs}
+
+@app.post("/api/config/zapi")
+async def salvar_config_zapi(request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] != 'admin':
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
+    try:
+        data = await request.json()
+        tipo = data.get("tipo")
+        if tipo not in ["atendimento", "disparos"]:
+            return JSONResponse({"sucesso": False, "erro": "Tipo inválido"}, status_code=400)
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO config_zapi (tipo, instance_id, token, client_token) VALUES (?, ?, ?, ?)
+            ON CONFLICT(tipo) DO UPDATE SET instance_id = ?, token = ?, client_token = ?
+        """, (tipo, data.get("instance_id"), data.get("token"), data.get("client_token"),
+              data.get("instance_id"), data.get("token"), data.get("client_token")))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registrar_log(user['id'], "config_zapi", tipo)
+        return {"sucesso": True}
+    except Exception as e:
+        return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
+
+# ============================================
+# WEBHOOK
+# ============================================
+
 @app.post("/webhook/zapi")
-async def webhook_zapi(request: Request):
+async def webhook(request: Request):
     try:
         data = await request.json()
         if data.get("fromMe"):
-            return JSONResponse({"success": True})
+            return {"success": True}
         
-        numero_cliente = data.get("phone")
-        nome_cliente = data.get("senderName", "")
+        numero = data.get("phone")
+        nome = data.get("senderName", "")
+        mensagem = data.get("text", {}).get("message") if data.get("text") else None
         
-        mensagem_cliente = None
-        if "text" in data and data["text"]:
-            mensagem_cliente = data["text"].get("message")
+        if not numero or not mensagem:
+            return {"success": False}
         
-        if not numero_cliente or not mensagem_cliente:
-            return JSONResponse({"success": False})
+        conn = get_db()
+        cur = conn.cursor()
         
-        conversa_id = buscar_conversa_aberta(numero_cliente)
-        if not conversa_id:
-            conversa_id = salvar_conversa(numero_cliente, nome_cliente)
+        # Busca ou cria conversa
+        cur.execute("SELECT id FROM conversas WHERE numero_cliente = ? AND status = 'aberto' LIMIT 1", (numero,))
+        row = cur.fetchone()
         
-        salvar_mensagem(conversa_id, "cliente", mensagem_cliente)
-        resposta = obter_resposta_ia(mensagem_cliente)
-        salvar_mensagem(conversa_id, "eva", resposta)
-        enviar_mensagem_zapi(numero_cliente, resposta)
+        if row:
+            conversa_id = row[0]
+        else:
+            cur.execute("INSERT INTO conversas (numero_cliente, nome_cliente, status) VALUES (?, ?, 'aberto')", (numero, nome))
+            conversa_id = cur.lastrowid
         
-        return JSONResponse({"success": True})
+        cur.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (?, ?, ?)", (conversa_id, "cliente", mensagem))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        # IA responde
+        resposta = obter_resposta_ia(mensagem)
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (?, ?, ?)", (conversa_id, "eva", resposta))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        enviar_mensagem_zapi(numero, resposta, "atendimento")
+        return {"success": True}
     except Exception as e:
         return JSONResponse({"success": False, "erro": str(e)}, status_code=500)
 
@@ -562,78 +790,122 @@ async def webhook_zapi(request: Request):
 # ============================================
 
 @app.get("/api/conversas/abertas")
-async def conversas_abertas():
-    conn = get_db_connection()
-    if not conn:
-        return {"sucesso": False, "conversas": [], "total": 0}
+async def conv_abertas(request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
+    conn = get_db()
     cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT c.id, c.numero_cliente, c.nome_cliente, c.criado_em,
-                (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens,
-                (SELECT conteudo FROM mensagens WHERE conversa_id = c.id ORDER BY criado_em DESC LIMIT 1) as ultima_mensagem
-            FROM conversas c WHERE c.status = 'aberto' ORDER BY c.criado_em DESC
-        """)
-        rows = cur.fetchall()
-        return {"sucesso": True, "conversas": [dict(r) for r in rows], "total": len(rows)}
-    finally:
-        cur.close()
-        conn.close()
+    cur.execute("""
+        SELECT c.*, 
+            (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens,
+            (SELECT conteudo FROM mensagens WHERE conversa_id = c.id ORDER BY criado_em DESC LIMIT 1) as ultima_mensagem
+        FROM conversas c WHERE status = 'aberto' ORDER BY criado_em DESC
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"sucesso": True, "conversas": [dict(r) for r in rows], "total": len(rows)}
 
 @app.get("/api/conversas/fechadas")
-async def conversas_fechadas():
-    conn = get_db_connection()
-    if not conn:
-        return {"sucesso": False, "conversas": [], "total": 0}
+async def conv_fechadas(request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
+    conn = get_db()
     cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT c.id, c.numero_cliente, c.nome_cliente, c.criado_em, c.fechado_em,
-                (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens
-            FROM conversas c WHERE c.status = 'fechado' ORDER BY c.fechado_em DESC
-        """)
-        rows = cur.fetchall()
-        return {"sucesso": True, "conversas": [dict(r) for r in rows], "total": len(rows)}
-    finally:
-        cur.close()
-        conn.close()
+    cur.execute("""
+        SELECT c.*,
+            (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens
+        FROM conversas c WHERE status = 'fechado' ORDER BY fechado_em DESC
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"sucesso": True, "conversas": [dict(r) for r in rows], "total": len(rows)}
 
-@app.get("/api/conversas/{conversa_id}/mensagens")
-async def mensagens_conversa(conversa_id: int):
-    conn = get_db_connection()
-    if not conn:
-        return {"sucesso": False, "mensagens": []}
+@app.get("/api/conversas/{cid}/mensagens")
+async def msgs_conversa(cid: int, request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
+    conn = get_db()
     cur = conn.cursor()
-    try:
-        cur.execute("SELECT * FROM mensagens WHERE conversa_id = ? ORDER BY criado_em ASC", (conversa_id,))
-        rows = cur.fetchall()
-        return {"sucesso": True, "mensagens": [dict(r) for r in rows]}
-    finally:
-        cur.close()
-        conn.close()
+    cur.execute("SELECT * FROM mensagens WHERE conversa_id = ? ORDER BY criado_em ASC", (cid,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"sucesso": True, "mensagens": [dict(r) for r in rows]}
 
-@app.post("/api/conversas/{conversa_id}/fechar")
-async def fechar_atendimento(conversa_id: int, request: Request):
+@app.post("/api/conversas/{cid}/fechar")
+async def fechar_conv(cid: int, request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
     try:
         data = await request.json()
-        conn = get_db_connection()
+        conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT numero_cliente FROM conversas WHERE id = ?", (conversa_id,))
+        cur.execute("SELECT numero_cliente FROM conversas WHERE id = ?", (cid,))
         row = cur.fetchone()
         numero = row[0] if row else None
         
-        cur.execute(
-            "UPDATE conversas SET status = ?, fechado_em = CURRENT_TIMESTAMP, usuario_id = ?, observacoes = ? WHERE id = ?",
-            ("fechado", data.get("usuario_id"), data.get("observacoes", ""), conversa_id)
-        )
+        cur.execute("""
+            UPDATE conversas SET status = 'fechado', fechado_em = CURRENT_TIMESTAMP,
+                fechado_por_id = ?, fechado_por_nome = ?, observacoes = ? WHERE id = ?
+        """, (user['id'], user['nome'], data.get("observacoes", ""), cid))
         conn.commit()
-        
-        if numero:
-            enviar_mensagem_zapi(numero, "Obrigado por entrar em contato! Atendimento encerrado. 😊")
-        
         cur.close()
         conn.close()
+        
+        if numero:
+            mensagem_final = f"*{user['nome']}:*\nObrigado por entrar em contato! Atendimento encerrado. 😊"
+            enviar_mensagem_zapi(numero, mensagem_final, "atendimento")
+        
+        registrar_log(user['id'], "fechar_conversa", f"ID {cid}")
         return {"sucesso": True}
+    except Exception as e:
+        return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
+
+@app.post("/api/conversas/{cid}/responder")
+async def responder_conv(cid: int, request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
+    try:
+        data = await request.json()
+        mensagem = data.get("mensagem", "")
+        
+        if not mensagem:
+            return JSONResponse({"sucesso": False, "erro": "Mensagem vazia"}, status_code=400)
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT numero_cliente FROM conversas WHERE id = ?", (cid,))
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse({"sucesso": False, "erro": "Conversa não encontrada"}, status_code=404)
+        
+        numero = row[0]
+        
+        # Mensagem com nome do atendente em negrito
+        mensagem_final = f"*{user['nome']}:*\n{mensagem}"
+        
+        # Salva no banco
+        cur.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo, usuario_nome) VALUES (?, ?, ?, ?)",
+                    (cid, "atendente", mensagem_final, user['nome']))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        # Envia
+        resultado = enviar_mensagem_zapi(numero, mensagem_final, "atendimento")
+        return {"sucesso": True, "envio": resultado}
     except Exception as e:
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
@@ -642,27 +914,31 @@ async def fechar_atendimento(conversa_id: int, request: Request):
 # ============================================
 
 @app.get("/api/contatos")
-async def listar_contatos():
-    conn = get_db_connection()
-    if not conn:
-        return {"sucesso": False, "contatos": []}
+async def listar_contatos(request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
+    conn = get_db()
     cur = conn.cursor()
-    try:
-        cur.execute("SELECT * FROM contatos ORDER BY nome ASC")
-        rows = cur.fetchall()
-        return {"sucesso": True, "contatos": [dict(r) for r in rows], "total": len(rows)}
-    finally:
-        cur.close()
-        conn.close()
+    cur.execute("SELECT * FROM contatos ORDER BY nome ASC")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"sucesso": True, "contatos": [dict(r) for r in rows], "total": len(rows)}
 
 @app.post("/api/contatos")
 async def criar_contato(request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] not in ['admin', 'marketing']:
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
     try:
         data = await request.json()
         if not data.get("nome") or not data.get("numero"):
             return JSONResponse({"sucesso": False, "erro": "Nome e número obrigatórios"}, status_code=400)
         
-        conn = get_db_connection()
+        conn = get_db()
         cur = conn.cursor()
         try:
             cur.execute(
@@ -679,26 +955,28 @@ async def criar_contato(request: Request):
     except Exception as e:
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
-@app.delete("/api/contatos/{contato_id}")
-async def deletar_contato(contato_id: int):
-    conn = get_db_connection()
+@app.delete("/api/contatos/{cid}")
+async def deletar_contato(cid: int, request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] not in ['admin', 'marketing']:
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
+    conn = get_db()
     cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM contatos WHERE id = ?", (contato_id,))
-        conn.commit()
-        return {"sucesso": True}
-    finally:
-        cur.close()
-        conn.close()
+    cur.execute("DELETE FROM contatos WHERE id = ?", (cid,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"sucesso": True}
 
 @app.post("/api/contatos/importar")
-async def importar_contatos_csv(file: UploadFile = File(...)):
+async def importar_contatos(file: UploadFile = File(...)):
     try:
         content = await file.read()
         text = content.decode('utf-8')
         reader = csv.DictReader(io.StringIO(text))
         
-        conn = get_db_connection()
+        conn = get_db()
         cur = conn.cursor()
         importados = 0
         erros = 0
@@ -725,33 +1003,45 @@ async def importar_contatos_csv(file: UploadFile = File(...)):
     except Exception as e:
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
+@app.post("/api/contatos/preview-csv")
+async def preview_csv(file: UploadFile = File(...)):
+    # Faz preview dos contatos do CSV sem salvar (pra usar em campanha)
+    try:
+        content = await file.read()
+        text = content.decode('utf-8')
+        reader = csv.DictReader(io.StringIO(text))
+        
+        contatos_csv = []
+        for row in reader:
+            nome = row.get('nome') or row.get('Nome') or row.get('NOME')
+            numero = row.get('numero') or row.get('Numero') or row.get('NUMERO') or row.get('telefone') or row.get('Telefone')
+            if nome and numero:
+                contatos_csv.append({"nome": nome, "numero": numero})
+        
+        return {"sucesso": True, "contatos": contatos_csv, "total": len(contatos_csv)}
+    except Exception as e:
+        return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
+
 # ============================================
-# UPLOAD DE IMAGEM
+# UPLOAD IMAGEM
 # ============================================
 
 @app.post("/api/upload/imagem")
 async def upload_imagem(file: UploadFile = File(...)):
-    # Faz upload de imagem pra usar em campanhas
     try:
-        # Valida extensão
         ext = file.filename.split(".")[-1].lower()
         if ext not in ["jpg", "jpeg", "png", "webp"]:
-            return JSONResponse({"sucesso": False, "erro": "Formato inválido. Use JPG, PNG ou WEBP"}, status_code=400)
+            return JSONResponse({"sucesso": False, "erro": "Formato inválido"}, status_code=400)
         
-        # Gera nome único
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        nome_arquivo = f"campanha_{timestamp}.{ext}"
-        caminho = os.path.join(UPLOAD_DIR, nome_arquivo)
+        nome = f"campanha_{timestamp}.{ext}"
+        caminho = os.path.join(UPLOAD_DIR, nome)
         
-        # Salva
         content = await file.read()
         with open(caminho, "wb") as f:
             f.write(content)
         
-        # Monta URL pública
-        url = f"/uploads/{nome_arquivo}"
-        
-        return {"sucesso": True, "url": url, "nome": nome_arquivo}
+        return {"sucesso": True, "url": f"/uploads/{nome}"}
     except Exception as e:
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
@@ -760,27 +1050,31 @@ async def upload_imagem(file: UploadFile = File(...)):
 # ============================================
 
 @app.get("/api/templates")
-async def listar_templates():
-    conn = get_db_connection()
-    if not conn:
-        return {"sucesso": False, "templates": []}
+async def listar_templates(request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
+    conn = get_db()
     cur = conn.cursor()
-    try:
-        cur.execute("SELECT * FROM templates ORDER BY nome ASC")
-        rows = cur.fetchall()
-        return {"sucesso": True, "templates": [dict(r) for r in rows]}
-    finally:
-        cur.close()
-        conn.close()
+    cur.execute("SELECT * FROM templates ORDER BY nome ASC")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"sucesso": True, "templates": [dict(r) for r in rows]}
 
 @app.post("/api/templates")
 async def criar_template(request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] not in ['admin', 'marketing']:
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
     try:
         data = await request.json()
         if not data.get("nome") or not data.get("conteudo"):
             return JSONResponse({"sucesso": False, "erro": "Dados incompletos"}, status_code=400)
         
-        conn = get_db_connection()
+        conn = get_db()
         cur = conn.cursor()
         cur.execute("INSERT INTO templates (nome, conteudo, categoria) VALUES (?, ?, ?)",
                     (data["nome"], data["conteudo"], data.get("categoria", "geral")))
@@ -791,128 +1085,133 @@ async def criar_template(request: Request):
     except Exception as e:
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
-@app.delete("/api/templates/{template_id}")
-async def deletar_template(template_id: int):
-    conn = get_db_connection()
+@app.delete("/api/templates/{tid}")
+async def deletar_template(tid: int, request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] not in ['admin', 'marketing']:
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
+    conn = get_db()
     cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM templates WHERE id = ?", (template_id,))
-        conn.commit()
-        return {"sucesso": True}
-    finally:
-        cur.close()
-        conn.close()
+    cur.execute("DELETE FROM templates WHERE id = ?", (tid,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"sucesso": True}
 
 # ============================================
 # CAMPANHAS
 # ============================================
 
 @app.get("/api/campanhas")
-async def listar_campanhas():
-    conn = get_db_connection()
+async def listar_campanhas(request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
+    conn = get_db()
     cur = conn.cursor()
-    try:
-        cur.execute("SELECT * FROM campanhas ORDER BY criado_em DESC")
-        rows = cur.fetchall()
-        return {"sucesso": True, "campanhas": [dict(r) for r in rows]}
-    finally:
-        cur.close()
-        conn.close()
+    cur.execute("SELECT * FROM campanhas ORDER BY criado_em DESC")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"sucesso": True, "campanhas": [dict(r) for r in rows]}
 
 @app.post("/api/campanhas")
 async def criar_campanha(request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] not in ['admin', 'marketing']:
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
     try:
         data = await request.json()
         nome = data.get("nome")
         mensagem = data.get("mensagem")
-        template_id = data.get("template_id")
         contato_ids = data.get("contato_ids", [])
-        imagem_url = data.get("imagem_url")  # NOVO!
+        contatos_csv = data.get("contatos_csv", [])  # NOVO: contatos vindo de CSV
+        imagem_url = data.get("imagem_url")
         
-        if not nome or not mensagem or not contato_ids:
+        if not nome or not mensagem:
             return JSONResponse({"sucesso": False, "erro": "Dados incompletos"}, status_code=400)
         
+        # Junta contatos do banco + CSV
+        total_contatos = len(contato_ids) + len(contatos_csv)
+        if total_contatos == 0:
+            return JSONResponse({"sucesso": False, "erro": "Selecione contatos"}, status_code=400)
+        
+        # Valida anti-ban
         config = obter_config_antiban()
         enviados_hoje = obter_envios_hoje()
-        
         if config and config['ativo']:
             disponivel = config['limite_diario'] - enviados_hoje
-            if disponivel <= 0:
-                return JSONResponse({"sucesso": False, "erro": f"Limite diário atingido"}, status_code=400)
-            if len(contato_ids) > disponivel:
+            if total_contatos > disponivel:
                 return JSONResponse({"sucesso": False, "erro": f"Só pode enviar mais {disponivel} hoje"}, status_code=400)
         
-        conn = get_db_connection()
+        conn = get_db()
         cur = conn.cursor()
         
         cur.execute(
-            "INSERT INTO campanhas (nome, template_id, mensagem, imagem_url, total_contatos, status) VALUES (?, ?, ?, ?, ?, ?)",
-            (nome, template_id, mensagem, imagem_url, len(contato_ids), "pendente")
+            "INSERT INTO campanhas (nome, template_id, mensagem, imagem_url, total_contatos, status, criado_por_id, criado_por_nome) VALUES (?, ?, ?, ?, ?, 'pendente', ?, ?)",
+            (nome, data.get("template_id"), mensagem, imagem_url, total_contatos, user['id'], user['nome'])
         )
         campanha_id = cur.lastrowid
         
+        # Contatos do banco
         for contato_id in contato_ids:
-            cur.execute("SELECT numero FROM contatos WHERE id = ?", (contato_id,))
+            cur.execute("SELECT nome, numero FROM contatos WHERE id = ?", (contato_id,))
             row = cur.fetchone()
             if row:
-                cur.execute(
-                    "INSERT INTO envios (campanha_id, contato_id, numero, status) VALUES (?, ?, ?, ?)",
-                    (campanha_id, contato_id, row[0], "pendente")
-                )
+                cur.execute("INSERT INTO envios (campanha_id, contato_id, numero, nome, status) VALUES (?, ?, ?, ?, 'pendente')",
+                            (campanha_id, contato_id, row[1], row[0]))
+        
+        # Contatos do CSV (sem salvar na lista de contatos)
+        for c in contatos_csv:
+            cur.execute("INSERT INTO envios (campanha_id, contato_id, numero, nome, status) VALUES (?, NULL, ?, ?, 'pendente')",
+                        (campanha_id, c['numero'], c['nome']))
         
         conn.commit()
         cur.close()
         conn.close()
         
         asyncio.create_task(processar_campanha(campanha_id))
+        registrar_log(user['id'], "criar_campanha", f"{nome} ({total_contatos} contatos)")
         
         return {"sucesso": True, "campanha_id": campanha_id}
     except Exception as e:
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
 async def processar_campanha(campanha_id: int):
-    conn = get_db_connection()
+    conn = get_db()
     cur = conn.cursor()
     
     try:
-        cur.execute("UPDATE campanhas SET status = ?, iniciado_em = CURRENT_TIMESTAMP WHERE id = ?", ("enviando", campanha_id))
+        cur.execute("UPDATE campanhas SET status = 'enviando', iniciado_em = CURRENT_TIMESTAMP WHERE id = ?", (campanha_id,))
         conn.commit()
         
         cur.execute("SELECT mensagem, imagem_url FROM campanhas WHERE id = ?", (campanha_id,))
-        campanha = cur.fetchone()
-        if not campanha:
-            return
+        c = cur.fetchone()
+        if not c: return
         
-        mensagem_base = campanha[0]
-        imagem_url = campanha[1]
+        mensagem_base, imagem_url = c[0], c[1]
         config = obter_config_antiban()
         
-        # Se tem imagem, monta URL completa
         imagem_completa = None
         if imagem_url:
-            base_url = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
-            if base_url:
-                imagem_completa = f"https://{base_url}{imagem_url}"
-            else:
-                # Fallback: usa hardcoded
-                imagem_completa = f"https://web-production-69fb05.up.railway.app{imagem_url}"
+            base = os.getenv("RAILWAY_PUBLIC_DOMAIN", "web-production-69fb05.up.railway.app")
+            imagem_completa = f"https://{base}{imagem_url}" if base else None
         
-        cur.execute("""
-            SELECT e.id, e.contato_id, e.numero, c.nome 
-            FROM envios e LEFT JOIN contatos c ON e.contato_id = c.id
-            WHERE e.campanha_id = ? AND e.status = 'pendente'
-        """, (campanha_id,))
-        
+        cur.execute("SELECT id, numero, nome FROM envios WHERE campanha_id = ? AND status = 'pendente'", (campanha_id,))
         envios = cur.fetchall()
+        
         enviadas = 0
         falhadas = 0
         
         for idx, envio in enumerate(envios):
-            envio_id, contato_id, numero, nome = envio
+            envio_id, numero, nome = envio
             
-            pode_enviar, motivo = verificar_pode_enviar()
-            if not pode_enviar:
-                cur.execute("UPDATE envios SET status = ?, resposta = ? WHERE id = ?", ("pausado", motivo, envio_id))
+            ok, motivo = pode_enviar()
+            if not ok:
+                cur.execute("UPDATE envios SET status = 'pausado', resposta = ? WHERE id = ?", (motivo, envio_id))
                 conn.commit()
                 continue
             
@@ -921,18 +1220,18 @@ async def processar_campanha(campanha_id: int):
             
             mensagem_final = mensagem_base.replace("{nome}", nome or "").replace("{numero}", numero or "")
             
-            # Envia imagem com legenda ou só texto
+            # Usa Z-API de DISPAROS!
             if imagem_completa:
-                resultado = enviar_imagem_zapi(numero, imagem_completa, mensagem_final)
+                resultado = enviar_imagem_zapi(numero, imagem_completa, mensagem_final, "disparos")
             else:
-                resultado = enviar_mensagem_zapi(numero, mensagem_final)
+                resultado = enviar_mensagem_zapi(numero, mensagem_final, "disparos")
             
             if resultado.get("sucesso"):
-                cur.execute("UPDATE envios SET status = ?, enviado_em = CURRENT_TIMESTAMP WHERE id = ?", ("enviado", envio_id))
+                cur.execute("UPDATE envios SET status = 'enviado', enviado_em = CURRENT_TIMESTAMP WHERE id = ?", (envio_id,))
                 enviadas += 1
                 incrementar_envio_diario()
             else:
-                cur.execute("UPDATE envios SET status = ?, resposta = ? WHERE id = ?", ("falhou", json.dumps(resultado), envio_id))
+                cur.execute("UPDATE envios SET status = 'falhou', resposta = ? WHERE id = ?", (json.dumps(resultado), envio_id))
                 falhadas += 1
             
             cur.execute("UPDATE campanhas SET enviadas = ?, falhadas = ? WHERE id = ?", (enviadas, falhadas, campanha_id))
@@ -941,72 +1240,51 @@ async def processar_campanha(campanha_id: int):
             delay = random.uniform(config['delay_min'], config['delay_max']) if config else 4
             await asyncio.sleep(delay)
         
-        cur.execute("UPDATE campanhas SET status = ?, finalizado_em = CURRENT_TIMESTAMP WHERE id = ?", ("finalizada", campanha_id))
+        cur.execute("UPDATE campanhas SET status = 'finalizada', finalizado_em = CURRENT_TIMESTAMP WHERE id = ?", (campanha_id,))
         conn.commit()
-        
     except Exception as e:
         logger.error(f"Erro campanha: {e}")
-        cur.execute("UPDATE campanhas SET status = ? WHERE id = ?", ("erro", campanha_id))
+        cur.execute("UPDATE campanhas SET status = 'erro' WHERE id = ?", (campanha_id,))
         conn.commit()
-    finally:
-        cur.close()
-        conn.close()
-
-@app.get("/api/campanhas/{campanha_id}/envios")
-async def envios_campanha(campanha_id: int):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT e.*, c.nome as contato_nome 
-            FROM envios e LEFT JOIN contatos c ON e.contato_id = c.id
-            WHERE e.campanha_id = ? ORDER BY e.id ASC
-        """, (campanha_id,))
-        rows = cur.fetchall()
-        return {"sucesso": True, "envios": [dict(r) for r in rows]}
     finally:
         cur.close()
         conn.close()
 
 # ============================================
-# ANTI-BAN CONFIG
+# ANTI-BAN
 # ============================================
 
 @app.get("/api/antiban/config")
-async def get_config_antiban():
+async def get_antiban(request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
     config = obter_config_antiban()
-    enviados_hoje = obter_envios_hoje()
+    enviados = obter_envios_hoje()
     return {
         "sucesso": True,
         "config": config,
-        "envios_hoje": enviados_hoje,
-        "disponivel_hoje": (config['limite_diario'] - enviados_hoje) if config else 0
+        "envios_hoje": enviados,
+        "disponivel_hoje": (config['limite_diario'] - enviados) if config else 0
     }
 
 @app.post("/api/antiban/config")
-async def salvar_config_antiban(request: Request):
+async def salvar_antiban(request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] != 'admin':
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
     try:
-        data = await request.json()
-        conn = get_db_connection()
+        d = await request.json()
+        conn = get_db()
         cur = conn.cursor()
-        cur.execute("""
-            UPDATE config_antiban SET
-                limite_diario = ?, limite_por_hora = ?,
-                delay_min = ?, delay_max = ?,
-                pausa_a_cada = ?, pausa_segundos = ?,
-                horario_inicio = ?, horario_fim = ?, ativo = ?
-            WHERE id = 1
-        """, (
-            data.get("limite_diario", 100),
-            data.get("limite_por_hora", 30),
-            data.get("delay_min", 3),
-            data.get("delay_max", 7),
-            data.get("pausa_a_cada", 30),
-            data.get("pausa_segundos", 60),
-            data.get("horario_inicio", "08:00"),
-            data.get("horario_fim", "20:00"),
-            1 if data.get("ativo", True) else 0
-        ))
+        cur.execute("""UPDATE config_antiban SET 
+            limite_diario=?, limite_por_hora=?, delay_min=?, delay_max=?,
+            pausa_a_cada=?, pausa_segundos=?, horario_inicio=?, horario_fim=?, ativo=? WHERE id=1""",
+            (d.get("limite_diario",100), d.get("limite_por_hora",30), d.get("delay_min",3), d.get("delay_max",7),
+             d.get("pausa_a_cada",30), d.get("pausa_segundos",60), d.get("horario_inicio","08:00"),
+             d.get("horario_fim","20:00"), 1 if d.get("ativo",True) else 0))
         conn.commit()
         cur.close()
         conn.close()
@@ -1019,52 +1297,63 @@ async def salvar_config_antiban(request: Request):
 # ============================================
 
 @app.get("/api/relatorios")
-async def relatorios():
-    conn = get_db_connection()
-    if not conn:
-        return {"sucesso": False, "relatorios": {}}
+async def relatorios(request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    
+    conn = get_db()
     cur = conn.cursor()
-    try:
-        cur.execute("SELECT COUNT(*) FROM conversas")
-        total = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM conversas WHERE status = 'aberto'")
-        abertos = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM conversas WHERE status = 'fechado'")
-        fechados = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM contatos")
-        contatos = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM campanhas")
-        campanhas = cur.fetchone()[0]
-        cur.execute("SELECT SUM(enviadas) FROM campanhas")
-        enviadas = cur.fetchone()[0] or 0
-        
-        cur.execute("SELECT AVG((julianday(fechado_em) - julianday(criado_em)) * 24 * 60) FROM conversas WHERE status = 'fechado'")
-        tempo = cur.fetchone()
-        tempo_medio = int(tempo[0] or 0) if tempo[0] else 0
-        
-        return {
-            "sucesso": True,
-            "relatorios": {
-                "totalConversas": total, "abertos": abertos, "fechados": fechados,
-                "tempoMedioMinutos": tempo_medio, "totalContatos": contatos,
-                "totalCampanhas": campanhas, "totalEnviadas": enviadas,
-                "enviadosHoje": obter_envios_hoje()
-            }
+    
+    cur.execute("SELECT COUNT(*) FROM conversas")
+    total_conv = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM conversas WHERE status='aberto'")
+    abertos = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM conversas WHERE status='fechado'")
+    fechados = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM contatos")
+    contatos = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM campanhas")
+    camps = cur.fetchone()[0]
+    cur.execute("SELECT SUM(enviadas) FROM campanhas")
+    enviadas = cur.fetchone()[0] or 0
+    
+    cur.execute("SELECT AVG((julianday(fechado_em) - julianday(criado_em))*24*60) FROM conversas WHERE status='fechado'")
+    tempo = cur.fetchone()[0]
+    tempo_medio = int(tempo) if tempo else 0
+    
+    # Top atendentes
+    cur.execute("""
+        SELECT fechado_por_nome, COUNT(*) as total
+        FROM conversas WHERE status='fechado' AND fechado_por_nome IS NOT NULL
+        GROUP BY fechado_por_nome ORDER BY total DESC LIMIT 5
+    """)
+    top_atendentes = [dict(r) for r in cur.fetchall()]
+    
+    cur.close()
+    conn.close()
+    
+    return {
+        "sucesso": True,
+        "relatorios": {
+            "totalConversas": total_conv, "abertos": abertos, "fechados": fechados,
+            "tempoMedioMinutos": tempo_medio, "totalContatos": contatos,
+            "totalCampanhas": camps, "totalEnviadas": enviadas,
+            "enviadosHoje": obter_envios_hoje(),
+            "topAtendentes": top_atendentes
         }
-    finally:
-        cur.close()
-        conn.close()
+    }
 
 @app.get("/api/zapi/status")
-async def api_status_zapi():
-    return status_zapi()
+async def zapi_status(request: Request):
+    return {"atendimento": status_zapi("atendimento"), "disparos": status_zapi("disparos")}
 
 if __name__ == "__main__":
     print("\n" + "="*60)
-    print("EVA Hotel Backend v4.0 - Iniciando")
+    print("EVA Hotel Backend v5.0 - Sistema Completo")
     print("="*60)
     init_db()
     print(f"URL: http://localhost:{PORT}")
-    print(f"Painel: http://localhost:{PORT}/painel")
+    print(f"Login padrão: admin@easy.com / admin123")
     print("="*60 + "\n")
     uvicorn.run(app, host="0.0.0.0", port=PORT)
