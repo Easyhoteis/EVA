@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Request, UploadFile, File
+from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
+import base64
 from datetime import datetime, date
 from dotenv import load_dotenv
 import logging
@@ -29,7 +31,11 @@ ZAPI_URL = f"https://api.z-api.io/instances/{ZAPI_INSTANCE}/token/{ZAPI_TOKEN}"
 CLAUDE_KEY = os.getenv("ANTHROPIC_API_KEY")
 PORT = int(os.getenv("PORT", 3000))
 
-app = FastAPI(title="EVA Hotel Backend", version="3.0.0")
+# Pasta pra salvar imagens
+UPLOAD_DIR = "/tmp/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+app = FastAPI(title="EVA Hotel Backend", version="4.0.0")
 claude_client = Anthropic(api_key=CLAUDE_KEY)
 
 app.add_middleware(
@@ -40,9 +46,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ============================================
-# BANCO DE DADOS
-# ============================================
+# Servir uploads
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 DB_PATH = "/tmp/eva.db"
 
@@ -115,6 +120,7 @@ def init_db():
                 nome TEXT NOT NULL,
                 template_id INTEGER,
                 mensagem TEXT NOT NULL,
+                imagem_url TEXT,
                 total_contatos INTEGER DEFAULT 0,
                 enviadas INTEGER DEFAULT 0,
                 falhadas INTEGER DEFAULT 0,
@@ -139,7 +145,6 @@ def init_db():
             );
         """)
         
-        # NOVO: Tabela de configurações anti-ban
         cur.execute("""
             CREATE TABLE IF NOT EXISTS config_antiban (
                 id INTEGER PRIMARY KEY DEFAULT 1,
@@ -155,7 +160,6 @@ def init_db():
             );
         """)
         
-        # NOVO: Tabela de logs de envio diário
         cur.execute("""
             CREATE TABLE IF NOT EXISTS envios_diarios (
                 data TEXT PRIMARY KEY,
@@ -165,40 +169,160 @@ def init_db():
         
         conn.commit()
         
-        # Inicializa config padrão se não existir
         cur.execute("SELECT COUNT(*) FROM config_antiban")
         if cur.fetchone()[0] == 0:
             cur.execute("""
-                INSERT INTO config_antiban (id, limite_diario, limite_por_hora, delay_min, delay_max, pausa_a_cada, pausa_segundos, horario_inicio, horario_fim, ativo)
-                VALUES (1, 100, 30, 3, 7, 30, 60, '08:00', '20:00', 1)
+                INSERT INTO config_antiban VALUES (1, 100, 30, 3, 7, 30, 60, '08:00', '20:00', 1)
             """)
             conn.commit()
         
-        # Templates padrão
+        # Templates da Easy 10 anos
         cur.execute("SELECT COUNT(*) FROM templates")
         if cur.fetchone()[0] == 0:
-            templates_exemplo = [
-                ("Confirmação de Reserva", "Olá {nome}! Sua reserva foi confirmada. Aguardamos sua chegada!", "reserva"),
-                ("Lembrete Check-in", "Olá {nome}! Lembrando que seu check-in é amanhã. Estamos te esperando!", "lembrete"),
-                ("Promoção", "Olá {nome}! Temos uma promoção especial para você. Aproveite!", "promocao"),
-                ("Pós-Estadia", "Olá {nome}! Esperamos que tenha gostado da sua estadia. Avalie sua experiência!", "feedback"),
+            templates_easy = [
+                (
+                    "Regional - Easy 10 Anos",
+                    """Olá {nome}! 🏨
+
+Confira os destaques da semana em [REGIÃO]:
+
+🌟 [Hotel 1] - [diferencial]
+🌟 [Hotel 2] - [diferencial]
+🌟 [Hotel 3] - [diferencial]
+
+🎉 Comemorando 10 anos da Easy, use o cupom EASY10 e ganhe 10% OFF!
+
+Reserve já: [link]
+
+---
+Não quer mais receber? Responda SAIR""",
+                    "regional"
+                ),
+                (
+                    "Lançamento - Hotéis Parceiros",
+                    """Olá {nome}! ✨
+
+NOVOS PARCEIROS chegaram à Easy!
+
+Este mês, novidades especiais:
+🆕 [Hotel 1] - [diferencial]
+🆕 [Hotel 2] - [diferencial]
+🆕 [Hotel 3] - [diferencial]
+
+🎊 10 anos Easy: cupom EASY10 = 10% OFF
+Em todos os novos parceiros!
+
+Conheça: [link]
+
+---
+Não quer mais receber? Responda SAIR""",
+                    "lancamento"
+                ),
+                (
+                    "Promo - Ofertas Exclusivas",
+                    """Olá {nome}! 🔥
+
+OFERTAS IMPERDÍVEIS da semana:
+
+💰 [Hotel 1] - de R$X por R$Y
+💰 [Hotel 2] - de R$X por R$Y
+💰 [Hotel 3] - de R$X por R$Y
+
+✨ Use EASY10 e ganhe MAIS 10% OFF
+🎉 Em comemoração aos 10 anos da Easy
+
+Aproveite: [link]
+
+---
+Não quer mais receber? Responda SAIR""",
+                    "promocao"
+                ),
+                (
+                    "Aniversário 10 Anos - Easy",
+                    """Olá {nome}! 🎉
+
+A EASY ESTÁ DE PARABÉNS! 🎂
+
+Há 10 anos transformando viagens em experiências inesquecíveis!
+
+🎁 PRESENTE PRA VOCÊ:
+Cupom EASY10 com 10% OFF
+Válido em TODOS os hotéis parceiros!
+
+Use agora: [link]
+
+Obrigado por fazer parte dessa história! ❤️
+
+---
+Não quer mais receber? Responda SAIR""",
+                    "aniversario"
+                ),
+                (
+                    "Confirmação de Reserva",
+                    """Olá {nome}! 
+
+Sua reserva foi confirmada com sucesso! ✅
+
+Detalhes:
+🏨 Hotel: [nome]
+📅 Check-in: [data]
+📅 Check-out: [data]
+🛏️ Acomodação: [tipo]
+
+Aguardamos sua chegada!
+
+Qualquer dúvida, estamos à disposição.""",
+                    "reserva"
+                ),
+                (
+                    "Lembrete Check-in",
+                    """Olá {nome}! 🏨
+
+Lembrando que seu check-in é AMANHÃ!
+
+📍 [Endereço do hotel]
+🕒 Horário: a partir das 14h
+
+Tenha uma ótima estadia! 
+
+A Easy está com você nessa jornada! 💙""",
+                    "lembrete"
+                ),
+                (
+                    "Pós-Estadia - Feedback",
+                    """Olá {nome}! 
+
+Esperamos que tenha tido uma ótima estadia! 
+
+Sua opinião é muito importante pra gente. 
+Como foi sua experiência?
+
+⭐⭐⭐⭐⭐ Excelente
+⭐⭐⭐⭐ Muito bom
+⭐⭐⭐ Bom
+⭐⭐ Regular
+⭐ Ruim
+
+Conte pra gente! 💙""",
+                    "feedback"
+                ),
             ]
             cur.executemany(
                 "INSERT INTO templates (nome, conteudo, categoria) VALUES (?, ?, ?)",
-                templates_exemplo
+                templates_easy
             )
             conn.commit()
         
-        logger.info("BD inicializado com sucesso")
+        logger.info("BD inicializado")
             
     except Exception as e:
-        logger.error(f"Erro ao criar tabelas: {e}")
+        logger.error(f"Erro: {e}")
     finally:
         cur.close()
         conn.close()
 
 # ============================================
-# FUNÇÕES ANTI-BAN
+# ANTI-BAN
 # ============================================
 
 def obter_config_antiban():
@@ -245,32 +369,49 @@ def incrementar_envio_diario():
         conn.close()
 
 def verificar_pode_enviar():
-    # Verifica se pode enviar baseado nas configs anti-ban
     config = obter_config_antiban()
     if not config or not config['ativo']:
-        return True, "Sistema anti-ban desativado"
+        return True, "OK"
     
-    # Verifica horário
     agora = datetime.now()
     horario_atual = agora.strftime("%H:%M")
     if horario_atual < config['horario_inicio'] or horario_atual > config['horario_fim']:
-        return False, f"Fora do horário permitido ({config['horario_inicio']} - {config['horario_fim']})"
+        return False, f"Fora do horário"
     
-    # Verifica limite diário
     enviados_hoje = obter_envios_hoje()
     if enviados_hoje >= config['limite_diario']:
-        return False, f"Limite diário atingido ({enviados_hoje}/{config['limite_diario']})"
+        return False, f"Limite diário atingido"
     
     return True, "OK"
 
 # ============================================
-# FUNÇÕES Z-API
+# Z-API
 # ============================================
 
 def enviar_mensagem_zapi(numero: str, mensagem: str) -> dict:
     numero_limpo = numero.replace("+", "").replace(" ", "").replace("-", "")
     
-    url = f"{ZAPI_URL}/send-text"
+    headers = {
+        "Content-Type": "application/json",
+        "Client-Token": ZAPI_CLIENT_TOKEN
+    }
+    
+    try:
+        response = requests.post(
+            f"{ZAPI_URL}/send-text",
+            json={"phone": numero_limpo, "message": mensagem},
+            headers=headers,
+            timeout=30
+        )
+        if response.status_code == 200:
+            return {"sucesso": True, "data": response.json()}
+        return {"sucesso": False, "erro": response.text}
+    except Exception as e:
+        return {"sucesso": False, "erro": str(e)}
+
+def enviar_imagem_zapi(numero: str, imagem_url: str, legenda: str = "") -> dict:
+    # Envia imagem via Z-API
+    numero_limpo = numero.replace("+", "").replace(" ", "").replace("-", "")
     
     headers = {
         "Content-Type": "application/json",
@@ -279,24 +420,29 @@ def enviar_mensagem_zapi(numero: str, mensagem: str) -> dict:
     
     payload = {
         "phone": numero_limpo,
-        "message": mensagem
+        "image": imagem_url
     }
     
+    if legenda:
+        payload["caption"] = legenda
+    
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response = requests.post(
+            f"{ZAPI_URL}/send-image",
+            json=payload,
+            headers=headers,
+            timeout=60
+        )
         if response.status_code == 200:
             return {"sucesso": True, "data": response.json()}
-        else:
-            return {"sucesso": False, "erro": response.text}
+        return {"sucesso": False, "erro": response.text}
     except Exception as e:
         return {"sucesso": False, "erro": str(e)}
 
 def status_zapi() -> dict:
-    url = f"{ZAPI_URL}/status"
     headers = {"Client-Token": ZAPI_CLIENT_TOKEN}
-    
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(f"{ZAPI_URL}/status", headers=headers, timeout=10)
         if response.status_code == 200:
             return {"conectado": True, "data": response.json()}
         return {"conectado": False}
@@ -304,7 +450,7 @@ def status_zapi() -> dict:
         return {"conectado": False, "erro": str(e)}
 
 # ============================================
-# FUNÇÕES CLAUDE
+# CLAUDE
 # ============================================
 
 def obter_resposta_ia(mensagem_cliente: str, contexto_hotel: str = "Hotel"):
@@ -325,11 +471,10 @@ Responda:"""
         )
         return response.content[0].text
     except Exception as e:
-        logger.error(f"Erro na IA: {e}")
         return "Desculpe, tive um problema. Vou chamar um atendente."
 
 # ============================================
-# FUNÇÕES BANCO
+# BANCO
 # ============================================
 
 def buscar_conversa_aberta(numero_cliente: str):
@@ -338,10 +483,7 @@ def buscar_conversa_aberta(numero_cliente: str):
         return None
     cur = conn.cursor()
     try:
-        cur.execute(
-            "SELECT id FROM conversas WHERE numero_cliente = ? AND status = ? LIMIT 1",
-            (numero_cliente, "aberto")
-        )
+        cur.execute("SELECT id FROM conversas WHERE numero_cliente = ? AND status = ? LIMIT 1", (numero_cliente, "aberto"))
         row = cur.fetchone()
         return row[0] if row else None
     finally:
@@ -354,10 +496,7 @@ def salvar_conversa(numero_cliente: str, nome_cliente: str = None):
         return None
     cur = conn.cursor()
     try:
-        cur.execute(
-            "INSERT INTO conversas (numero_cliente, nome_cliente, status) VALUES (?, ?, ?)",
-            (numero_cliente, nome_cliente, "aberto")
-        )
+        cur.execute("INSERT INTO conversas (numero_cliente, nome_cliente, status) VALUES (?, ?, ?)", (numero_cliente, nome_cliente, "aberto"))
         conn.commit()
         return cur.lastrowid
     finally:
@@ -370,36 +509,28 @@ def salvar_mensagem(conversa_id: int, remetente: str, conteudo: str):
         return
     cur = conn.cursor()
     try:
-        cur.execute(
-            "INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (?, ?, ?)",
-            (conversa_id, remetente, conteudo)
-        )
+        cur.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (?, ?, ?)", (conversa_id, remetente, conteudo))
         conn.commit()
     finally:
         cur.close()
         conn.close()
 
 # ============================================
-# ROTAS PRINCIPAIS
+# ROTAS
 # ============================================
 
 @app.get("/")
 async def root():
-    return {"mensagem": "EVA Hotel Backend", "status": "OK", "versao": "3.0.0"}
+    return {"mensagem": "EVA Hotel Backend", "status": "OK", "versao": "4.0.0"}
 
 @app.get("/painel")
 async def painel():
     return FileResponse("painel.html", media_type="text/html")
 
-# ============================================
-# WEBHOOK Z-API
-# ============================================
-
 @app.post("/webhook/zapi")
 async def webhook_zapi(request: Request):
     try:
         data = await request.json()
-        
         if data.get("fromMe"):
             return JSONResponse({"success": True})
         
@@ -424,11 +555,10 @@ async def webhook_zapi(request: Request):
         
         return JSONResponse({"success": True})
     except Exception as e:
-        logger.error(f"Erro webhook: {e}")
         return JSONResponse({"success": False, "erro": str(e)}, status_code=500)
 
 # ============================================
-# API CONVERSAS
+# CONVERSAS
 # ============================================
 
 @app.get("/api/conversas/abertas")
@@ -445,8 +575,7 @@ async def conversas_abertas():
             FROM conversas c WHERE c.status = 'aberto' ORDER BY c.criado_em DESC
         """)
         rows = cur.fetchall()
-        conversas = [dict(row) for row in rows]
-        return {"sucesso": True, "conversas": conversas, "total": len(conversas)}
+        return {"sucesso": True, "conversas": [dict(r) for r in rows], "total": len(rows)}
     finally:
         cur.close()
         conn.close()
@@ -464,8 +593,7 @@ async def conversas_fechadas():
             FROM conversas c WHERE c.status = 'fechado' ORDER BY c.fechado_em DESC
         """)
         rows = cur.fetchall()
-        conversas = [dict(row) for row in rows]
-        return {"sucesso": True, "conversas": conversas, "total": len(conversas)}
+        return {"sucesso": True, "conversas": [dict(r) for r in rows], "total": len(rows)}
     finally:
         cur.close()
         conn.close()
@@ -479,8 +607,7 @@ async def mensagens_conversa(conversa_id: int):
     try:
         cur.execute("SELECT * FROM mensagens WHERE conversa_id = ? ORDER BY criado_em ASC", (conversa_id,))
         rows = cur.fetchall()
-        mensagens = [dict(row) for row in rows]
-        return {"sucesso": True, "mensagens": mensagens}
+        return {"sucesso": True, "mensagens": [dict(r) for r in rows]}
     finally:
         cur.close()
         conn.close()
@@ -489,32 +616,29 @@ async def mensagens_conversa(conversa_id: int):
 async def fechar_atendimento(conversa_id: int, request: Request):
     try:
         data = await request.json()
-        observacoes = data.get("observacoes", "")
-        usuario_id = data.get("usuario_id")
-        
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT numero_cliente FROM conversas WHERE id = ?", (conversa_id,))
         row = cur.fetchone()
-        numero_cliente = row[0] if row else None
+        numero = row[0] if row else None
         
         cur.execute(
             "UPDATE conversas SET status = ?, fechado_em = CURRENT_TIMESTAMP, usuario_id = ?, observacoes = ? WHERE id = ?",
-            ("fechado", usuario_id, observacoes, conversa_id)
+            ("fechado", data.get("usuario_id"), data.get("observacoes", ""), conversa_id)
         )
         conn.commit()
         
-        if numero_cliente:
-            enviar_mensagem_zapi(numero_cliente, "Obrigado por entrar em contato! Atendimento encerrado. 😊")
+        if numero:
+            enviar_mensagem_zapi(numero, "Obrigado por entrar em contato! Atendimento encerrado. 😊")
         
         cur.close()
         conn.close()
-        return JSONResponse({"sucesso": True})
+        return {"sucesso": True}
     except Exception as e:
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
 # ============================================
-# API CONTATOS
+# CONTATOS
 # ============================================
 
 @app.get("/api/contatos")
@@ -526,8 +650,7 @@ async def listar_contatos():
     try:
         cur.execute("SELECT * FROM contatos ORDER BY nome ASC")
         rows = cur.fetchall()
-        contatos = [dict(row) for row in rows]
-        return {"sucesso": True, "contatos": contatos, "total": len(contatos)}
+        return {"sucesso": True, "contatos": [dict(r) for r in rows], "total": len(rows)}
     finally:
         cur.close()
         conn.close()
@@ -536,13 +659,7 @@ async def listar_contatos():
 async def criar_contato(request: Request):
     try:
         data = await request.json()
-        nome = data.get("nome")
-        numero = data.get("numero")
-        email = data.get("email", "")
-        tags = data.get("tags", "")
-        observacoes = data.get("observacoes", "")
-        
-        if not nome or not numero:
+        if not data.get("nome") or not data.get("numero"):
             return JSONResponse({"sucesso": False, "erro": "Nome e número obrigatórios"}, status_code=400)
         
         conn = get_db_connection()
@@ -550,7 +667,7 @@ async def criar_contato(request: Request):
         try:
             cur.execute(
                 "INSERT INTO contatos (nome, numero, email, tags, observacoes) VALUES (?, ?, ?, ?, ?)",
-                (nome, numero, email, tags, observacoes)
+                (data["nome"], data["numero"], data.get("email", ""), data.get("tags", ""), data.get("observacoes", ""))
             )
             conn.commit()
             return {"sucesso": True, "id": cur.lastrowid}
@@ -593,10 +710,7 @@ async def importar_contatos_csv(file: UploadFile = File(...)):
                 email = row.get('email') or row.get('Email') or ""
                 
                 if nome and numero:
-                    cur.execute(
-                        "INSERT OR IGNORE INTO contatos (nome, numero, email) VALUES (?, ?, ?)",
-                        (nome, numero, email)
-                    )
+                    cur.execute("INSERT OR IGNORE INTO contatos (nome, numero, email) VALUES (?, ?, ?)", (nome, numero, email))
                     if cur.rowcount > 0:
                         importados += 1
                     else:
@@ -607,13 +721,42 @@ async def importar_contatos_csv(file: UploadFile = File(...)):
         conn.commit()
         cur.close()
         conn.close()
-        
         return {"sucesso": True, "importados": importados, "erros": erros}
     except Exception as e:
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
 # ============================================
-# API TEMPLATES
+# UPLOAD DE IMAGEM
+# ============================================
+
+@app.post("/api/upload/imagem")
+async def upload_imagem(file: UploadFile = File(...)):
+    # Faz upload de imagem pra usar em campanhas
+    try:
+        # Valida extensão
+        ext = file.filename.split(".")[-1].lower()
+        if ext not in ["jpg", "jpeg", "png", "webp"]:
+            return JSONResponse({"sucesso": False, "erro": "Formato inválido. Use JPG, PNG ou WEBP"}, status_code=400)
+        
+        # Gera nome único
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        nome_arquivo = f"campanha_{timestamp}.{ext}"
+        caminho = os.path.join(UPLOAD_DIR, nome_arquivo)
+        
+        # Salva
+        content = await file.read()
+        with open(caminho, "wb") as f:
+            f.write(content)
+        
+        # Monta URL pública
+        url = f"/uploads/{nome_arquivo}"
+        
+        return {"sucesso": True, "url": url, "nome": nome_arquivo}
+    except Exception as e:
+        return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
+
+# ============================================
+# TEMPLATES
 # ============================================
 
 @app.get("/api/templates")
@@ -625,8 +768,7 @@ async def listar_templates():
     try:
         cur.execute("SELECT * FROM templates ORDER BY nome ASC")
         rows = cur.fetchall()
-        templates = [dict(row) for row in rows]
-        return {"sucesso": True, "templates": templates}
+        return {"sucesso": True, "templates": [dict(r) for r in rows]}
     finally:
         cur.close()
         conn.close()
@@ -635,19 +777,13 @@ async def listar_templates():
 async def criar_template(request: Request):
     try:
         data = await request.json()
-        nome = data.get("nome")
-        conteudo = data.get("conteudo")
-        categoria = data.get("categoria", "geral")
-        
-        if not nome or not conteudo:
+        if not data.get("nome") or not data.get("conteudo"):
             return JSONResponse({"sucesso": False, "erro": "Dados incompletos"}, status_code=400)
         
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO templates (nome, conteudo, categoria) VALUES (?, ?, ?)",
-            (nome, conteudo, categoria)
-        )
+        cur.execute("INSERT INTO templates (nome, conteudo, categoria) VALUES (?, ?, ?)",
+                    (data["nome"], data["conteudo"], data.get("categoria", "geral")))
         conn.commit()
         cur.close()
         conn.close()
@@ -668,7 +804,7 @@ async def deletar_template(template_id: int):
         conn.close()
 
 # ============================================
-# API CAMPANHAS
+# CAMPANHAS
 # ============================================
 
 @app.get("/api/campanhas")
@@ -678,8 +814,7 @@ async def listar_campanhas():
     try:
         cur.execute("SELECT * FROM campanhas ORDER BY criado_em DESC")
         rows = cur.fetchall()
-        campanhas = [dict(row) for row in rows]
-        return {"sucesso": True, "campanhas": campanhas}
+        return {"sucesso": True, "campanhas": [dict(r) for r in rows]}
     finally:
         cur.close()
         conn.close()
@@ -692,34 +827,27 @@ async def criar_campanha(request: Request):
         mensagem = data.get("mensagem")
         template_id = data.get("template_id")
         contato_ids = data.get("contato_ids", [])
+        imagem_url = data.get("imagem_url")  # NOVO!
         
         if not nome or not mensagem or not contato_ids:
             return JSONResponse({"sucesso": False, "erro": "Dados incompletos"}, status_code=400)
         
-        # Verifica configs anti-ban
         config = obter_config_antiban()
         enviados_hoje = obter_envios_hoje()
         
         if config and config['ativo']:
             disponivel = config['limite_diario'] - enviados_hoje
             if disponivel <= 0:
-                return JSONResponse({
-                    "sucesso": False, 
-                    "erro": f"Limite diário atingido ({enviados_hoje}/{config['limite_diario']})"
-                }, status_code=400)
-            
+                return JSONResponse({"sucesso": False, "erro": f"Limite diário atingido"}, status_code=400)
             if len(contato_ids) > disponivel:
-                return JSONResponse({
-                    "sucesso": False,
-                    "erro": f"Você pode enviar apenas mais {disponivel} mensagens hoje. Selecione menos contatos ou aumente o limite."
-                }, status_code=400)
+                return JSONResponse({"sucesso": False, "erro": f"Só pode enviar mais {disponivel} hoje"}, status_code=400)
         
         conn = get_db_connection()
         cur = conn.cursor()
         
         cur.execute(
-            "INSERT INTO campanhas (nome, template_id, mensagem, total_contatos, status) VALUES (?, ?, ?, ?, ?)",
-            (nome, template_id, mensagem, len(contato_ids), "pendente")
+            "INSERT INTO campanhas (nome, template_id, mensagem, imagem_url, total_contatos, status) VALUES (?, ?, ?, ?, ?, ?)",
+            (nome, template_id, mensagem, imagem_url, len(contato_ids), "pendente")
         )
         campanha_id = cur.lastrowid
         
@@ -743,29 +871,35 @@ async def criar_campanha(request: Request):
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
 async def processar_campanha(campanha_id: int):
-    # Processa envios com proteção anti-ban completa
     conn = get_db_connection()
     cur = conn.cursor()
     
     try:
-        cur.execute(
-            "UPDATE campanhas SET status = ?, iniciado_em = CURRENT_TIMESTAMP WHERE id = ?",
-            ("enviando", campanha_id)
-        )
+        cur.execute("UPDATE campanhas SET status = ?, iniciado_em = CURRENT_TIMESTAMP WHERE id = ?", ("enviando", campanha_id))
         conn.commit()
         
-        cur.execute("SELECT mensagem FROM campanhas WHERE id = ?", (campanha_id,))
+        cur.execute("SELECT mensagem, imagem_url FROM campanhas WHERE id = ?", (campanha_id,))
         campanha = cur.fetchone()
         if not campanha:
             return
         
         mensagem_base = campanha[0]
+        imagem_url = campanha[1]
         config = obter_config_antiban()
+        
+        # Se tem imagem, monta URL completa
+        imagem_completa = None
+        if imagem_url:
+            base_url = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+            if base_url:
+                imagem_completa = f"https://{base_url}{imagem_url}"
+            else:
+                # Fallback: usa hardcoded
+                imagem_completa = f"https://web-production-69fb05.up.railway.app{imagem_url}"
         
         cur.execute("""
             SELECT e.id, e.contato_id, e.numero, c.nome 
-            FROM envios e
-            LEFT JOIN contatos c ON e.contato_id = c.id
+            FROM envios e LEFT JOIN contatos c ON e.contato_id = c.id
             WHERE e.campanha_id = ? AND e.status = 'pendente'
         """, (campanha_id,))
         
@@ -776,60 +910,42 @@ async def processar_campanha(campanha_id: int):
         for idx, envio in enumerate(envios):
             envio_id, contato_id, numero, nome = envio
             
-            # Verifica se pode enviar (anti-ban)
             pode_enviar, motivo = verificar_pode_enviar()
             if not pode_enviar:
-                logger.warning(f"Pausando campanha: {motivo}")
-                cur.execute(
-                    "UPDATE envios SET status = ?, resposta = ? WHERE id = ?",
-                    ("pausado", motivo, envio_id)
-                )
+                cur.execute("UPDATE envios SET status = ?, resposta = ? WHERE id = ?", ("pausado", motivo, envio_id))
                 conn.commit()
                 continue
             
-            # Pausa estratégica a cada X envios
             if config and idx > 0 and idx % config['pausa_a_cada'] == 0:
-                logger.info(f"Pausa estratégica: {config['pausa_segundos']}s")
                 await asyncio.sleep(config['pausa_segundos'])
             
             mensagem_final = mensagem_base.replace("{nome}", nome or "").replace("{numero}", numero or "")
-            resultado = enviar_mensagem_zapi(numero, mensagem_final)
+            
+            # Envia imagem com legenda ou só texto
+            if imagem_completa:
+                resultado = enviar_imagem_zapi(numero, imagem_completa, mensagem_final)
+            else:
+                resultado = enviar_mensagem_zapi(numero, mensagem_final)
             
             if resultado.get("sucesso"):
-                cur.execute(
-                    "UPDATE envios SET status = ?, enviado_em = CURRENT_TIMESTAMP WHERE id = ?",
-                    ("enviado", envio_id)
-                )
+                cur.execute("UPDATE envios SET status = ?, enviado_em = CURRENT_TIMESTAMP WHERE id = ?", ("enviado", envio_id))
                 enviadas += 1
                 incrementar_envio_diario()
             else:
-                cur.execute(
-                    "UPDATE envios SET status = ?, resposta = ? WHERE id = ?",
-                    ("falhou", json.dumps(resultado), envio_id)
-                )
+                cur.execute("UPDATE envios SET status = ?, resposta = ? WHERE id = ?", ("falhou", json.dumps(resultado), envio_id))
                 falhadas += 1
             
-            cur.execute(
-                "UPDATE campanhas SET enviadas = ?, falhadas = ? WHERE id = ?",
-                (enviadas, falhadas, campanha_id)
-            )
+            cur.execute("UPDATE campanhas SET enviadas = ?, falhadas = ? WHERE id = ?", (enviadas, falhadas, campanha_id))
             conn.commit()
             
-            # Delay aleatório entre envios
-            if config:
-                delay = random.uniform(config['delay_min'], config['delay_max'])
-            else:
-                delay = 4
+            delay = random.uniform(config['delay_min'], config['delay_max']) if config else 4
             await asyncio.sleep(delay)
         
-        cur.execute(
-            "UPDATE campanhas SET status = ?, finalizado_em = CURRENT_TIMESTAMP WHERE id = ?",
-            ("finalizada", campanha_id)
-        )
+        cur.execute("UPDATE campanhas SET status = ?, finalizado_em = CURRENT_TIMESTAMP WHERE id = ?", ("finalizada", campanha_id))
         conn.commit()
         
     except Exception as e:
-        logger.error(f"Erro ao processar campanha: {e}")
+        logger.error(f"Erro campanha: {e}")
         cur.execute("UPDATE campanhas SET status = ? WHERE id = ?", ("erro", campanha_id))
         conn.commit()
     finally:
@@ -843,20 +959,17 @@ async def envios_campanha(campanha_id: int):
     try:
         cur.execute("""
             SELECT e.*, c.nome as contato_nome 
-            FROM envios e
-            LEFT JOIN contatos c ON e.contato_id = c.id
-            WHERE e.campanha_id = ?
-            ORDER BY e.id ASC
+            FROM envios e LEFT JOIN contatos c ON e.contato_id = c.id
+            WHERE e.campanha_id = ? ORDER BY e.id ASC
         """, (campanha_id,))
         rows = cur.fetchall()
-        envios = [dict(row) for row in rows]
-        return {"sucesso": True, "envios": envios}
+        return {"sucesso": True, "envios": [dict(r) for r in rows]}
     finally:
         cur.close()
         conn.close()
 
 # ============================================
-# API CONFIG ANTI-BAN
+# ANTI-BAN CONFIG
 # ============================================
 
 @app.get("/api/antiban/config")
@@ -874,20 +987,14 @@ async def get_config_antiban():
 async def salvar_config_antiban(request: Request):
     try:
         data = await request.json()
-        
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE config_antiban SET
-                limite_diario = ?,
-                limite_por_hora = ?,
-                delay_min = ?,
-                delay_max = ?,
-                pausa_a_cada = ?,
-                pausa_segundos = ?,
-                horario_inicio = ?,
-                horario_fim = ?,
-                ativo = ?
+                limite_diario = ?, limite_por_hora = ?,
+                delay_min = ?, delay_max = ?,
+                pausa_a_cada = ?, pausa_segundos = ?,
+                horario_inicio = ?, horario_fim = ?, ativo = ?
             WHERE id = 1
         """, (
             data.get("limite_diario", 100),
@@ -903,7 +1010,6 @@ async def salvar_config_antiban(request: Request):
         conn.commit()
         cur.close()
         conn.close()
-        
         return {"sucesso": True}
     except Exception as e:
         return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
@@ -920,38 +1026,29 @@ async def relatorios():
     cur = conn.cursor()
     try:
         cur.execute("SELECT COUNT(*) FROM conversas")
-        total_conversas = cur.fetchone()[0]
+        total = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM conversas WHERE status = 'aberto'")
         abertos = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM conversas WHERE status = 'fechado'")
         fechados = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM contatos")
-        total_contatos = cur.fetchone()[0]
+        contatos = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM campanhas")
-        total_campanhas = cur.fetchone()[0]
+        campanhas = cur.fetchone()[0]
         cur.execute("SELECT SUM(enviadas) FROM campanhas")
-        total_enviadas = cur.fetchone()[0] or 0
+        enviadas = cur.fetchone()[0] or 0
         
-        cur.execute("""
-            SELECT AVG((julianday(fechado_em) - julianday(criado_em)) * 24 * 60) 
-            FROM conversas WHERE status = 'fechado'
-        """)
-        tempo_row = cur.fetchone()
-        tempo_medio = int(tempo_row[0] or 0) if tempo_row[0] else 0
-        
-        enviados_hoje = obter_envios_hoje()
+        cur.execute("SELECT AVG((julianday(fechado_em) - julianday(criado_em)) * 24 * 60) FROM conversas WHERE status = 'fechado'")
+        tempo = cur.fetchone()
+        tempo_medio = int(tempo[0] or 0) if tempo[0] else 0
         
         return {
             "sucesso": True,
             "relatorios": {
-                "totalConversas": total_conversas,
-                "abertos": abertos,
-                "fechados": fechados,
-                "tempoMedioMinutos": tempo_medio,
-                "totalContatos": total_contatos,
-                "totalCampanhas": total_campanhas,
-                "totalEnviadas": total_enviadas,
-                "enviadosHoje": enviados_hoje
+                "totalConversas": total, "abertos": abertos, "fechados": fechados,
+                "tempoMedioMinutos": tempo_medio, "totalContatos": contatos,
+                "totalCampanhas": campanhas, "totalEnviadas": enviadas,
+                "enviadosHoje": obter_envios_hoje()
             }
         }
     finally:
@@ -962,20 +1059,12 @@ async def relatorios():
 async def api_status_zapi():
     return status_zapi()
 
-# ============================================
-# INICIAR
-# ============================================
-
 if __name__ == "__main__":
     print("\n" + "="*60)
-    print("EVA Hotel Backend v3.0 - Anti-Ban - Iniciando")
+    print("EVA Hotel Backend v4.0 - Iniciando")
     print("="*60)
-    
     init_db()
-    
     print(f"URL: http://localhost:{PORT}")
     print(f"Painel: http://localhost:{PORT}/painel")
-    print(f"Webhook Z-API: http://localhost:{PORT}/webhook/zapi")
     print("="*60 + "\n")
-    
     uvicorn.run(app, host="0.0.0.0", port=PORT)
