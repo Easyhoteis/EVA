@@ -27,12 +27,13 @@
         .nav-item:hover { background: var(--light); color: var(--primary); }
         .nav-item.ativo { border-left-color: var(--primary); background: rgba(102, 126, 234, 0.1); color: var(--primary); }
         .nav-item i { width: 20px; text-align: center; }
+        .nav-item.hidden { display: none; }
         .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
         .user-section { padding: 1rem; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
         .user-avatar { width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
         .user-info { flex: 1; }
         .user-name { font-weight: 600; font-size: 13px; }
-        .user-status { font-size: 11px; color: var(--gray); }
+        .user-perfil { font-size: 10px; color: var(--gray); text-transform: uppercase; }
         .btn-logout { background: var(--light); border: none; padding: 0.4rem; border-radius: 6px; cursor: pointer; color: var(--danger); }
         .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .header { background: white; padding: 1.25rem 2rem; box-shadow: 0 1px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
@@ -53,7 +54,7 @@
         .card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
         .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; }
         .stat-icon { font-size: 28px; margin-bottom: 0.5rem; }
-        .stat-num { font-size: 28px; font-weight: 700; color: var(--dark); }
+        .stat-num { font-size: 28px; font-weight: 700; }
         .stat-label { font-size: 12px; color: var(--gray); text-transform: uppercase; margin-top: 0.5rem; }
         .conversa-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; height: 320px; }
         .conversa-header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 1rem 1.25rem; display: flex; justify-content: space-between; }
@@ -83,7 +84,7 @@
         textarea { resize: vertical; min-height: 100px; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal.ativo { display: flex; }
-        .modal-content { background: white; padding: 2rem; border-radius: 12px; max-width: 650px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background: white; padding: 2rem; border-radius: 12px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; }
         .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 1.5rem; }
         .modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
         .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
@@ -93,8 +94,11 @@
         .mensagem { margin-bottom: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 13px; }
         .mensagem-cliente { background: #e0e7ff; border-left: 3px solid var(--primary); }
         .mensagem-eva { background: #dbeafe; border-left: 3px solid var(--info); }
+        .mensagem-atendente { background: #c6f6d5; border-left: 3px solid var(--success); }
         .mensagem-label { font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 0.25rem; opacity: 0.7; }
-        .modal-chat { height: 400px; overflow-y: auto; padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; }
+        .modal-chat { height: 350px; overflow-y: auto; padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; }
+        .responder-area { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .responder-area textarea { flex: 1; min-height: 60px; }
         .checkbox-list { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
         .checkbox-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; border-radius: 6px; cursor: pointer; }
         .checkbox-item:hover { background: var(--light); }
@@ -104,8 +108,10 @@
         .status-enviando { background: #bee3f8; color: #2c5282; }
         .status-finalizada { background: #c6f6d5; color: #22543d; }
         .status-erro { background: #fed7d7; color: #742a2a; }
-        .status-enviado { background: #c6f6d5; color: #22543d; }
-        .status-falhou { background: #fed7d7; color: #742a2a; }
+        .perfil-badge { padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 11px; font-weight: 600; }
+        .perfil-admin { background: #fed7d7; color: #742a2a; }
+        .perfil-atendente { background: #bee3f8; color: #2c5282; }
+        .perfil-marketing { background: #c6f6d5; color: #22543d; }
         .empty { text-align: center; padding: 3rem; color: var(--gray); }
         .empty i { font-size: 48px; opacity: 0.3; margin-bottom: 1rem; display: block; }
         .progress { width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 0.5rem; }
@@ -122,59 +128,22 @@
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--success); }
         input:checked + .slider:before { transform: translateX(24px); }
-
-        /* Upload de imagem */
-        .upload-area {
-            border: 2px dashed var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: var(--light);
-        }
-        .upload-area:hover {
-            border-color: var(--primary);
-            background: rgba(102, 126, 234, 0.05);
-        }
+        .upload-area { border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--light); }
+        .upload-area:hover { border-color: var(--primary); background: rgba(102, 126, 234, 0.05); }
         .upload-area i { font-size: 32px; color: var(--gray); margin-bottom: 0.5rem; }
         .upload-area p { color: var(--gray); font-size: 13px; }
-        .imagem-preview {
-            margin-top: 1rem;
-            position: relative;
-            display: inline-block;
-        }
-        .imagem-preview img {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .imagem-preview button {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: var(--danger);
-            color: white;
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        @media (max-width: 768px) {
-            .main { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; }
-            .nav { display: flex; overflow-x: auto; }
-            .nav-item { white-space: nowrap; }
-            .grid { grid-template-columns: 1fr; }
-        }
+        .imagem-preview { margin-top: 1rem; position: relative; display: inline-block; }
+        .imagem-preview img { max-width: 200px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .imagem-preview button { position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; }
+        .tabs-contatos { display: flex; gap: 1rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border); }
+        .tab-contato { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; font-size: 13px; color: var(--gray); }
+        .tab-contato.ativo { border-bottom-color: var(--primary); color: var(--primary); }
+        .config-zapi-box { background: var(--light); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+        .config-zapi-box h4 { margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
     </style>
 </head>
 <body>
-    <div class="main">
+    <div class="main" id="app-content" style="display:none">
         <div class="sidebar">
             <div class="logo-section">
                 <div class="logo">
@@ -183,23 +152,29 @@
                 </div>
             </div>
             <div class="nav">
-                <div class="nav-item ativo" onclick="mudarPagina('conversas')">
+                <div class="nav-item" id="nav-conversas" onclick="mudarPagina('conversas')">
                     <i class="fas fa-comments"></i><span>Conversas</span>
                     <span class="badge" id="badge-conversas">0</span>
                 </div>
-                <div class="nav-item" onclick="mudarPagina('contatos')">
+                <div class="nav-item" id="nav-contatos" onclick="mudarPagina('contatos')">
                     <i class="fas fa-address-book"></i><span>Contatos</span>
                 </div>
-                <div class="nav-item" onclick="mudarPagina('templates')">
+                <div class="nav-item" id="nav-templates" onclick="mudarPagina('templates')">
                     <i class="fas fa-file-alt"></i><span>Templates</span>
                 </div>
-                <div class="nav-item" onclick="mudarPagina('campanhas')">
+                <div class="nav-item" id="nav-campanhas" onclick="mudarPagina('campanhas')">
                     <i class="fas fa-paper-plane"></i><span>Disparos</span>
                 </div>
-                <div class="nav-item" onclick="mudarPagina('antiban')">
+                <div class="nav-item" id="nav-antiban" onclick="mudarPagina('antiban')">
                     <i class="fas fa-shield-alt"></i><span>Anti-Ban</span>
                 </div>
-                <div class="nav-item" onclick="mudarPagina('relatorios')">
+                <div class="nav-item" id="nav-usuarios" onclick="mudarPagina('usuarios')">
+                    <i class="fas fa-users"></i><span>Usuários</span>
+                </div>
+                <div class="nav-item" id="nav-config" onclick="mudarPagina('config')">
+                    <i class="fas fa-cog"></i><span>Configurações</span>
+                </div>
+                <div class="nav-item" id="nav-relatorios" onclick="mudarPagina('relatorios')">
                     <i class="fas fa-chart-bar"></i><span>Relatórios</span>
                 </div>
             </div>
@@ -207,7 +182,7 @@
                 <div class="user-avatar" id="avatar">D</div>
                 <div class="user-info">
                     <div class="user-name" id="usuario-nome">Usuário</div>
-                    <div class="user-status">Online</div>
+                    <div class="user-perfil" id="usuario-perfil">Perfil</div>
                 </div>
                 <button class="btn-logout" onclick="fazerLogout()"><i class="fas fa-sign-out-alt"></i></button>
             </div>
@@ -217,15 +192,19 @@
                 <h2 id="pagina-titulo">Conversas</h2>
                 <div class="header-actions">
                     <div class="limite-info" id="limite-info">
-                        <i class="fas fa-shield-alt"></i> <span id="limite-texto">0 / 100 hoje</span>
+                        <i class="fas fa-shield-alt"></i> <span id="limite-texto">0 / 100</span>
                     </div>
-                    <div class="status-zapi offline" id="status-zapi">
-                        <i class="fas fa-circle"></i> Z-API: Verificando...
+                    <div class="status-zapi offline" id="status-zapi-atend">
+                        <i class="fas fa-circle"></i> Atend: ...
+                    </div>
+                    <div class="status-zapi offline" id="status-zapi-disp">
+                        <i class="fas fa-circle"></i> Disp: ...
                     </div>
                 </div>
             </div>
             <div class="page-content">
-                <div id="page-conversas" class="page ativo">
+                <!-- CONVERSAS -->
+                <div id="page-conversas" class="page">
                     <div class="toolbar">
                         <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..."></div>
                         <div>
@@ -239,11 +218,13 @@
                     </div>
                     <div class="grid" id="grid-conversas"></div>
                 </div>
+
+                <!-- CONTATOS -->
                 <div id="page-contatos" class="page">
                     <div class="toolbar">
                         <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..." id="busca-contatos" onkeyup="filtrarContatos()"></div>
                         <div style="display:flex;gap:0.5rem">
-                            <button class="btn btn-info btn-sm" onclick="abrirModalImportar()"><i class="fas fa-upload"></i> Importar CSV</button>
+                            <button class="btn btn-info btn-sm" onclick="abrirModalImportar()"><i class="fas fa-upload"></i> CSV</button>
                             <button class="btn btn-primary btn-sm" onclick="abrirModalContato()"><i class="fas fa-plus"></i> Novo</button>
                         </div>
                     </div>
@@ -254,13 +235,17 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- TEMPLATES -->
                 <div id="page-templates" class="page">
                     <div class="toolbar">
                         <h3>Templates</h3>
-                        <button class="btn btn-primary btn-sm" onclick="abrirModalTemplate()"><i class="fas fa-plus"></i> Novo Template</button>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModalTemplate()"><i class="fas fa-plus"></i> Novo</button>
                     </div>
                     <div class="grid" id="grid-templates"></div>
                 </div>
+
+                <!-- CAMPANHAS -->
                 <div id="page-campanhas" class="page">
                     <div class="toolbar">
                         <h3>Campanhas</h3>
@@ -268,11 +253,13 @@
                     </div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Nome</th><th>Total</th><th>Enviadas</th><th>Falhadas</th><th>Status</th><th>Progresso</th><th>Criada</th></tr></thead>
+                            <thead><tr><th>Nome</th><th>Criada por</th><th>Total</th><th>Enviadas</th><th>Status</th><th>Progresso</th><th>Data</th></tr></thead>
                             <tbody id="tabela-campanhas"></tbody>
                         </table>
                     </div>
                 </div>
+
+                <!-- ANTI-BAN -->
                 <div id="page-antiban" class="page">
                     <div class="uso-diario">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -287,43 +274,100 @@
                     </div>
                     <div class="antiban-card">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
-                            <h3>⚙️ Configurações Anti-Ban</h3>
-                            <div style="display:flex;align-items:center;gap:1rem">
-                                <span style="font-size:13px">Ativo</span>
-                                <label class="switch"><input type="checkbox" id="antiban-ativo" checked><span class="slider"></span></label>
-                            </div>
+                            <h3>⚙️ Configurações</h3>
+                            <label class="switch"><input type="checkbox" id="antiban-ativo" checked><span class="slider"></span></label>
                         </div>
                         <div class="antiban-grid">
-                            <div class="form-group"><label>📊 Limite Diário</label><input type="number" id="config-limite-diario" value="100"></div>
-                            <div class="form-group"><label>⏱️ Limite por Hora</label><input type="number" id="config-limite-hora" value="30"></div>
-                            <div class="form-group"><label>🕐 Delay Mín (seg)</label><input type="number" id="config-delay-min" value="3"></div>
-                            <div class="form-group"><label>🕐 Delay Máx (seg)</label><input type="number" id="config-delay-max" value="7"></div>
-                            <div class="form-group"><label>⏸️ Pausa a cada</label><input type="number" id="config-pausa-cada" value="30"></div>
-                            <div class="form-group"><label>⏸️ Pausa (seg)</label><input type="number" id="config-pausa-segundos" value="60"></div>
-                            <div class="form-group"><label>🌅 Início</label><input type="time" id="config-horario-inicio" value="08:00"></div>
-                            <div class="form-group"><label>🌙 Fim</label><input type="time" id="config-horario-fim" value="20:00"></div>
+                            <div class="form-group"><label>Limite Diário</label><input type="number" id="config-limite-diario" value="100"></div>
+                            <div class="form-group"><label>Limite/Hora</label><input type="number" id="config-limite-hora" value="30"></div>
+                            <div class="form-group"><label>Delay Mín (s)</label><input type="number" id="config-delay-min" value="3"></div>
+                            <div class="form-group"><label>Delay Máx (s)</label><input type="number" id="config-delay-max" value="7"></div>
+                            <div class="form-group"><label>Pausa a cada</label><input type="number" id="config-pausa-cada" value="30"></div>
+                            <div class="form-group"><label>Pausa (s)</label><input type="number" id="config-pausa-segundos" value="60"></div>
+                            <div class="form-group"><label>Início</label><input type="time" id="config-horario-inicio" value="08:00"></div>
+                            <div class="form-group"><label>Fim</label><input type="time" id="config-horario-fim" value="20:00"></div>
                         </div>
                         <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap">
                             <button class="btn btn-success" onclick="salvarConfigAntiban()"><i class="fas fa-save"></i> Salvar</button>
-                            <button class="btn btn-warning" onclick="usarConfigSegura()"><i class="fas fa-shield-alt"></i> Config Segura</button>
-                            <button class="btn btn-info" onclick="usarConfigAgressiva()"><i class="fas fa-rocket"></i> Agressiva</button>
+                            <button class="btn btn-warning" onclick="usarConfigSegura()">🛡️ Segura</button>
+                            <button class="btn btn-info" onclick="usarConfigAgressiva()">🚀 Agressiva</button>
                         </div>
                     </div>
                 </div>
+
+                <!-- USUÁRIOS -->
+                <div id="page-usuarios" class="page">
+                    <div class="toolbar">
+                        <h3>Gerenciar Usuários</h3>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()"><i class="fas fa-user-plus"></i> Novo Usuário</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Status</th><th>Último Login</th><th>Ações</th></tr></thead>
+                            <tbody id="tabela-usuarios"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CONFIGURAÇÕES -->
+                <div id="page-config" class="page">
+                    <div class="config-zapi-box">
+                        <h4>📞 Z-API Atendimento</h4>
+                        <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Número usado pra responder clientes automaticamente</p>
+                        <div class="form-group"><label>Instance ID</label><input type="text" id="zapi-atend-instance"></div>
+                        <div class="form-group"><label>Token</label><input type="text" id="zapi-atend-token"></div>
+                        <div class="form-group"><label>Client/Security Token</label><input type="text" id="zapi-atend-client"></div>
+                        <button class="btn btn-success" onclick="salvarZapi('atendimento')"><i class="fas fa-save"></i> Salvar Atendimento</button>
+                    </div>
+                    <div class="config-zapi-box">
+                        <h4>📢 Z-API Disparos</h4>
+                        <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Número usado pra disparos em massa (separado pra proteger atendimento)</p>
+                        <div class="form-group"><label>Instance ID</label><input type="text" id="zapi-disp-instance"></div>
+                        <div class="form-group"><label>Token</label><input type="text" id="zapi-disp-token"></div>
+                        <div class="form-group"><label>Client/Security Token</label><input type="text" id="zapi-disp-client"></div>
+                        <button class="btn btn-success" onclick="salvarZapi('disparos')"><i class="fas fa-save"></i> Salvar Disparos</button>
+                    </div>
+                </div>
+
+                <!-- RELATÓRIOS -->
                 <div id="page-relatorios" class="page">
                     <div class="grid-stats" id="stats-cards"></div>
+                    <div class="card" style="padding:2rem;margin-top:2rem">
+                        <h3 style="margin-bottom:1rem">🏆 Top Atendentes</h3>
+                        <div id="top-atendentes"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- LOGIN -->
+    <div id="login-screen" style="height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2)">
+        <div style="background:white;padding:3rem;border-radius:16px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+            <div style="text-align:center;margin-bottom:2rem">
+                <div style="font-size:60px">🤖</div>
+                <h2 style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:32px">EVA</h2>
+                <p style="color:#718096;font-size:11px;text-transform:uppercase;letter-spacing:2px">Hotel AI</p>
+            </div>
+            <div id="erro-login" style="display:none;background:#fed7d7;color:#742a2a;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:13px"></div>
+            <input type="email" id="login-email" placeholder="Email" style="width:100%;padding:12px;margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px">
+            <input type="password" id="login-senha" placeholder="Senha" style="width:100%;padding:12px;margin-bottom:20px;border:1px solid #e2e8f0;border-radius:8px">
+            <button onclick="fazerLogin()" id="btn-login" style="width:100%;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">Entrar</button>
+        </div>
+    </div>
+
+    <!-- MODAIS -->
     <div class="modal" id="modal-conversa">
         <div class="modal-content">
             <div class="modal-title" id="modal-conversa-titulo">Conversa</div>
             <div class="modal-chat" id="modal-chat"></div>
-            <div class="form-group"><label>Observações</label><textarea id="modal-observacoes"></textarea></div>
+            <div class="responder-area">
+                <textarea id="modal-resposta" placeholder="Digite sua resposta..."></textarea>
+                <button class="btn btn-primary" onclick="enviarResposta()" style="height:fit-content;align-self:flex-end"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            <div class="form-group"><label>Observações</label><textarea id="modal-observacoes" style="min-height:60px"></textarea></div>
             <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="fecharAtendimentoModal()"><i class="fas fa-check"></i> Fechar Atendimento</button>
+                <button class="btn btn-success btn-block" onclick="fecharAtendimentoModal()"><i class="fas fa-check"></i> Fechar Atendimento</button>
                 <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-conversa')">Cancelar</button>
             </div>
         </div>
@@ -372,11 +416,7 @@
                     <option value="feedback">Feedback</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label>Conteúdo *</label>
-                <textarea id="template-conteudo" placeholder="Olá {nome}!"></textarea>
-                <p style="font-size:12px;color:var(--gray);margin-top:0.5rem">Use {nome} pra personalizar</p>
-            </div>
+            <div class="form-group"><label>Conteúdo *</label><textarea id="template-conteudo" placeholder="Olá {nome}!"></textarea></div>
             <div class="modal-actions">
                 <button class="btn btn-primary btn-block" onclick="salvarTemplate()"><i class="fas fa-save"></i> Salvar</button>
                 <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-template')">Cancelar</button>
@@ -387,39 +427,56 @@
     <div class="modal" id="modal-campanha">
         <div class="modal-content">
             <div class="modal-title">Nova Campanha</div>
-            <div class="form-group"><label>Nome da Campanha *</label><input type="text" id="campanha-nome"></div>
+            <div class="form-group"><label>Nome *</label><input type="text" id="campanha-nome"></div>
             <div class="form-group">
                 <label>Template</label>
                 <select id="campanha-template" onchange="usarTemplate()">
                     <option value="">Selecione ou escreva manualmente</option>
                 </select>
             </div>
-            
-            <!-- UPLOAD DE IMAGEM -->
             <div class="form-group">
                 <label>📸 Imagem (opcional)</label>
                 <div class="upload-area" onclick="document.getElementById('campanha-imagem').click()">
                     <i class="fas fa-cloud-upload-alt"></i>
-                    <p><strong>Clique para enviar imagem</strong></p>
-                    <p style="font-size:11px">JPG, PNG ou WEBP (máx 5MB)</p>
+                    <p><strong>Clique para enviar</strong> (JPG, PNG, WEBP)</p>
                 </div>
                 <input type="file" id="campanha-imagem" accept="image/*" style="display:none" onchange="uploadImagem(this)">
                 <div id="imagem-preview-container"></div>
             </div>
+            <div class="form-group"><label>Mensagem *</label><textarea id="campanha-mensagem"></textarea></div>
             
+            <!-- NOVO: TABS DE CONTATOS -->
             <div class="form-group">
-                <label>Mensagem *</label>
-                <textarea id="campanha-mensagem"></textarea>
-            </div>
-            <div class="form-group">
-                <label>Selecionar Contatos *</label>
-                <div style="margin-bottom:0.5rem">
-                    <button class="btn btn-sm btn-info" onclick="selecionarTodosContatos()"><i class="fas fa-check-double"></i> Todos</button>
-                    <button class="btn btn-sm" style="background:#e2e8f0;color:var(--dark)" onclick="desmarcarTodosContatos()"><i class="fas fa-times"></i> Desmarcar</button>
-                    <span id="contatos-selecionados" style="margin-left:1rem;font-size:13px;color:var(--gray)">0 selecionados</span>
+                <label>Contatos *</label>
+                <div class="tabs-contatos">
+                    <div class="tab-contato ativo" onclick="mudarTabContato('cadastrados')">
+                        <i class="fas fa-address-book"></i> Cadastrados
+                    </div>
+                    <div class="tab-contato" onclick="mudarTabContato('csv')">
+                        <i class="fas fa-file-csv"></i> Importar CSV
+                    </div>
                 </div>
-                <div class="checkbox-list" id="lista-contatos-checkbox"></div>
+                
+                <div id="tab-cadastrados">
+                    <div style="margin-bottom:0.5rem">
+                        <button class="btn btn-sm btn-info" onclick="selecionarTodosContatos()"><i class="fas fa-check-double"></i> Todos</button>
+                        <button class="btn btn-sm" style="background:#e2e8f0;color:var(--dark)" onclick="desmarcarTodosContatos()"><i class="fas fa-times"></i> Desmarcar</button>
+                        <span id="contatos-selecionados" style="margin-left:1rem;font-size:13px;color:var(--gray)">0 selecionados</span>
+                    </div>
+                    <div class="checkbox-list" id="lista-contatos-checkbox"></div>
+                </div>
+                
+                <div id="tab-csv" style="display:none">
+                    <div class="upload-area" onclick="document.getElementById('campanha-csv').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p><strong>Clique para enviar CSV</strong></p>
+                        <p style="font-size:11px">Colunas: nome, numero</p>
+                    </div>
+                    <input type="file" id="campanha-csv" accept=".csv" style="display:none" onchange="processarCSVCampanha(this)">
+                    <div id="csv-preview" style="margin-top:1rem"></div>
+                </div>
             </div>
+            
             <div id="aviso-limite" style="display:none;padding:1rem;background:#feebc8;color:#7c2d12;border-radius:8px;margin-bottom:1rem"></div>
             <div class="modal-actions">
                 <button class="btn btn-success btn-block" onclick="dispararCampanha()"><i class="fas fa-paper-plane"></i> Disparar</button>
@@ -428,69 +485,172 @@
         </div>
     </div>
 
+    <div class="modal" id="modal-usuario">
+        <div class="modal-content">
+            <div class="modal-title" id="modal-usuario-titulo">Novo Usuário</div>
+            <div class="form-group"><label>Nome *</label><input type="text" id="usuario-novo-nome"></div>
+            <div class="form-group"><label>Email *</label><input type="email" id="usuario-novo-email"></div>
+            <div class="form-group"><label>Senha *</label><input type="password" id="usuario-novo-senha"></div>
+            <div class="form-group">
+                <label>Perfil *</label>
+                <select id="usuario-novo-perfil">
+                    <option value="atendente">🔵 Atendente</option>
+                    <option value="marketing">🟢 Marketing</option>
+                    <option value="admin">🔴 Admin</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-block" onclick="salvarUsuario()"><i class="fas fa-save"></i> Salvar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-usuario')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = "/api";
+        let token = localStorage.getItem("eva-token");
         let usuarioLogado = null;
         let paginaAtual = 'conversas';
         let tabConversaAtual = 'abertos';
+        let tabContatoAtual = 'cadastrados';
         let conversaSelecionada = null;
-        let conversasAbertas = [];
-        let conversasFechadas = [];
-        let contatos = [];
-        let templates = [];
-        let campanhas = [];
+        let conversasAbertas = [], conversasFechadas = [];
+        let contatos = [], templates = [], campanhas = [];
         let configAntiban = null;
         let imagemUploadUrl = null;
+        let contatosCsv = [];
 
         document.addEventListener("DOMContentLoaded", () => {
-            verificarLogin();
+            if (token) verificarToken();
+        });
+
+        async function verificarToken() {
+            try {
+                const res = await fetch(`${API}/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.sucesso) {
+                    usuarioLogado = data.usuario;
+                    iniciarApp();
+                } else {
+                    localStorage.removeItem("eva-token");
+                    token = null;
+                }
+            } catch (e) { localStorage.removeItem("eva-token"); }
+        }
+
+        async function fazerLogin() {
+            const email = document.getElementById("login-email").value;
+            const senha = document.getElementById("login-senha").value;
+            const erroEl = document.getElementById("erro-login");
+            
+            if (!email || !senha) {
+                erroEl.style.display = 'block';
+                erroEl.textContent = 'Preencha email e senha';
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${API}/login`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email, senha })
+                });
+                const data = await res.json();
+                
+                if (data.sucesso) {
+                    token = data.token;
+                    usuarioLogado = data.usuario;
+                    localStorage.setItem("eva-token", token);
+                    erroEl.style.display = 'none';
+                    iniciarApp();
+                } else {
+                    erroEl.style.display = 'block';
+                    erroEl.textContent = data.erro || 'Erro ao fazer login';
+                }
+            } catch (e) {
+                erroEl.style.display = 'block';
+                erroEl.textContent = 'Erro de conexão';
+            }
+        }
+
+        async function fazerLogout() {
+            try {
+                await fetch(`${API}/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            } catch (e) {}
+            localStorage.removeItem("eva-token");
+            location.reload();
+        }
+
+        function iniciarApp() {
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("app-content").style.display = "flex";
+            document.getElementById("usuario-nome").textContent = usuarioLogado.nome;
+            document.getElementById("usuario-perfil").textContent = usuarioLogado.perfil;
+            document.getElementById("avatar").textContent = usuarioLogado.nome[0].toUpperCase();
+            
+            ajustarMenuPorPerfil();
             carregarTudo();
             verificarStatusZapi();
             atualizarLimiteInfo();
+            
             setInterval(carregarConversas, 5000);
             setInterval(verificarStatusZapi, 30000);
             setInterval(atualizarLimiteInfo, 10000);
             setInterval(() => { if (paginaAtual === 'campanhas') carregarCampanhas(); }, 3000);
-        });
-
-        function verificarLogin() {
-            const usuario = localStorage.getItem("eva-usuario");
-            if (!usuario) { mostrarTelaLogin(); return false; }
-            usuarioLogado = JSON.parse(usuario);
-            document.getElementById("usuario-nome").textContent = usuarioLogado.nome;
-            document.getElementById("avatar").textContent = usuarioLogado.nome[0].toUpperCase();
-            return true;
         }
 
-        function mostrarTelaLogin() {
-            document.body.innerHTML = `<div style="height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2)"><div style="background:white;padding:3rem;border-radius:16px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)"><div style="text-align:center;margin-bottom:2rem"><div style="font-size:60px">🤖</div><h2 style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:32px">EVA</h2><p style="color:#718096;font-size:11px;text-transform:uppercase;letter-spacing:2px">Hotel AI</p></div><input type="email" id="email" placeholder="Email" style="width:100%;padding:12px;margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px"><input type="password" id="senha" placeholder="Senha" style="width:100%;padding:12px;margin-bottom:20px;border:1px solid #e2e8f0;border-radius:8px"><button onclick="fazerLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">Entrar</button></div></div>`;
+        function ajustarMenuPorPerfil() {
+            const perfil = usuarioLogado.perfil;
+            
+            // Esconde tudo primeiro
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.add('hidden'));
+            
+            if (perfil === 'admin') {
+                // Admin vê tudo
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('hidden'));
+                mudarPagina('conversas');
+            } else if (perfil === 'atendente') {
+                // Só conversas
+                document.getElementById('nav-conversas').classList.remove('hidden');
+                mudarPagina('conversas');
+            } else if (perfil === 'marketing') {
+                // Marketing: contatos, templates, campanhas, anti-ban
+                document.getElementById('nav-contatos').classList.remove('hidden');
+                document.getElementById('nav-templates').classList.remove('hidden');
+                document.getElementById('nav-campanhas').classList.remove('hidden');
+                document.getElementById('nav-antiban').classList.remove('hidden');
+                mudarPagina('campanhas');
+            }
         }
-
-        function fazerLogin() {
-            const email = document.getElementById("email").value;
-            const senha = document.getElementById("senha").value;
-            if (!email || !senha) { alert("Preencha tudo!"); return; }
-            localStorage.setItem("eva-usuario", JSON.stringify({ id: 1, nome: email.split("@")[0], email }));
-            location.reload();
-        }
-
-        function fazerLogout() { localStorage.removeItem("eva-usuario"); location.reload(); }
 
         function mudarPagina(pagina) {
             paginaAtual = pagina;
             document.querySelectorAll('.page').forEach(p => p.classList.remove('ativo'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('ativo'));
             document.getElementById(`page-${pagina}`).classList.add('ativo');
-            event.target.closest('.nav-item').classList.add('ativo');
+            document.getElementById(`nav-${pagina}`).classList.add('ativo');
             document.getElementById('pagina-titulo').textContent = {
                 conversas: 'Conversas', contatos: 'Contatos', templates: 'Templates',
-                campanhas: 'Disparos', antiban: 'Anti-Ban', relatorios: 'Relatórios'
+                campanhas: 'Disparos', antiban: 'Anti-Ban', usuarios: 'Usuários',
+                config: 'Configurações', relatorios: 'Relatórios'
             }[pagina];
+            
             if (pagina === 'contatos') carregarContatos();
             if (pagina === 'templates') carregarTemplates();
             if (pagina === 'campanhas') carregarCampanhas();
             if (pagina === 'antiban') carregarConfigAntiban();
+            if (pagina === 'usuarios') carregarUsuarios();
+            if (pagina === 'config') carregarConfigZapi();
             if (pagina === 'relatorios') carregarRelatorios();
+        }
+
+        function api(url, options = {}) {
+            return fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    'Authorization': `Bearer ${token}`
+                }
+            });
         }
 
         function mudarTabConversa(tab) {
@@ -509,26 +669,38 @@
             renderizarConversas();
         }
 
-        async function carregarTudo() { await carregarConversas(); }
+        async function carregarTudo() {
+            await carregarConversas();
+        }
 
         async function verificarStatusZapi() {
             try {
-                const res = await fetch(`${API}/zapi/status`);
+                const res = await api(`${API}/zapi/status`);
                 const data = await res.json();
-                const el = document.getElementById('status-zapi');
-                if (data.conectado && data.data && data.data.connected) {
-                    el.className = 'status-zapi online';
-                    el.innerHTML = '<i class="fas fa-circle"></i> Z-API: Conectado';
+                
+                const atendEl = document.getElementById('status-zapi-atend');
+                if (data.atendimento.conectado && data.atendimento.data?.connected) {
+                    atendEl.className = 'status-zapi online';
+                    atendEl.innerHTML = '<i class="fas fa-circle"></i> Atend: ON';
                 } else {
-                    el.className = 'status-zapi offline';
-                    el.innerHTML = '<i class="fas fa-circle"></i> Z-API: Desconectado';
+                    atendEl.className = 'status-zapi offline';
+                    atendEl.innerHTML = '<i class="fas fa-circle"></i> Atend: OFF';
                 }
-            } catch (e) { document.getElementById('status-zapi').innerHTML = '<i class="fas fa-circle"></i> Z-API: Erro'; }
+                
+                const dispEl = document.getElementById('status-zapi-disp');
+                if (data.disparos.conectado && data.disparos.data?.connected) {
+                    dispEl.className = 'status-zapi online';
+                    dispEl.innerHTML = '<i class="fas fa-circle"></i> Disp: ON';
+                } else {
+                    dispEl.className = 'status-zapi offline';
+                    dispEl.innerHTML = '<i class="fas fa-circle"></i> Disp: OFF';
+                }
+            } catch (e) {}
         }
 
         async function atualizarLimiteInfo() {
             try {
-                const res = await fetch(`${API}/antiban/config`);
+                const res = await api(`${API}/antiban/config`);
                 const data = await res.json();
                 if (data.sucesso && data.config) {
                     configAntiban = data.config;
@@ -536,7 +708,7 @@
                     const limite = data.config.limite_diario;
                     const percent = (enviados / limite * 100).toFixed(0);
                     const el = document.getElementById('limite-info');
-                    document.getElementById('limite-texto').textContent = `${enviados} / ${limite} hoje`;
+                    document.getElementById('limite-texto').textContent = `${enviados} / ${limite}`;
                     if (percent >= 90) el.className = 'limite-info bloqueado';
                     else if (percent >= 70) el.className = 'limite-info alerta';
                     else el.className = 'limite-info';
@@ -546,7 +718,7 @@
 
         async function carregarConversas() {
             try {
-                const [resA, resF] = await Promise.all([fetch(`${API}/conversas/abertas`), fetch(`${API}/conversas/fechadas`)]);
+                const [resA, resF] = await Promise.all([api(`${API}/conversas/abertas`), api(`${API}/conversas/fechadas`)]);
                 const dataA = await resA.json();
                 const dataF = await resF.json();
                 conversasAbertas = dataA.conversas || [];
@@ -569,59 +741,76 @@
                 <div class="conversa-card">
                     <div class="conversa-header">
                         <div>
-                            <div class="conversa-numero"><i class="fas fa-phone"></i> ${c.numero_cliente || 'Sem número'}</div>
+                            <div class="conversa-numero"><i class="fas fa-phone"></i> ${c.numero_cliente || '-'}</div>
                             ${c.nome_cliente ? `<div class="conversa-nome">${c.nome_cliente}</div>` : ''}
                             <div class="conversa-tempo">${formatarData(c.criado_em)}</div>
+                            ${c.fechado_por_nome ? `<div style="font-size:10px;opacity:0.8;margin-top:4px">Fechado por: ${c.fechado_por_nome}</div>` : ''}
                         </div>
                         <span style="background:rgba(255,255,255,0.3);padding:4px 10px;border-radius:12px;font-size:11px;height:fit-content">${c.total_mensagens || 0} msg</span>
                     </div>
-                    <div class="conversa-body">${c.ultima_mensagem ? `<div class="mensagem"><strong>Última:</strong> ${c.ultima_mensagem.substring(0,150)}</div>` : '<p style="color:#a0aec0;text-align:center">Sem mensagens</p>'}</div>
+                    <div class="conversa-body">${c.ultima_mensagem ? `<div class="mensagem">${c.ultima_mensagem.substring(0,150)}</div>` : '<p style="color:#a0aec0;text-align:center">Sem mensagens</p>'}</div>
                     <div class="conversa-footer">
-                        <button class="btn btn-primary btn-sm" style="flex:1" onclick="abrirConversa(${c.id})"><i class="fas fa-eye"></i> Ver Chat</button>
-                        ${tabConversaAtual === 'abertos' ? `<button class="btn btn-danger btn-sm" onclick="fecharRapido(${c.id})"><i class="fas fa-check"></i></button>` : ''}
+                        <button class="btn btn-primary btn-sm" style="flex:1" onclick="abrirConversa(${c.id})"><i class="fas fa-eye"></i> Abrir</button>
                     </div>
                 </div>
             `).join('');
         }
 
         async function abrirConversa(id) {
-            const res = await fetch(`${API}/conversas/${id}/mensagens`);
+            const res = await api(`${API}/conversas/${id}/mensagens`);
             const data = await res.json();
             if (!data.sucesso) return;
             conversaSelecionada = id;
             const chat = data.mensagens.map(m => `
                 <div class="mensagem mensagem-${m.remetente}">
-                    <div class="mensagem-label">${m.remetente === 'cliente' ? '👤 Cliente' : '🤖 EVA'}</div>
-                    ${m.conteudo}
+                    <div class="mensagem-label">${m.remetente === 'cliente' ? '👤 Cliente' : m.remetente === 'eva' ? '🤖 EVA' : '👨‍💼 ' + (m.usuario_nome || 'Atendente')}</div>
+                    <div style="white-space:pre-wrap">${m.conteudo}</div>
                     <div style="font-size:11px;opacity:0.6;margin-top:4px">${new Date(m.criado_em).toLocaleTimeString('pt-BR')}</div>
                 </div>
             `).join('');
             document.getElementById('modal-chat').innerHTML = chat;
+            document.getElementById('modal-resposta').value = '';
             document.getElementById('modal-observacoes').value = '';
             document.getElementById('modal-conversa').classList.add('ativo');
+            setTimeout(() => {
+                const chatEl = document.getElementById('modal-chat');
+                chatEl.scrollTop = chatEl.scrollHeight;
+            }, 100);
+        }
+
+        async function enviarResposta() {
+            if (!conversaSelecionada) return;
+            const mensagem = document.getElementById('modal-resposta').value;
+            if (!mensagem.trim()) return;
+            
+            const res = await api(`${API}/conversas/${conversaSelecionada}/responder`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ mensagem })
+            });
+            const data = await res.json();
+            if (data.sucesso) {
+                document.getElementById('modal-resposta').value = '';
+                abrirConversa(conversaSelecionada);
+            } else {
+                alert('Erro: ' + (data.erro || 'desconhecido'));
+            }
         }
 
         async function fecharAtendimentoModal() {
             if (!conversaSelecionada) return;
-            await fetch(`${API}/conversas/${conversaSelecionada}/fechar`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ observacoes: document.getElementById('modal-observacoes').value, usuario_id: usuarioLogado.id })
+            if (!confirm('Fechar este atendimento?')) return;
+            
+            await api(`${API}/conversas/${conversaSelecionada}/fechar`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ observacoes: document.getElementById('modal-observacoes').value })
             });
             fecharModal('modal-conversa');
             carregarConversas();
         }
 
-        async function fecharRapido(id) {
-            if (!confirm('Fechar?')) return;
-            await fetch(`${API}/conversas/${id}/fechar`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ observacoes: 'Fechado pelo painel', usuario_id: usuarioLogado.id })
-            });
-            carregarConversas();
-        }
-
+        // CONTATOS
         async function carregarContatos() {
-            const res = await fetch(`${API}/contatos`);
+            const res = await api(`${API}/contatos`);
             const data = await res.json();
             contatos = data.contatos || [];
             renderizarContatos();
@@ -661,17 +850,17 @@
                 tags: document.getElementById('contato-tags').value
             };
             if (!dados.nome || !dados.numero) { alert('Preencha nome e número'); return; }
-            const res = await fetch(`${API}/contatos`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
+            const res = await api(`${API}/contatos`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
             });
             const data = await res.json();
             if (data.sucesso) { fecharModal('modal-contato'); carregarContatos(); }
-            else alert(data.erro || 'Erro');
+            else alert(data.erro);
         }
 
         async function deletarContato(id) {
             if (!confirm('Deletar?')) return;
-            await fetch(`${API}/contatos/${id}`, { method: 'DELETE' });
+            await api(`${API}/contatos/${id}`, { method: 'DELETE' });
             carregarContatos();
         }
 
@@ -682,7 +871,7 @@
             if (!file) { alert('Selecione arquivo'); return; }
             const formData = new FormData();
             formData.append('file', file);
-            const res = await fetch(`${API}/contatos/importar`, { method: 'POST', body: formData });
+            const res = await fetch(`${API}/contatos/importar`, { method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             if (data.sucesso) {
                 alert(`${data.importados} importados! ${data.erros} erros.`);
@@ -691,8 +880,9 @@
             }
         }
 
+        // TEMPLATES
         async function carregarTemplates() {
-            const res = await fetch(`${API}/templates`);
+            const res = await api(`${API}/templates`);
             const data = await res.json();
             templates = data.templates || [];
             renderizarTemplates();
@@ -708,7 +898,7 @@
                 <div class="card" style="padding:1.5rem">
                     <h4>${t.nome}</h4>
                     <span class="status-badge status-finalizada">${t.categoria}</span>
-                    <p style="margin-top:1rem;font-size:13px;color:var(--gray);min-height:60px;white-space:pre-wrap">${t.conteudo.substring(0,200)}${t.conteudo.length > 200 ? '...' : ''}</p>
+                    <p style="margin-top:1rem;font-size:13px;color:var(--gray);min-height:60px;white-space:pre-wrap">${t.conteudo.substring(0,150)}${t.conteudo.length > 150 ? '...' : ''}</p>
                     <button class="btn btn-danger btn-sm" onclick="deletarTemplate(${t.id})" style="margin-top:1rem"><i class="fas fa-trash"></i> Deletar</button>
                 </div>
             `).join('');
@@ -727,8 +917,8 @@
                 categoria: document.getElementById('template-categoria').value
             };
             if (!dados.nome || !dados.conteudo) { alert('Preencha tudo'); return; }
-            await fetch(`${API}/templates`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
+            await api(`${API}/templates`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
             });
             fecharModal('modal-template');
             carregarTemplates();
@@ -736,12 +926,13 @@
 
         async function deletarTemplate(id) {
             if (!confirm('Deletar?')) return;
-            await fetch(`${API}/templates/${id}`, { method: 'DELETE' });
+            await api(`${API}/templates/${id}`, { method: 'DELETE' });
             carregarTemplates();
         }
 
+        // CAMPANHAS
         async function carregarCampanhas() {
-            const res = await fetch(`${API}/campanhas`);
+            const res = await api(`${API}/campanhas`);
             const data = await res.json();
             campanhas = data.campanhas || [];
             renderizarCampanhas();
@@ -750,19 +941,19 @@
         function renderizarCampanhas() {
             const tbody = document.getElementById('tabela-campanhas');
             if (campanhas.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="empty"><i class="fas fa-paper-plane"></i><p>Nenhuma campanha</p></td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="empty"><i class="fas fa-paper-plane"></i><p>Nenhuma</p></td></tr>`;
                 return;
             }
             tbody.innerHTML = campanhas.map(c => {
-                const progresso = c.total_contatos > 0 ? ((c.enviadas + c.falhadas) / c.total_contatos * 100) : 0;
+                const prog = c.total_contatos > 0 ? ((c.enviadas + c.falhadas) / c.total_contatos * 100) : 0;
                 return `
                     <tr>
-                        <td><strong>${c.nome}</strong>${c.imagem_url ? ' <i class="fas fa-image" style="color:var(--info)" title="Com imagem"></i>' : ''}</td>
+                        <td><strong>${c.nome}</strong>${c.imagem_url ? ' <i class="fas fa-image" style="color:var(--info)"></i>' : ''}</td>
+                        <td style="font-size:12px">${c.criado_por_nome || '-'}</td>
                         <td>${c.total_contatos}</td>
                         <td style="color:var(--success)">${c.enviadas}</td>
-                        <td style="color:var(--danger)">${c.falhadas}</td>
                         <td><span class="status-badge status-${c.status}">${c.status}</span></td>
-                        <td><div class="progress"><div class="progress-bar" style="width:${progresso}%"></div></div><small>${Math.round(progresso)}%</small></td>
+                        <td><div class="progress"><div class="progress-bar" style="width:${prog}%"></div></div><small>${Math.round(prog)}%</small></td>
                         <td style="font-size:12px">${formatarData(c.criado_em)}</td>
                     </tr>
                 `;
@@ -776,8 +967,11 @@
             
             document.getElementById('campanha-nome').value = '';
             document.getElementById('campanha-mensagem').value = '';
+            document.getElementById('campanha-template').value = '';
             imagemUploadUrl = null;
+            contatosCsv = [];
             document.getElementById('imagem-preview-container').innerHTML = '';
+            document.getElementById('csv-preview').innerHTML = '';
             
             const select = document.getElementById('campanha-template');
             select.innerHTML = '<option value="">Selecione ou escreva manualmente</option>' +
@@ -785,61 +979,88 @@
             
             const lista = document.getElementById('lista-contatos-checkbox');
             if (contatos.length === 0) {
-                lista.innerHTML = '<p style="color:var(--gray)">Nenhum contato. Cadastre primeiro!</p>';
+                lista.innerHTML = '<p style="color:var(--gray)">Nenhum contato. Cadastre primeiro ou use CSV!</p>';
             } else {
                 lista.innerHTML = contatos.map(c => `
                     <label class="checkbox-item">
                         <input type="checkbox" value="${c.id}" onchange="atualizarContagemSelecionados()">
-                        <div>
-                            <strong>${c.nome}</strong>
-                            <div style="font-size:12px;color:var(--gray)">${c.numero}</div>
-                        </div>
+                        <div><strong>${c.nome}</strong><div style="font-size:12px;color:var(--gray)">${c.numero}</div></div>
                     </label>
                 `).join('');
             }
             
             atualizarContagemSelecionados();
+            mudarTabContato('cadastrados');
             document.getElementById('modal-campanha').classList.add('ativo');
+        }
+
+        function mudarTabContato(tab) {
+            tabContatoAtual = tab;
+            document.querySelectorAll('.tab-contato').forEach(t => t.classList.remove('ativo'));
+            event?.target?.closest('.tab-contato')?.classList.add('ativo');
+            document.getElementById('tab-cadastrados').style.display = tab === 'cadastrados' ? 'block' : 'none';
+            document.getElementById('tab-csv').style.display = tab === 'csv' ? 'block' : 'none';
+        }
+
+        async function processarCSVCampanha(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const preview = document.getElementById('csv-preview');
+            preview.innerHTML = '<p>📤 Processando...</p>';
+            
+            try {
+                const res = await fetch(`${API}/contatos/preview-csv`, {
+                    method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (data.sucesso) {
+                    contatosCsv = data.contatos;
+                    preview.innerHTML = `
+                        <div style="background:#c6f6d5;color:#22543d;padding:1rem;border-radius:8px;margin-top:1rem">
+                            ✅ <strong>${data.total} contatos carregados!</strong>
+                            <div style="margin-top:0.5rem;font-size:12px;max-height:150px;overflow-y:auto">
+                                ${contatosCsv.slice(0, 10).map(c => `• ${c.nome} (${c.numero})`).join('<br>')}
+                                ${contatosCsv.length > 10 ? `<br>... e mais ${contatosCsv.length - 10}` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    preview.innerHTML = `<p style="color:var(--danger)">❌ ${data.erro}</p>`;
+                }
+            } catch (e) {
+                preview.innerHTML = `<p style="color:var(--danger)">❌ ${e.message}</p>`;
+            }
         }
 
         async function uploadImagem(input) {
             const file = input.files[0];
             if (!file) return;
-            
-            if (file.size > 5 * 1024 * 1024) {
-                alert('Imagem muito grande (máx 5MB)');
-                return;
-            }
+            if (file.size > 5 * 1024 * 1024) { alert('Máx 5MB'); return; }
             
             const formData = new FormData();
             formData.append('file', file);
-            
             const container = document.getElementById('imagem-preview-container');
-            container.innerHTML = '<p style="color:var(--gray);font-size:13px;margin-top:0.5rem">📤 Enviando imagem...</p>';
+            container.innerHTML = '<p>📤 Enviando...</p>';
             
             try {
-                const res = await fetch(`${API}/upload/imagem`, { method: 'POST', body: formData });
+                const res = await fetch(`${API}/upload/imagem`, {
+                    method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${token}` }
+                });
                 const data = await res.json();
-                
                 if (data.sucesso) {
                     imagemUploadUrl = data.url;
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        container.innerHTML = `
-                            <div class="imagem-preview">
-                                <img src="${e.target.result}" alt="Preview">
-                                <button onclick="removerImagem()" title="Remover">✕</button>
-                            </div>
-                            <p style="color:var(--success);font-size:13px;margin-top:0.5rem">✅ Imagem carregada!</p>
-                        `;
+                        container.innerHTML = `<div class="imagem-preview"><img src="${e.target.result}"><button onclick="removerImagem()">✕</button></div>`;
                     };
                     reader.readAsDataURL(file);
-                } else {
-                    container.innerHTML = `<p style="color:var(--danger);font-size:13px">❌ ${data.erro || 'Erro no upload'}</p>`;
                 }
-            } catch (e) {
-                container.innerHTML = `<p style="color:var(--danger);font-size:13px">❌ Erro: ${e.message}</p>`;
-            }
+            } catch (e) {}
         }
 
         function removerImagem() {
@@ -851,8 +1072,8 @@
         function usarTemplate() {
             const id = document.getElementById('campanha-template').value;
             if (id) {
-                const template = templates.find(t => t.id == id);
-                if (template) document.getElementById('campanha-mensagem').value = template.conteudo;
+                const t = templates.find(t => t.id == id);
+                if (t) document.getElementById('campanha-mensagem').value = t.conteudo;
             }
         }
 
@@ -869,18 +1090,6 @@
         function atualizarContagemSelecionados() {
             const total = document.querySelectorAll('#lista-contatos-checkbox input:checked').length;
             document.getElementById('contatos-selecionados').textContent = `${total} selecionados`;
-            const aviso = document.getElementById('aviso-limite');
-            if (configAntiban && total > 0) {
-                const limite = configAntiban.limite_diario;
-                const enviados = parseInt(document.getElementById('limite-texto').textContent.split('/')[0]);
-                const disponivel = limite - enviados;
-                if (total > disponivel) {
-                    aviso.style.display = 'block';
-                    aviso.innerHTML = `⚠️ <strong>Atenção:</strong> ${total} selecionados, mas só pode enviar mais ${disponivel} hoje.`;
-                } else {
-                    aviso.style.display = 'none';
-                }
-            }
         }
 
         async function dispararCampanha() {
@@ -890,29 +1099,29 @@
             const contato_ids = Array.from(document.querySelectorAll('#lista-contatos-checkbox input:checked')).map(i => parseInt(i.value));
             
             if (!nome || !mensagem) { alert('Preencha nome e mensagem'); return; }
-            if (contato_ids.length === 0) { alert('Selecione contatos'); return; }
             
-            const temImagem = imagemUploadUrl ? ' (com imagem)' : '';
-            if (!confirm(`Disparar${temImagem} para ${contato_ids.length} contatos?\n\nDelay anti-ban ativo.`)) return;
+            const total = contato_ids.length + contatosCsv.length;
+            if (total === 0) { alert('Selecione contatos ou suba CSV'); return; }
             
-            try {
-                const res = await fetch(`${API}/campanhas`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome, mensagem, template_id, contato_ids, imagem_url: imagemUploadUrl })
-                });
-                const data = await res.json();
-                if (data.sucesso) {
-                    alert('✅ Campanha iniciada!');
-                    fecharModal('modal-campanha');
-                    mudarPagina('campanhas');
-                } else {
-                    alert('❌ ' + (data.erro || 'Erro'));
-                }
-            } catch (e) { alert('Erro: ' + e); }
+            if (!confirm(`Disparar para ${total} contatos?`)) return;
+            
+            const res = await api(`${API}/campanhas`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nome, mensagem, template_id, contato_ids, contatos_csv: contatosCsv, imagem_url: imagemUploadUrl })
+            });
+            const data = await res.json();
+            if (data.sucesso) {
+                alert('✅ Campanha iniciada!');
+                fecharModal('modal-campanha');
+                mudarPagina('campanhas');
+            } else {
+                alert('❌ ' + (data.erro || 'Erro'));
+            }
         }
 
+        // ANTI-BAN
         async function carregarConfigAntiban() {
-            const res = await fetch(`${API}/antiban/config`);
+            const res = await api(`${API}/antiban/config`);
             const data = await res.json();
             if (data.sucesso && data.config) {
                 const c = data.config;
@@ -947,11 +1156,12 @@
                 horario_fim: document.getElementById('config-horario-fim').value,
                 ativo: document.getElementById('antiban-ativo').checked
             };
-            const res = await fetch(`${API}/antiban/config`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
+            await api(`${API}/antiban/config`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
             });
-            const data = await res.json();
-            if (data.sucesso) { alert('✅ Salvo!'); atualizarLimiteInfo(); carregarConfigAntiban(); }
+            alert('✅ Salvo!');
+            atualizarLimiteInfo();
+            carregarConfigAntiban();
         }
 
         function usarConfigSegura() {
@@ -961,26 +1171,112 @@
             document.getElementById('config-delay-max').value = 10;
             document.getElementById('config-pausa-cada').value = 20;
             document.getElementById('config-pausa-segundos').value = 120;
-            document.getElementById('config-horario-inicio').value = '09:00';
-            document.getElementById('config-horario-fim').value = '18:00';
-            alert('🛡️ Config SEGURA aplicada! Salve.');
+            alert('🛡️ Aplicado! Salve.');
         }
 
         function usarConfigAgressiva() {
-            if (!confirm('⚠️ Config agressiva tem maior risco!')) return;
+            if (!confirm('⚠️ Maior risco!')) return;
             document.getElementById('config-limite-diario').value = 300;
-            document.getElementById('config-limite-hora').value = 60;
             document.getElementById('config-delay-min').value = 2;
             document.getElementById('config-delay-max').value = 5;
-            document.getElementById('config-pausa-cada').value = 50;
-            document.getElementById('config-pausa-segundos').value = 30;
-            document.getElementById('config-horario-inicio').value = '08:00';
-            document.getElementById('config-horario-fim').value = '22:00';
-            alert('🚀 AGRESSIVA aplicada! Salve com cuidado.');
+            alert('🚀 Aplicado! Salve.');
         }
 
+        // USUÁRIOS
+        async function carregarUsuarios() {
+            const res = await api(`${API}/usuarios`);
+            const data = await res.json();
+            const tbody = document.getElementById('tabela-usuarios');
+            if (!data.usuarios || data.usuarios.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty"><i class="fas fa-users"></i><p>Nenhum usuário</p></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.usuarios.map(u => `
+                <tr>
+                    <td><strong>${u.nome}</strong></td>
+                    <td>${u.email}</td>
+                    <td><span class="perfil-badge perfil-${u.perfil}">${u.perfil}</span></td>
+                    <td>${u.ativo ? '✅ Ativo' : '❌ Inativo'}</td>
+                    <td style="font-size:12px">${u.ultimo_login ? formatarData(u.ultimo_login) : 'Nunca'}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" onclick="toggleAtivo(${u.id}, ${u.ativo ? 0 : 1})">${u.ativo ? '🔒' : '🔓'}</button>
+                        ${u.id !== usuarioLogado.id ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function abrirModalUsuario() {
+            ['usuario-novo-nome', 'usuario-novo-email', 'usuario-novo-senha'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('modal-usuario').classList.add('ativo');
+        }
+
+        async function salvarUsuario() {
+            const dados = {
+                nome: document.getElementById('usuario-novo-nome').value,
+                email: document.getElementById('usuario-novo-email').value,
+                senha: document.getElementById('usuario-novo-senha').value,
+                perfil: document.getElementById('usuario-novo-perfil').value
+            };
+            if (!dados.nome || !dados.email || !dados.senha) { alert('Preencha tudo'); return; }
+            
+            const res = await api(`${API}/usuarios`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
+            });
+            const data = await res.json();
+            if (data.sucesso) { fecharModal('modal-usuario'); carregarUsuarios(); }
+            else alert(data.erro);
+        }
+
+        async function toggleAtivo(id, ativo) {
+            await api(`${API}/usuarios/${id}`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ativo: ativo === 1 })
+            });
+            carregarUsuarios();
+        }
+
+        async function deletarUsuario(id) {
+            if (!confirm('Deletar usuário?')) return;
+            await api(`${API}/usuarios/${id}`, { method: 'DELETE' });
+            carregarUsuarios();
+        }
+
+        // CONFIG Z-API
+        async function carregarConfigZapi() {
+            const res = await api(`${API}/config/zapi`);
+            const data = await res.json();
+            if (data.configs) {
+                if (data.configs.atendimento) {
+                    document.getElementById('zapi-atend-instance').value = data.configs.atendimento.instance_id || '';
+                    document.getElementById('zapi-atend-token').value = data.configs.atendimento.token || '';
+                    document.getElementById('zapi-atend-client').value = data.configs.atendimento.client_token || '';
+                }
+                if (data.configs.disparos) {
+                    document.getElementById('zapi-disp-instance').value = data.configs.disparos.instance_id || '';
+                    document.getElementById('zapi-disp-token').value = data.configs.disparos.token || '';
+                    document.getElementById('zapi-disp-client').value = data.configs.disparos.client_token || '';
+                }
+            }
+        }
+
+        async function salvarZapi(tipo) {
+            const prefix = tipo === 'atendimento' ? 'zapi-atend' : 'zapi-disp';
+            const dados = {
+                tipo,
+                instance_id: document.getElementById(`${prefix}-instance`).value,
+                token: document.getElementById(`${prefix}-token`).value,
+                client_token: document.getElementById(`${prefix}-client`).value
+            };
+            const res = await api(`${API}/config/zapi`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
+            });
+            const data = await res.json();
+            if (data.sucesso) { alert(`✅ Z-API ${tipo} salva!`); verificarStatusZapi(); }
+        }
+
+        // RELATÓRIOS
         async function carregarRelatorios() {
-            const res = await fetch(`${API}/relatorios`);
+            const res = await api(`${API}/relatorios`);
             const data = await res.json();
             const r = data.relatorios;
             document.getElementById('stats-cards').innerHTML = `
@@ -993,6 +1289,18 @@
                 <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-num" style="color:var(--success)">${r.totalEnviadas}</div><div class="stat-label">Enviadas</div></div>
                 <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-num" style="color:var(--primary)">${r.enviadosHoje}</div><div class="stat-label">Hoje</div></div>
             `;
+            
+            const topEl = document.getElementById('top-atendentes');
+            if (r.topAtendentes && r.topAtendentes.length > 0) {
+                topEl.innerHTML = r.topAtendentes.map((a, i) => `
+                    <div style="display:flex;justify-content:space-between;padding:0.75rem;border-bottom:1px solid var(--border)">
+                        <div><strong>${i+1}º</strong> ${a.fechado_por_nome}</div>
+                        <div style="color:var(--success);font-weight:600">${a.total} atendimentos</div>
+                    </div>
+                `).join('');
+            } else {
+                topEl.innerHTML = '<p style="color:var(--gray)">Sem dados ainda</p>';
+            }
         }
 
         function fecharModal(id) { document.getElementById(id).classList.remove('ativo'); }
@@ -1000,6 +1308,11 @@
             if (!data) return '-';
             return new Date(data).toLocaleString('pt-BR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         }
+        
+        // Enter pra logar
+        document.getElementById('login-senha').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fazerLogin();
+        });
     </script>
 </body>
 </html>
