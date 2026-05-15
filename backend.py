@@ -304,10 +304,13 @@ async def criar_user(req: Request):
         c.close()
         conn.close()
         return {"sucesso": True}
-    except:
+    except Exception as e:
         c.close()
         conn.close()
-        return JSONResponse({"sucesso": False, "erro": "Email ja existe"}, 400)
+        erro_msg = str(e)
+        if "duplicate key" in erro_msg.lower() or "unique" in erro_msg.lower():
+            return JSONResponse({"sucesso": False, "erro": f"Email {email} ja cadastrado no sistema"}, 400)
+        return JSONResponse({"sucesso": False, "erro": f"Erro ao criar usuario"}, 400)
 
 @app.put("/api/usuarios/{uid}")
 async def update_user(uid: int, req: Request):
