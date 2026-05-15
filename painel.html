@@ -15,15 +15,6 @@
             --gray: #718096; --border: #e2e8f0;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--light); color: var(--dark); min-height: 100vh; }
-        .login-screen { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, var(--primary), var(--secondary)); }
-        .login-box { background: white; padding: 3rem; border-radius: 16px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        .login-header { text-align: center; margin-bottom: 2rem; }
-        .login-icon { font-size: 60px; }
-        .login-title { background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 32px; }
-        .login-subtitle { color: var(--gray); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; }
-        #erro-login { display: none; background: #fed7d7; color: #742a2a; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 13px; }
-        .login-input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; }
-        .login-button { width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
         .main { display: flex; height: 100vh; }
         .sidebar { width: 260px; background: white; box-shadow: 2px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
         .logo-section { padding: 1.5rem; border-bottom: 1px solid var(--border); }
@@ -38,97 +29,1439 @@
         .nav-item i { width: 20px; text-align: center; }
         .nav-item.hidden { display: none; }
         .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
+        .user-section { padding: 1rem; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .user-avatar { width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { flex: 1; }
+        .user-name { font-weight: 600; font-size: 13px; }
+        .user-perfil { font-size: 10px; color: var(--gray); text-transform: uppercase; }
+        .btn-logout { background: var(--light); border: none; padding: 0.4rem; border-radius: 6px; cursor: pointer; color: var(--danger); }
+        .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: white; padding: 1.25rem 2rem; box-shadow: 0 1px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { font-size: 22px; font-weight: 700; }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+        .status-zapi { padding: 0.5rem 1rem; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-zapi.online { background: #c6f6d5; color: #22543d; }
+        .status-zapi.offline { background: #fed7d7; color: #742a2a; }
+        .limite-info { padding: 0.5rem 1rem; border-radius: 20px; font-size: 12px; font-weight: 600; background: var(--light); color: var(--dark); }
+        .limite-info.alerta { background: #feebc8; color: #7c2d12; }
+        .limite-info.bloqueado { background: #fed7d7; color: #742a2a; }
+        .page-content { flex: 1; overflow-y: auto; padding: 2rem; }
+        .page { display: none; }
+        .page.ativo { display: block; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; transition: all 0.3s; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; }
+        .stat-icon { font-size: 28px; margin-bottom: 0.5rem; }
+        .stat-num { font-size: 28px; font-weight: 700; }
+        .stat-label { font-size: 12px; color: var(--gray); text-transform: uppercase; margin-top: 0.5rem; }
+        .conversa-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; height: 320px; }
+        .conversa-header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 1rem 1.25rem; display: flex; justify-content: space-between; }
+        .conversa-numero { font-weight: 700; font-size: 16px; }
+        .conversa-nome { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+        .conversa-tempo { font-size: 11px; opacity: 0.9; }
+        .conversa-body { flex: 1; padding: 1rem; overflow-y: auto; background: #fafbfc; font-size: 13px; }
+        .conversa-footer { padding: 1rem; background: white; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
+        .btn { padding: 0.65rem 1.25rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+        .btn-primary:hover { transform: scale(1.03); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-info { background: var(--info); color: white; }
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 12px; }
+        .btn-block { width: 100%; }
+        .table-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--light); font-weight: 600; font-size: 12px; text-transform: uppercase; color: var(--gray); }
+        tr:hover { background: #f9fafb; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 13px; }
+        input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        textarea { resize: vertical; min-height: 100px; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal.ativo { display: flex; }
+        .modal-content { background: white; padding: 2rem; border-radius: 12px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 1.5rem; }
+        .modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+        .search-box { flex: 1; max-width: 400px; position: relative; }
+        .search-box input { padding-left: 2.5rem; }
+        .search-box i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--gray); }
+        .mensagem { margin-bottom: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 13px; }
+        .mensagem-cliente { background: #e0e7ff; border-left: 3px solid var(--primary); }
+        .mensagem-eva { background: #dbeafe; border-left: 3px solid var(--info); }
+        .mensagem-atendente { background: #c6f6d5; border-left: 3px solid var(--success); }
+        .mensagem-label { font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 0.25rem; opacity: 0.7; }
+        .modal-chat { height: 350px; overflow-y: auto; padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; }
+        .responder-area { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .responder-area textarea { flex: 1; min-height: 60px; }
+        .checkbox-list { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+        .checkbox-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; border-radius: 6px; cursor: pointer; }
+        .checkbox-item:hover { background: var(--light); }
+        .checkbox-item input { width: auto; }
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .status-pendente { background: #feebc8; color: #7c2d12; }
+        .status-enviando { background: #bee3f8; color: #2c5282; }
+        .status-finalizada { background: #c6f6d5; color: #22543d; }
+        .status-erro { background: #fed7d7; color: #742a2a; }
+        .perfil-badge { padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 11px; font-weight: 600; }
+        .perfil-admin { background: #fed7d7; color: #742a2a; }
+        .perfil-atendente { background: #bee3f8; color: #2c5282; }
+        .perfil-marketing { background: #c6f6d5; color: #22543d; }
+        .empty { text-align: center; padding: 3rem; color: var(--gray); }
+        .empty i { font-size: 48px; opacity: 0.3; margin-bottom: 1rem; display: block; }
+        .progress { width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 0.5rem; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.3s; }
+        .antiban-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 2rem; margin-bottom: 1.5rem; }
+        .antiban-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .uso-diario { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 1.5rem; }
+        .uso-grande { font-size: 48px; font-weight: 700; }
+        .uso-progress { width: 100%; height: 12px; background: rgba(255,255,255,0.3); border-radius: 6px; margin-top: 1rem; overflow: hidden; }
+        .uso-progress-bar { height: 100%; background: white; transition: width 0.3s; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 26px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        .upload-area { border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--light); }
+        .upload-area:hover { border-color: var(--primary); background: rgba(102, 126, 234, 0.05); }
+        .upload-area i { font-size: 32px; color: var(--gray); margin-bottom: 0.5rem; }
+        .upload-area p { color: var(--gray); font-size: 13px; }
+        .imagem-preview { margin-top: 1rem; position: relative; display: inline-block; }
+        .imagem-preview img { max-width: 200px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .imagem-preview button { position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; }
+        .tabs-contatos { display: flex; gap: 1rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border); }
+        .tab-contato { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; font-size: 13px; color: var(--gray); }
+        .tab-contato.ativo { border-bottom-color: var(--primary); color: var(--primary); }
+        .config-zapi-box { background: var(--light); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+        .config-zapi-box h4 { margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
     </style>
 </head>
 <body>
-<div class="login-screen" id="tela-login">
-    <div class="login-box">
-        <div class="login-header">
-            <div class="login-icon">🤖</div>
-            <h2 class="login-title">EVA</h2>
-            <p class="login-subtitle">Hotel AI</p>
+    <div class="main" id="app-content" style="display:none">
+        <div class="sidebar">
+            <div class="logo-section">
+                <div class="logo">
+                    <div class="logo-icon">🤖</div>
+                    <div><h1>EVA</h1><p>Hotel AI</p></div>
+                </div>
+            </div>
+            <div class="nav">
+                <div class="nav-item" id="nav-conversas" onclick="mudarPagina('conversas')">
+                    <i class="fas fa-comments"></i><span>Conversas</span>
+                    <span class="badge" id="badge-conversas">0</span>
+                </div>
+                <div class="nav-item" id="nav-notificacoes" onclick="mudarPagina('notificacoes')">
+                    <i class="fas fa-bell"></i><span>Notificações</span>
+                </div>
+                <div class="nav-item" id="nav-contatos" onclick="mudarPagina('contatos')">
+                    <i class="fas fa-address-book"></i><span>Contatos</span>
+                </div>
+                <div class="nav-item" id="nav-templates" onclick="mudarPagina('templates')">
+                    <i class="fas fa-file-alt"></i><span>Templates</span>
+                </div>
+                <div class="nav-item" id="nav-campanhas" onclick="mudarPagina('campanhas')">
+                    <i class="fas fa-paper-plane"></i><span>Disparos</span>
+                </div>
+                <div class="nav-item" id="nav-antiban" onclick="mudarPagina('antiban')">
+                    <i class="fas fa-shield-alt"></i><span>Anti-Ban</span>
+                </div>
+                <div class="nav-item" id="nav-usuarios" onclick="mudarPagina('usuarios')">
+                    <i class="fas fa-users"></i><span>Usuários</span>
+                </div>
+                <div class="nav-item" id="nav-config" onclick="mudarPagina('config')">
+                    <i class="fas fa-cog"></i><span>Configurações</span>
+                </div>
+                <div class="nav-item" id="nav-relatorios" onclick="mudarPagina('relatorios')">
+                    <i class="fas fa-chart-bar"></i><span>Relatórios</span>
+                </div>
+            </div>
+            <div class="user-section">
+                <div class="user-avatar" id="avatar">D</div>
+                <div class="user-info">
+                    <div class="user-name" id="usuario-nome">Usuário</div>
+                    <div class="user-perfil" id="usuario-perfil">Perfil</div>
+                </div>
+                <button class="btn-logout" onclick="fazerLogout()"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
         </div>
-        <div id="erro-login"></div>
-        <input type="email" class="login-input" id="login-email" placeholder="Email">
-        <input type="password" class="login-input" id="login-senha" placeholder="Senha">
-        <button class="login-button" id="btn-login">Entrar</button>
+        <div class="content">
+            <div class="header">
+                <h2 id="pagina-titulo">Conversas</h2>
+                <div class="header-actions">
+                    <div class="limite-info" id="limite-info">
+                        <i class="fas fa-shield-alt"></i> <span id="limite-texto">0 / 100</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;background:var(--color-background-secondary);border-radius:20px" id="robo-toggle-container">
+                        <i class="fas fa-robot" style="font-size:14px"></i>
+                        <span style="font-size:12px;font-weight:600" id="robo-status-text">Robô: ...</span>
+                        <label class="switch" style="margin:0">
+                            <input type="checkbox" id="robo-toggle" onchange="toggleRobo()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="status-zapi offline" id="status-zapi-atend">
+                        <i class="fas fa-circle"></i> Atend: ...
+                    </div>
+                    <div class="status-zapi offline" id="status-zapi-disp">
+                        <i class="fas fa-circle"></i> Disp: ...
+                    </div>
+                </div>
+            </div>
+            <div class="page-content">
+                <!-- CONVERSAS -->
+                <div id="page-conversas" class="page">
+                    <div class="toolbar">
+                        <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..."></div>
+                        <div>
+                            <button class="btn btn-primary btn-sm" onclick="mudarTabConversa('abertos')" id="tab-abertos">
+                                <i class="fas fa-inbox"></i> Abertos <span id="count-abertos">0</span>
+                            </button>
+                            <button class="btn btn-sm" style="background:#e2e8f0;color:var(--dark)" onclick="mudarTabConversa('fechados')" id="tab-fechados">
+                                <i class="fas fa-check"></i> Fechados <span id="count-fechados">0</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid" id="grid-conversas"></div>
+                </div>
+
+                <!-- NOTIFICAÇÕES -->
+                <div id="page-notificacoes" class="page">
+                    <div class="toolbar">
+                        <h3>📬 Histórico de Notificações</h3>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Data/Hora</th><th>Hotel</th><th>Atendente</th><th>Mensagem</th></tr></thead>
+                            <tbody id="tabela-notificacoes"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CONTATOS -->
+                <div id="page-contatos" class="page">
+                    <div class="toolbar">
+                        <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..." id="busca-contatos" onkeyup="filtrarContatos()"></div>
+                        <div style="display:flex;gap:0.5rem">
+                            <button class="btn btn-info btn-sm" onclick="abrirModalImportar()"><i class="fas fa-upload"></i> CSV</button>
+                            <button class="btn btn-primary btn-sm" onclick="abrirModalContato()"><i class="fas fa-plus"></i> Novo</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Nome</th><th>Número</th><th>Email</th><th>Tags</th><th>Ações</th></tr></thead>
+                            <tbody id="tabela-contatos"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TEMPLATES -->
+                <div id="page-templates" class="page">
+                    <div class="toolbar">
+                        <h3>Templates</h3>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModalTemplate()"><i class="fas fa-plus"></i> Novo</button>
+                    </div>
+                    <div class="grid" id="grid-templates"></div>
+                </div>
+
+                <!-- CAMPANHAS -->
+                <div id="page-campanhas" class="page">
+                    <div class="toolbar">
+                        <h3>Campanhas</h3>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModalCampanha()"><i class="fas fa-paper-plane"></i> Nova Campanha</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Nome</th><th>Criada por</th><th>Total</th><th>Enviadas</th><th>Status</th><th>Progresso</th><th>Data</th></tr></thead>
+                            <tbody id="tabela-campanhas"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ANTI-BAN -->
+                <div id="page-antiban" class="page">
+                    <div class="uso-diario">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                            <div>
+                                <p style="font-size:14px;opacity:0.9;text-transform:uppercase;letter-spacing:1px">Uso Diário</p>
+                                <div class="uso-grande" id="uso-grande">0 / 100</div>
+                                <p style="font-size:13px;opacity:0.9;margin-top:0.5rem" id="uso-texto">Pode enviar mais 100 hoje</p>
+                            </div>
+                            <div style="font-size:48px">🛡️</div>
+                        </div>
+                        <div class="uso-progress"><div class="uso-progress-bar" id="uso-progress-bar" style="width:0%"></div></div>
+                    </div>
+                    <div class="antiban-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+                            <h3>⚙️ Configurações</h3>
+                            <label class="switch"><input type="checkbox" id="antiban-ativo" checked><span class="slider"></span></label>
+                        </div>
+                        <div class="antiban-grid">
+                            <div class="form-group"><label>Limite Diário</label><input type="number" id="config-limite-diario" value="100"></div>
+                            <div class="form-group"><label>Limite/Hora</label><input type="number" id="config-limite-hora" value="30"></div>
+                            <div class="form-group"><label>Delay Mín (s)</label><input type="number" id="config-delay-min" value="3"></div>
+                            <div class="form-group"><label>Delay Máx (s)</label><input type="number" id="config-delay-max" value="7"></div>
+                            <div class="form-group"><label>Pausa a cada</label><input type="number" id="config-pausa-cada" value="30"></div>
+                            <div class="form-group"><label>Pausa (s)</label><input type="number" id="config-pausa-segundos" value="60"></div>
+                            <div class="form-group"><label>Início</label><input type="time" id="config-horario-inicio" value="08:00"></div>
+                            <div class="form-group"><label>Fim</label><input type="time" id="config-horario-fim" value="20:00"></div>
+                        </div>
+                        <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap">
+                            <button class="btn btn-success" onclick="salvarConfigAntiban()"><i class="fas fa-save"></i> Salvar</button>
+                            <button class="btn btn-warning" onclick="usarConfigSegura()">🛡️ Segura</button>
+                            <button class="btn btn-info" onclick="usarConfigAgressiva()">🚀 Agressiva</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- USUÁRIOS -->
+                <div id="page-usuarios" class="page">
+                    <div class="toolbar">
+                        <h3>Gerenciar Usuários</h3>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()"><i class="fas fa-user-plus"></i> Novo Usuário</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Status</th><th>Último Login</th><th>Ações</th></tr></thead>
+                            <tbody id="tabela-usuarios"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CONFIGURAÇÕES -->
+                <div id="page-config" class="page">
+                    <div class="config-zapi-box">
+                        <h4>📞 Z-API Atendimento</h4>
+                        <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Número usado pra responder clientes automaticamente</p>
+                        <div class="form-group"><label>Instance ID</label><input type="text" id="zapi-atend-instance"></div>
+                        <div class="form-group"><label>Token</label><input type="text" id="zapi-atend-token"></div>
+                        <div class="form-group"><label>Client/Security Token</label><input type="text" id="zapi-atend-client"></div>
+                        <button class="btn btn-success" onclick="salvarZapi('atendimento')"><i class="fas fa-save"></i> Salvar Atendimento</button>
+                    </div>
+                    <div class="config-zapi-box">
+                        <h4>📢 Z-API Disparos</h4>
+                        <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Número usado pra disparos em massa (separado pra proteger atendimento)</p>
+                        <div class="form-group"><label>Instance ID</label><input type="text" id="zapi-disp-instance"></div>
+                        <div class="form-group"><label>Token</label><input type="text" id="zapi-disp-token"></div>
+                        <div class="form-group"><label>Client/Security Token</label><input type="text" id="zapi-disp-client"></div>
+                        <button class="btn btn-success" onclick="salvarZapi('disparos')"><i class="fas fa-save"></i> Salvar Disparos</button>
+                    </div>
+                </div>
+
+                <!-- RELATÓRIOS -->
+                <div id="page-relatorios" class="page">
+                    <div class="grid-stats" id="stats-cards"></div>
+                    <div class="card" style="padding:2rem;margin-top:2rem">
+                        <h3 style="margin-bottom:1rem">🏆 Top Atendentes</h3>
+                        <div id="top-atendentes"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
-<div class="main" id="app-content" style="display:none">
-    <div style="padding:3rem;text-align:center">
-        <h1>🎉 EVA funcionando!</h1>
-        <p>Login realizado com sucesso!</p>
-        <button onclick="localStorage.removeItem('eva-token'); location.reload()">Sair</button>
+    <!-- LOGIN -->
+    <div id="login-screen" style="height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2)">
+        <div style="background:white;padding:3rem;border-radius:16px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+            <div style="text-align:center;margin-bottom:2rem">
+                <div style="font-size:60px">🤖</div>
+                <h2 style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:32px">EVA</h2>
+                <p style="color:#718096;font-size:11px;text-transform:uppercase;letter-spacing:2px">Hotel AI</p>
+            </div>
+            <div id="erro-login" style="display:none;background:#fed7d7;color:#742a2a;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:13px"></div>
+            <input type="email" id="login-email" placeholder="Email" style="width:100%;padding:12px;margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px">
+            <input type="password" id="login-senha" placeholder="Senha" style="width:100%;padding:12px;margin-bottom:20px;border:1px solid #e2e8f0;border-radius:8px">
+            <button onclick="fazerLogin()" id="btn-login" style="width:100%;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">Entrar</button>
+        </div>
     </div>
-</div>
 
-<script>
-const API = "/api";
-let token = localStorage.getItem("eva-token");
+    <!-- MODAIS -->
+    <div class="modal" id="modal-conversa">
+        <div class="modal-content">
+            <div class="modal-title" id="modal-conversa-titulo">Conversa</div>
+            <div class="modal-chat" id="modal-chat"></div>
+            <div class="responder-area">
+                <textarea id="modal-resposta" placeholder="Digite sua resposta..."></textarea>
+                <button class="btn btn-primary" onclick="enviarResposta()" style="height:fit-content;align-self:flex-end"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            <div class="form-group"><label>Observações</label><textarea id="modal-observacoes" style="min-height:60px"></textarea></div>
+            <div class="modal-actions">
+                <button class="btn btn-success btn-block" onclick="fecharAtendimentoModal()"><i class="fas fa-check"></i> Fechar Atendimento</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-conversa')">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
-document.addEventListener("DOMContentLoaded", () => {
-    if (token) verificarToken();
-    document.getElementById("btn-login").addEventListener("click", fazerLogin);
-    document.getElementById("login-senha").addEventListener("keypress", (e) => {
-        if (e.key === "Enter") fazerLogin();
-    });
-});
+    <div class="modal" id="modal-contato">
+        <div class="modal-content">
+            <div class="modal-title">Novo Contato</div>
+            <div class="form-group"><label>Nome *</label><input type="text" id="contato-nome"></div>
+            <div class="form-group"><label>Número (com DDI) *</label><input type="text" id="contato-numero" placeholder="5511999999999"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="contato-email"></div>
+            <div class="form-group"><label>Tags</label><input type="text" id="contato-tags"></div>
+            <div class="form-group">
+                <label>👥 Responsáveis (Atendentes)</label>
+                <p style="font-size:12px;color:var(--gray);margin-bottom:0.5rem">Selecione os atendentes responsáveis por este hotel. Eles serão notificados quando houver mensagens.</p>
+                <select id="contato-responsaveis" multiple style="min-height:100px">
+                    <!-- Carregado dinamicamente -->
+                </select>
+                <p style="font-size:11px;color:var(--gray);margin-top:0.3rem">Use Ctrl/Cmd + clique para selecionar múltiplos</p>
+            </div>
+            <div class="form-group">
+                <label>🧠 Base de Conhecimento da IA</label>
+                <p style="font-size:12px;color:var(--gray);margin-bottom:0.5rem">Informações que a IA usará ao responder este hotel (quartos, tarifas, procedimentos)</p>
+                <textarea id="contato-conhecimento" style="min-height:150px" placeholder="Hotel: [Nome do Hotel]
+Endereço: [Endereço completo]
 
-async function verificarToken() {
-    try {
-        const res = await fetch(`${API}/me`, { headers: { 'Authorization': `Bearer ${token}` } });
-        const data = await res.json();
-        if (data.sucesso) {
-            mostrarApp();
-        } else {
-            localStorage.removeItem("eva-token");
-            token = null;
-        }
-    } catch (e) { 
-        localStorage.removeItem("eva-token"); 
-        token = null;
-    }
-}
+Quartos disponíveis:
+- Standard (30m²) - R$ XXX/diária
+- Superior (40m²) - R$ XXX/diária
+- Master Suite (60m²) - R$ XXX/diária
 
-async function fazerLogin() {
-    const email = document.getElementById("login-email").value;
-    const senha = document.getElementById("login-senha").value;
-    const erroEl = document.getElementById("erro-login");
-    
-    if (!email || !senha) {
-        erroEl.textContent = "Preencha email e senha";
-        erroEl.style.display = 'block';
-        return;
-    }
-    
-    try {
-        const res = await fetch(`${API}/login`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ email, senha })
+Procedimentos:
+- Fecho de disponibilidade: [sistema usado]
+- Alteração de tarifa: [prazo/regra]
+- Cancelamento: [política]"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-block" onclick="salvarContato()"><i class="fas fa-save"></i> Salvar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-contato')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-importar">
+        <div class="modal-content">
+            <div class="modal-title">Importar CSV</div>
+            <p style="margin-bottom:1rem;font-size:13px;color:var(--gray)">Colunas: nome, numero, email</p>
+            <div class="form-group"><label>Arquivo</label><input type="file" id="arquivo-csv" accept=".csv"></div>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-block" onclick="importarCSV()"><i class="fas fa-upload"></i> Importar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-importar')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-template">
+        <div class="modal-content">
+            <div class="modal-title">Novo Template</div>
+            <div class="form-group"><label>Nome *</label><input type="text" id="template-nome"></div>
+            <div class="form-group">
+                <label>Categoria</label>
+                <select id="template-categoria">
+                    <option value="geral">Geral</option>
+                    <option value="regional">Regional</option>
+                    <option value="lancamento">Lançamento</option>
+                    <option value="promocao">Promoção</option>
+                    <option value="aniversario">Aniversário</option>
+                    <option value="reserva">Reserva</option>
+                    <option value="lembrete">Lembrete</option>
+                    <option value="feedback">Feedback</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Conteúdo *</label><textarea id="template-conteudo" placeholder="Olá {nome}!"></textarea></div>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-block" onclick="salvarTemplate()"><i class="fas fa-save"></i> Salvar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-template')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-campanha">
+        <div class="modal-content">
+            <div class="modal-title">Nova Campanha</div>
+            <div class="form-group"><label>Nome *</label><input type="text" id="campanha-nome"></div>
+            <div class="form-group">
+                <label>Template</label>
+                <select id="campanha-template" onchange="usarTemplate()">
+                    <option value="">Selecione ou escreva manualmente</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>📸 Imagem (opcional)</label>
+                <div class="upload-area" onclick="document.getElementById('campanha-imagem').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p><strong>Clique para enviar</strong> (JPG, PNG, WEBP)</p>
+                </div>
+                <input type="file" id="campanha-imagem" accept="image/*" style="display:none" onchange="uploadImagem(this)">
+                <div id="imagem-preview-container"></div>
+            </div>
+            <div class="form-group"><label>Mensagem *</label><textarea id="campanha-mensagem"></textarea></div>
+            
+            <!-- NOVO: TABS DE CONTATOS -->
+            <div class="form-group">
+                <label>Contatos *</label>
+                <div class="tabs-contatos">
+                    <div class="tab-contato ativo" onclick="mudarTabContato('cadastrados')">
+                        <i class="fas fa-address-book"></i> Cadastrados
+                    </div>
+                    <div class="tab-contato" onclick="mudarTabContato('csv')">
+                        <i class="fas fa-file-csv"></i> Importar CSV
+                    </div>
+                </div>
+                
+                <div id="tab-cadastrados">
+                    <div style="margin-bottom:0.5rem">
+                        <button class="btn btn-sm btn-info" onclick="selecionarTodosContatos()"><i class="fas fa-check-double"></i> Todos</button>
+                        <button class="btn btn-sm" style="background:#e2e8f0;color:var(--dark)" onclick="desmarcarTodosContatos()"><i class="fas fa-times"></i> Desmarcar</button>
+                        <span id="contatos-selecionados" style="margin-left:1rem;font-size:13px;color:var(--gray)">0 selecionados</span>
+                    </div>
+                    <div class="checkbox-list" id="lista-contatos-checkbox"></div>
+                </div>
+                
+                <div id="tab-csv" style="display:none">
+                    <div class="upload-area" onclick="document.getElementById('campanha-csv').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p><strong>Clique para enviar CSV</strong></p>
+                        <p style="font-size:11px">Colunas: nome, numero</p>
+                    </div>
+                    <input type="file" id="campanha-csv" accept=".csv" style="display:none" onchange="processarCSVCampanha(this)">
+                    <div id="csv-preview" style="margin-top:1rem"></div>
+                </div>
+            </div>
+            
+            <div id="aviso-limite" style="display:none;padding:1rem;background:#feebc8;color:#7c2d12;border-radius:8px;margin-bottom:1rem"></div>
+            <div class="modal-actions">
+                <button class="btn btn-success btn-block" onclick="dispararCampanha()"><i class="fas fa-paper-plane"></i> Disparar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-campanha')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-usuario">
+        <div class="modal-content">
+            <div class="modal-title" id="modal-usuario-titulo">Novo Usuário</div>
+            <div class="form-group"><label>Nome *</label><input type="text" id="usuario-novo-nome"></div>
+            <div class="form-group"><label>Email *</label><input type="email" id="usuario-novo-email"></div>
+            <div class="form-group"><label>Senha *</label><input type="password" id="usuario-novo-senha"></div>
+            <div class="form-group">
+                <label>📱 WhatsApp (pra receber notificações)</label>
+                <input type="text" id="usuario-novo-whatsapp" placeholder="5511999999999">
+                <p style="font-size:11px;color:var(--gray);margin-top:0.3rem">Número com DDI (ex: 5511999999999)</p>
+            </div>
+            <div class="form-group">
+                <label>Perfil *</label>
+                <select id="usuario-novo-perfil">
+                    <option value="atendente">🔵 Atendente</option>
+                    <option value="marketing">🟢 Marketing</option>
+                    <option value="admin">🔴 Admin</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-block" onclick="salvarUsuario()"><i class="fas fa-save"></i> Salvar</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-usuario')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "/api";
+        let token = localStorage.getItem("eva-token");
+        let usuarioLogado = null;
+        let paginaAtual = 'conversas';
+        let tabConversaAtual = 'abertos';
+        let tabContatoAtual = 'cadastrados';
+        let conversaSelecionada = null;
+        let conversasAbertas = [], conversasFechadas = [];
+        let contatos = [], templates = [], campanhas = [];
+        let configAntiban = null;
+        let imagemUploadUrl = null;
+        let contatosCsv = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (token) verificarToken();
         });
-        
-        const data = await res.json();
-        
-        if (data.sucesso) {
-            token = data.token;
-            localStorage.setItem("eva-token", token);
-            mostrarApp();
-        } else {
-            erroEl.textContent = data.erro || "Email ou senha incorretos";
-            erroEl.style.display = 'block';
-        }
-    } catch (e) {
-        erroEl.textContent = "Erro ao conectar. Tente novamente.";
-        erroEl.style.display = 'block';
-    }
-}
 
-function mostrarApp() {
-    document.getElementById("tela-login").style.display = 'none';
-    document.getElementById("app-content").style.display = 'flex';
-}
-</script>
+        async function verificarToken() {
+            try {
+                const res = await fetch(`${API}/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.sucesso) {
+                    usuarioLogado = data.usuario;
+                    iniciarApp();
+                } else {
+                    localStorage.removeItem("eva-token");
+                    token = null;
+                }
+            } catch (e) { localStorage.removeItem("eva-token"); }
+        }
+
+        async function fazerLogin() {
+            const email = document.getElementById("login-email").value;
+            const senha = document.getElementById("login-senha").value;
+            const erroEl = document.getElementById("erro-login");
+            
+            if (!email || !senha) {
+                erroEl.style.display = 'block';
+                erroEl.textContent = 'Preencha email e senha';
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${API}/login`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email, senha })
+                });
+                const data = await res.json();
+                
+                if (data.sucesso) {
+                    token = data.token;
+                    usuarioLogado = data.usuario;
+                    localStorage.setItem("eva-token", token);
+                    erroEl.style.display = 'none';
+                    iniciarApp();
+                } else {
+                    erroEl.style.display = 'block';
+                    erroEl.textContent = data.erro || 'Erro ao fazer login';
+                }
+            } catch (e) {
+                erroEl.style.display = 'block';
+                erroEl.textContent = 'Erro de conexão';
+            }
+        }
+
+        async function fazerLogout() {
+            try {
+                await fetch(`${API}/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            } catch (e) {}
+            localStorage.removeItem("eva-token");
+            location.reload();
+        }
+
+        function iniciarApp() {
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("app-content").style.display = "flex";
+            document.getElementById("usuario-nome").textContent = usuarioLogado.nome;
+            document.getElementById("usuario-perfil").textContent = usuarioLogado.perfil;
+            document.getElementById("avatar").textContent = usuarioLogado.nome[0].toUpperCase();
+            
+            ajustarMenuPorPerfil();
+            carregarTudo();
+            verificarStatusZapi();
+            atualizarLimiteInfo();
+            carregarStatusRobo();
+            
+            setInterval(carregarConversas, 5000);
+            setInterval(verificarStatusZapi, 30000);
+            setInterval(atualizarLimiteInfo, 10000);
+            setInterval(() => { if (paginaAtual === 'campanhas') carregarCampanhas(); }, 3000);
+        }
+
+        async function carregarStatusRobo() {
+            try {
+                const res = await api(`${API}/sistema/robo`);
+                const data = await res.json();
+                if (data.sucesso) {
+                    const ativo = data.ativo;
+                    document.getElementById('robo-toggle').checked = ativo;
+                    document.getElementById('robo-status-text').textContent = ativo ? 'Robô: ATIVO' : 'Robô: PAUSADO';
+                    document.getElementById('robo-toggle-container').style.background = ativo ? 'var(--color-background-success)' : 'var(--color-background-warning)';
+                    document.getElementById('robo-toggle-container').style.color = ativo ? 'var(--color-text-success)' : 'var(--color-text-warning)';
+                }
+            } catch (e) {}
+        }
+
+        async function toggleRobo() {
+            const checkbox = document.getElementById('robo-toggle');
+            const ativo = checkbox.checked;
+            
+            if (!confirm(ativo ? '✅ Ativar robô?\n\nEVA voltará a responder automaticamente.' : '⏸️ Pausar robô?\n\nEVA NÃO responderá automaticamente.\nSó atendentes humanos.')) {
+                checkbox.checked = !ativo;
+                return;
+            }
+            
+            try {
+                const res = await api(`${API}/sistema/robo`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ativo })
+                });
+                const data = await res.json();
+                if (data.sucesso) {
+                    carregarStatusRobo();
+                    alert(ativo ? '✅ Robô ATIVADO!\nEVA responde automaticamente.' : '⏸️ Robô PAUSADO!\nSó atendentes humanos respondem.');
+                } else {
+                    checkbox.checked = !ativo;
+                    alert('Erro: ' + (data.erro || 'desconhecido'));
+                }
+            } catch (e) {
+                checkbox.checked = !ativo;
+                alert('Erro ao alterar status do robô');
+            }
+        }
+
+        function ajustarMenuPorPerfil() {
+            const perfil = usuarioLogado.perfil;
+            
+            // Esconde tudo primeiro
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.add('hidden'));
+            
+            // Esconde/mostra toggle robô (só admin)
+            if (perfil !== 'admin') {
+                document.getElementById('robo-toggle-container').style.display = 'none';
+            }
+            
+            if (perfil === 'admin') {
+                // Admin vê tudo
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('hidden'));
+                mudarPagina('conversas');
+            } else if (perfil === 'atendente') {
+                // conversas + notificacoes
+                document.getElementById('nav-conversas').classList.remove('hidden');
+                document.getElementById('nav-notificacoes').classList.remove('hidden');
+                mudarPagina('conversas');
+            } else if (perfil === 'marketing') {
+                // Marketing: contatos, templates, campanhas, anti-ban (SEM notificacoes)
+                document.getElementById('nav-contatos').classList.remove('hidden');
+                document.getElementById('nav-templates').classList.remove('hidden');
+                document.getElementById('nav-campanhas').classList.remove('hidden');
+                document.getElementById('nav-antiban').classList.remove('hidden');
+                mudarPagina('campanhas');
+            }
+        }
+
+        function mudarPagina(pagina) {
+            paginaAtual = pagina;
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('ativo'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('ativo'));
+            document.getElementById(`page-${pagina}`).classList.add('ativo');
+            document.getElementById(`nav-${pagina}`).classList.add('ativo');
+            document.getElementById('pagina-titulo').textContent = {
+                conversas: 'Conversas', notificacoes: 'Notificações', contatos: 'Contatos', templates: 'Templates',
+                campanhas: 'Disparos', antiban: 'Anti-Ban', usuarios: 'Usuários',
+                config: 'Configurações', relatorios: 'Relatórios'
+            }[pagina];
+            
+            if (pagina === 'contatos') carregarContatos();
+            if (pagina === 'notificacoes') carregarNotificacoes();
+            if (pagina === 'templates') carregarTemplates();
+            if (pagina === 'campanhas') carregarCampanhas();
+            if (pagina === 'antiban') carregarConfigAntiban();
+            if (pagina === 'usuarios') carregarUsuarios();
+            if (pagina === 'config') carregarConfigZapi();
+            if (pagina === 'relatorios') carregarRelatorios();
+        }
+
+        function api(url, options = {}) {
+            return fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        }
+
+        function mudarTabConversa(tab) {
+            tabConversaAtual = tab;
+            document.querySelectorAll('#page-conversas .btn').forEach(b => {
+                if (b.id && b.id.startsWith('tab-')) {
+                    b.classList.remove('btn-primary');
+                    b.style.background = '#e2e8f0';
+                    b.style.color = 'var(--dark)';
+                }
+            });
+            const btn = document.getElementById(`tab-${tab}`);
+            btn.classList.add('btn-primary');
+            btn.style.background = '';
+            btn.style.color = '';
+            renderizarConversas();
+        }
+
+        async function carregarTudo() {
+            await carregarConversas();
+        }
+
+        async function verificarStatusZapi() {
+            try {
+                const res = await api(`${API}/zapi/status`);
+                const data = await res.json();
+                
+                const atendEl = document.getElementById('status-zapi-atend');
+                if (data.atendimento.conectado && data.atendimento.data?.connected) {
+                    atendEl.className = 'status-zapi online';
+                    atendEl.innerHTML = '<i class="fas fa-circle"></i> Atend: ON';
+                } else {
+                    atendEl.className = 'status-zapi offline';
+                    atendEl.innerHTML = '<i class="fas fa-circle"></i> Atend: OFF';
+                }
+                
+                const dispEl = document.getElementById('status-zapi-disp');
+                if (data.disparos.conectado && data.disparos.data?.connected) {
+                    dispEl.className = 'status-zapi online';
+                    dispEl.innerHTML = '<i class="fas fa-circle"></i> Disp: ON';
+                } else {
+                    dispEl.className = 'status-zapi offline';
+                    dispEl.innerHTML = '<i class="fas fa-circle"></i> Disp: OFF';
+                }
+            } catch (e) {}
+        }
+
+        async function atualizarLimiteInfo() {
+            try {
+                const res = await api(`${API}/antiban/config`);
+                const data = await res.json();
+                if (data.sucesso && data.config) {
+                    configAntiban = data.config;
+                    const enviados = data.envios_hoje;
+                    const limite = data.config.limite_diario;
+                    const percent = (enviados / limite * 100).toFixed(0);
+                    const el = document.getElementById('limite-info');
+                    document.getElementById('limite-texto').textContent = `${enviados} / ${limite}`;
+                    if (percent >= 90) el.className = 'limite-info bloqueado';
+                    else if (percent >= 70) el.className = 'limite-info alerta';
+                    else el.className = 'limite-info';
+                }
+            } catch (e) {}
+        }
+
+        async function carregarConversas() {
+            try {
+                const [resA, resF] = await Promise.all([api(`${API}/conversas/abertas`), api(`${API}/conversas/fechadas`)]);
+                const dataA = await resA.json();
+                const dataF = await resF.json();
+                conversasAbertas = dataA.conversas || [];
+                conversasFechadas = dataF.conversas || [];
+                document.getElementById('count-abertos').textContent = conversasAbertas.length;
+                document.getElementById('count-fechados').textContent = conversasFechadas.length;
+                document.getElementById('badge-conversas').textContent = conversasAbertas.length;
+                renderizarConversas();
+            } catch (e) {}
+        }
+
+        function renderizarConversas() {
+            const conversas = tabConversaAtual === 'abertos' ? conversasAbertas : conversasFechadas;
+            const grid = document.getElementById('grid-conversas');
+            if (conversas.length === 0) {
+                grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><i class="fas fa-inbox"></i><p>Nenhuma conversa</p></div>`;
+                return;
+            }
+            grid.innerHTML = conversas.map(c => {
+                const badgeResp = c.minha_responsabilidade ? '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:50%;margin-left:6px;vertical-align:middle" title="Você é responsável por este hotel"></span>' : '';
+                return `
+                <div class="conversa-card" style="${c.minha_responsabilidade ? 'border-left:3px solid #ef4444' : ''}">
+                    <div class="conversa-header">
+                        <div>
+                            <div class="conversa-numero"><i class="fas fa-phone"></i> ${c.numero_cliente || '-'}${badgeResp}</div>
+                            ${c.nome_cliente ? `<div class="conversa-nome">${c.nome_cliente}</div>` : ''}
+                            <div class="conversa-tempo">${formatarData(c.criado_em)}</div>
+                            ${c.fechado_por_nome ? `<div style="font-size:10px;opacity:0.8;margin-top:4px">Fechado por: ${c.fechado_por_nome}</div>` : ''}
+                        </div>
+                        <span style="background:rgba(255,255,255,0.3);padding:4px 10px;border-radius:12px;font-size:11px;height:fit-content">${c.total_mensagens || 0} msg</span>
+                    </div>
+                    <div class="conversa-body">${c.ultima_mensagem ? `<div class="mensagem">${c.ultima_mensagem.substring(0,150)}</div>` : '<p style="color:#a0aec0;text-align:center">Sem mensagens</p>'}</div>
+                    <div class="conversa-footer">
+                        <button class="btn btn-primary btn-sm" style="flex:1" onclick="abrirConversa(${c.id})"><i class="fas fa-eye"></i> Abrir</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+            `).join('');
+        }
+
+        async function abrirConversa(id) {
+            const res = await api(`${API}/conversas/${id}/mensagens`);
+            const data = await res.json();
+            if (!data.sucesso) return;
+            conversaSelecionada = id;
+            const chat = data.mensagens.map(m => `
+                <div class="mensagem mensagem-${m.remetente}">
+                    <div class="mensagem-label">${m.remetente === 'cliente' ? '👤 Cliente' : m.remetente === 'eva' ? '🤖 EVA' : '👨‍💼 ' + (m.usuario_nome || 'Atendente')}</div>
+                    <div style="white-space:pre-wrap">${m.conteudo}</div>
+                    <div style="font-size:11px;opacity:0.6;margin-top:4px">${new Date(m.criado_em).toLocaleTimeString('pt-BR')}</div>
+                </div>
+            `).join('');
+            document.getElementById('modal-chat').innerHTML = chat;
+            document.getElementById('modal-resposta').value = '';
+            document.getElementById('modal-observacoes').value = '';
+            document.getElementById('modal-conversa').classList.add('ativo');
+            setTimeout(() => {
+                const chatEl = document.getElementById('modal-chat');
+                chatEl.scrollTop = chatEl.scrollHeight;
+            }, 100);
+        }
+
+        async function enviarResposta() {
+            if (!conversaSelecionada) return;
+            const mensagem = document.getElementById('modal-resposta').value;
+            if (!mensagem.trim()) return;
+            
+            const res = await api(`${API}/conversas/${conversaSelecionada}/responder`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ mensagem })
+            });
+            const data = await res.json();
+            if (data.sucesso) {
+                document.getElementById('modal-resposta').value = '';
+                abrirConversa(conversaSelecionada);
+            } else {
+                alert('Erro: ' + (data.erro || 'desconhecido'));
+            }
+        }
+
+        async function fecharAtendimentoModal() {
+            if (!conversaSelecionada) return;
+            if (!confirm('Fechar este atendimento?')) return;
+            
+            await api(`${API}/conversas/${conversaSelecionada}/fechar`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ observacoes: document.getElementById('modal-observacoes').value })
+            });
+            fecharModal('modal-conversa');
+            carregarConversas();
+        }
+
+        // CONTATOS
+        async function carregarNotificacoes() {
+            const res = await api(`${API}/notificacoes`);
+            const d = await res.json();
+            if (!d.sucesso) return;
+            const tb = document.getElementById('tabela-notificacoes');
+            if (d.notificacoes.length === 0) {
+                tb.innerHTML = '<tr><td colspan="4" class="empty"><i class="fas fa-bell-slash"></i><p>Nenhuma notificação enviada</p></td></tr>';
+                return;
+            }
+            tb.innerHTML = d.notificacoes.map(n => {
+                const dt = new Date(n.enviado_em);
+                const dtF = dt.toLocaleString('pt-BR');
+                const msgPrev = n.mensagem_original.length > 100 ? n.mensagem_original.substring(0,100) + '...' : n.mensagem_original;
+                return `<tr>
+                    <td>${dtF}</td>
+                    <td><strong>${n.hotel_nome}</strong><br><small style="color:var(--gray)">${n.hotel_numero}</small></td>
+                    <td>${n.usuario_nome}</td>
+                    <td>${msgPrev}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function carregarContatos() {
+            const res = await api(`${API}/contatos`);
+            const data = await res.json();
+            contatos = data.contatos || [];
+            renderizarContatos();
+        }
+
+        function renderizarContatos() {
+            const busca = (document.getElementById('busca-contatos')?.value || '').toLowerCase();
+            const filtrados = contatos.filter(c => c.nome.toLowerCase().includes(busca) || c.numero.includes(busca));
+            const tbody = document.getElementById('tabela-contatos');
+            if (filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty"><i class="fas fa-address-book"></i><p>Nenhum contato</p></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = filtrados.map(c => `
+                <tr>
+                    <td><strong>${c.nome}</strong></td>
+                    <td>${c.numero}</td>
+                    <td>${c.email || '-'}</td>
+                    <td>${c.tags || '-'}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deletarContato(${c.id})"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function filtrarContatos() { renderizarContatos(); }
+
+        function abrirModalContato() {
+            ['contato-nome', 'contato-numero', 'contato-email', 'contato-tags', 'contato-conhecimento'].forEach(id => document.getElementById(id).value = '');
+            carregarUsuariosSelect();
+            document.getElementById('modal-contato').classList.add('ativo');
+        }
+
+        async function carregarUsuariosSelect() {
+            const res = await api(`${API}/usuarios`);
+            const data = await res.json();
+            if (!data.sucesso) return;
+            const select = document.getElementById('contato-responsaveis');
+            select.innerHTML = '';
+            data.usuarios.filter(u => u.perfil === 'atendente' || u.perfil === 'admin').forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = `${u.nome} (${u.perfil})`;
+                select.appendChild(opt);
+            });
+        }
+
+        async function salvarContato() {
+            const select = document.getElementById('contato-responsaveis');
+            const responsaveis = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            const dados = {
+                nome: document.getElementById('contato-nome').value,
+                numero: document.getElementById('contato-numero').value,
+                email: document.getElementById('contato-email').value,
+                tags: document.getElementById('contato-tags').value,
+                conhecimento_ia: document.getElementById('contato-conhecimento').value,
+                responsaveis: responsaveis
+            };
+            if (!dados.nome || !dados.numero) { alert('Preencha nome e número'); return; }
+            const res = await api(`${API}/contatos`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
+            });
+            const data = await res.json();
+            if (data.sucesso) { fecharModal('modal-contato'); carregarContatos(); }
+            else alert(data.erro);
+        }
+
+        async function deletarContato(id) {
+            if (!confirm('Deletar?')) return;
+            await api(`${API}/contatos/${id}`, { method: 'DELETE' });
+            carregarContatos();
+        }
+
+        function abrirModalImportar() { document.getElementById('modal-importar').classList.add('ativo'); }
+
+        async function importarCSV() {
+            const file = document.getElementById('arquivo-csv').files[0];
+            if (!file) { alert('Selecione arquivo'); return; }
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch(`${API}/contatos/importar`, { method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            if (data.sucesso) {
+                alert(`${data.importados} importados! ${data.erros} erros.`);
+                fecharModal('modal-importar');
+                carregarContatos();
+            }
+        }
+
+        // TEMPLATES
+        async function carregarTemplates() {
+            const res = await api(`${API}/templates`);
+            const data = await res.json();
+            templates = data.templates || [];
+            renderizarTemplates();
+        }
+
+        function renderizarTemplates() {
+            const grid = document.getElementById('grid-templates');
+            if (templates.length === 0) {
+                grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><i class="fas fa-file-alt"></i><p>Nenhum template</p></div>`;
+                return;
+            }
+            grid.innerHTML = templates.map(t => `
+                <div class="card" style="padding:1.5rem">
+                    <h4>${t.nome}</h4>
+                    <span class="status-badge status-finalizada">${t.categoria}</span>
+                    <p style="margin-top:1rem;font-size:13px;color:var(--gray);min-height:60px;white-space:pre-wrap">${t.conteudo.substring(0,150)}${t.conteudo.length > 150 ? '...' : ''}</p>
+                    <button class="btn btn-danger btn-sm" onclick="deletarTemplate(${t.id})" style="margin-top:1rem"><i class="fas fa-trash"></i> Deletar</button>
+                </div>
+            `).join('');
+        }
+
+        function abrirModalTemplate() {
+            document.getElementById('template-nome').value = '';
+            document.getElementById('template-conteudo').value = '';
+            document.getElementById('modal-template').classList.add('ativo');
+        }
+
+        async function salvarTemplate() {
+            const dados = {
+                nome: document.getElementById('template-nome').value,
+                conteudo: document.getElementById('template-conteudo').value,
+                categoria: document.getElementById('template-categoria').value
+            };
+            if (!dados.nome || !dados.conteudo) { alert('Preencha tudo'); return; }
+            await api(`${API}/templates`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
+            });
+            fecharModal('modal-template');
+            carregarTemplates();
+        }
+
+        async function deletarTemplate(id) {
+            if (!confirm('Deletar?')) return;
+            await api(`${API}/templates/${id}`, { method: 'DELETE' });
+            carregarTemplates();
+        }
+
+        // CAMPANHAS
+        async function carregarCampanhas() {
+            const res = await api(`${API}/campanhas`);
+            const data = await res.json();
+            campanhas = data.campanhas || [];
+            renderizarCampanhas();
+        }
+
+        function renderizarCampanhas() {
+            const tbody = document.getElementById('tabela-campanhas');
+            if (campanhas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="empty"><i class="fas fa-paper-plane"></i><p>Nenhuma</p></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = campanhas.map(c => {
+                const prog = c.total_contatos > 0 ? ((c.enviadas + c.falhadas) / c.total_contatos * 100) : 0;
+                return `
+                    <tr>
+                        <td><strong>${c.nome}</strong>${c.imagem_url ? ' <i class="fas fa-image" style="color:var(--info)"></i>' : ''}</td>
+                        <td style="font-size:12px">${c.criado_por_nome || '-'}</td>
+                        <td>${c.total_contatos}</td>
+                        <td style="color:var(--success)">${c.enviadas}</td>
+                        <td><span class="status-badge status-${c.status}">${c.status}</span></td>
+                        <td><div class="progress"><div class="progress-bar" style="width:${prog}%"></div></div><small>${Math.round(prog)}%</small></td>
+                        <td style="font-size:12px">${formatarData(c.criado_em)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function abrirModalCampanha() {
+            await carregarContatos();
+            await carregarTemplates();
+            await atualizarLimiteInfo();
+            
+            document.getElementById('campanha-nome').value = '';
+            document.getElementById('campanha-mensagem').value = '';
+            document.getElementById('campanha-template').value = '';
+            imagemUploadUrl = null;
+            contatosCsv = [];
+            document.getElementById('imagem-preview-container').innerHTML = '';
+            document.getElementById('csv-preview').innerHTML = '';
+            
+            const select = document.getElementById('campanha-template');
+            select.innerHTML = '<option value="">Selecione ou escreva manualmente</option>' +
+                templates.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
+            
+            const lista = document.getElementById('lista-contatos-checkbox');
+            if (contatos.length === 0) {
+                lista.innerHTML = '<p style="color:var(--gray)">Nenhum contato. Cadastre primeiro ou use CSV!</p>';
+            } else {
+                lista.innerHTML = contatos.map(c => `
+                    <label class="checkbox-item">
+                        <input type="checkbox" value="${c.id}" onchange="atualizarContagemSelecionados()">
+                        <div><strong>${c.nome}</strong><div style="font-size:12px;color:var(--gray)">${c.numero}</div></div>
+                    </label>
+                `).join('');
+            }
+            
+            atualizarContagemSelecionados();
+            mudarTabContato('cadastrados');
+            document.getElementById('modal-campanha').classList.add('ativo');
+        }
+
+        function mudarTabContato(tab) {
+            tabContatoAtual = tab;
+            document.querySelectorAll('.tab-contato').forEach(t => t.classList.remove('ativo'));
+            event?.target?.closest('.tab-contato')?.classList.add('ativo');
+            document.getElementById('tab-cadastrados').style.display = tab === 'cadastrados' ? 'block' : 'none';
+            document.getElementById('tab-csv').style.display = tab === 'csv' ? 'block' : 'none';
+        }
+
+        async function processarCSVCampanha(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const preview = document.getElementById('csv-preview');
+            preview.innerHTML = '<p>📤 Processando...</p>';
+            
+            try {
+                const res = await fetch(`${API}/contatos/preview-csv`, {
+                    method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (data.sucesso) {
+                    contatosCsv = data.contatos;
+                    preview.innerHTML = `
+                        <div style="background:#c6f6d5;color:#22543d;padding:1rem;border-radius:8px;margin-top:1rem">
+                            ✅ <strong>${data.total} contatos carregados!</strong>
+                            <div style="margin-top:0.5rem;font-size:12px;max-height:150px;overflow-y:auto">
+                                ${contatosCsv.slice(0, 10).map(c => `• ${c.nome} (${c.numero})`).join('<br>')}
+                                ${contatosCsv.length > 10 ? `<br>... e mais ${contatosCsv.length - 10}` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    preview.innerHTML = `<p style="color:var(--danger)">❌ ${data.erro}</p>`;
+                }
+            } catch (e) {
+                preview.innerHTML = `<p style="color:var(--danger)">❌ ${e.message}</p>`;
+            }
+        }
+
+        async function uploadImagem(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { alert('Máx 5MB'); return; }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            const container = document.getElementById('imagem-preview-container');
+            container.innerHTML = '<p>📤 Enviando...</p>';
+            
+            try {
+                const res = await fetch(`${API}/upload/imagem`, {
+                    method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.sucesso) {
+                    imagemUploadUrl = data.url;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        container.innerHTML = `<div class="imagem-preview"><img src="${e.target.result}"><button onclick="removerImagem()">✕</button></div>`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            } catch (e) {}
+        }
+
+        function removerImagem() {
+            imagemUploadUrl = null;
+            document.getElementById('imagem-preview-container').innerHTML = '';
+            document.getElementById('campanha-imagem').value = '';
+        }
+
+        function usarTemplate() {
+            const id = document.getElementById('campanha-template').value;
+            if (id) {
+                const t = templates.find(t => t.id == id);
+                if (t) document.getElementById('campanha-mensagem').value = t.conteudo;
+            }
+        }
+
+        function selecionarTodosContatos() {
+            document.querySelectorAll('#lista-contatos-checkbox input').forEach(i => i.checked = true);
+            atualizarContagemSelecionados();
+        }
+
+        function desmarcarTodosContatos() {
+            document.querySelectorAll('#lista-contatos-checkbox input').forEach(i => i.checked = false);
+            atualizarContagemSelecionados();
+        }
+
+        function atualizarContagemSelecionados() {
+            const total = document.querySelectorAll('#lista-contatos-checkbox input:checked').length;
+            document.getElementById('contatos-selecionados').textContent = `${total} selecionados`;
+        }
+
+        async function dispararCampanha() {
+            const nome = document.getElementById('campanha-nome').value;
+            const mensagem = document.getElementById('campanha-mensagem').value;
+            const template_id = document.getElementById('campanha-template').value || null;
+            const contato_ids = Array.from(document.querySelectorAll('#lista-contatos-checkbox input:checked')).map(i => parseInt(i.value));
+            
+            if (!nome || !mensagem) { alert('Preencha nome e mensagem'); return; }
+            
+            const total = contato_ids.length + contatosCsv.length;
+            if (total === 0) { alert('Selecione contatos ou suba CSV'); return; }
+            
+            if (!confirm(`Disparar para ${total} contatos?`)) return;
+            
+            const res = await api(`${API}/campanhas`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nome, mensagem, template_id, contato_ids, contatos_csv: contatosCsv, imagem_url: imagemUploadUrl })
+            });
+            const data = await res.json();
+            if (data.sucesso) {
+                alert('✅ Campanha iniciada!');
+                fecharModal('modal-campanha');
+                mudarPagina('campanhas');
+            } else {
+                alert('❌ ' + (data.erro || 'Erro'));
+            }
+        }
+
+        // ANTI-BAN
+        async function carregarConfigAntiban() {
+            const res = await api(`${API}/antiban/config`);
+            const data = await res.json();
+            if (data.sucesso && data.config) {
+                const c = data.config;
+                document.getElementById('config-limite-diario').value = c.limite_diario;
+                document.getElementById('config-limite-hora').value = c.limite_por_hora;
+                document.getElementById('config-delay-min').value = c.delay_min;
+                document.getElementById('config-delay-max').value = c.delay_max;
+                document.getElementById('config-pausa-cada').value = c.pausa_a_cada;
+                document.getElementById('config-pausa-segundos').value = c.pausa_segundos;
+                document.getElementById('config-horario-inicio').value = c.horario_inicio;
+                document.getElementById('config-horario-fim').value = c.horario_fim;
+                document.getElementById('antiban-ativo').checked = c.ativo === 1;
+                
+                const enviados = data.envios_hoje;
+                const limite = c.limite_diario;
+                const percent = (enviados / limite * 100).toFixed(0);
+                document.getElementById('uso-grande').textContent = `${enviados} / ${limite}`;
+                document.getElementById('uso-texto').textContent = `Pode enviar mais ${data.disponivel_hoje} hoje`;
+                document.getElementById('uso-progress-bar').style.width = `${Math.min(percent, 100)}%`;
+            }
+        }
+
+        async function salvarConfigAntiban() {
+            const dados = {
+                limite_diario: parseInt(document.getElementById('config-limite-diario').value),
+                limite_por_hora: parseInt(document.getElementById('config-limite-hora').value),
+                delay_min: parseInt(document.getElementById('config-delay-min').value),
+                delay_max: parseInt(document.getElementById('config-delay-max').value),
+                pausa_a_cada: parseInt(document.getElementById('config-pausa-cada').value),
+                pausa_segundos: parseInt(document.getElementById('config-pausa-segundos').value),
+                horario_inicio: document.getElementById('config-horario-inicio').value,
+                horario_fim: document.getElementById('config-horario-fim').value,
+                ativo: document.getElementById('antiban-ativo').checked
+            };
+            await api(`${API}/antiban/config`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
+            });
+            alert('✅ Salvo!');
+            atualizarLimiteInfo();
+            carregarConfigAntiban();
+        }
+
+        function usarConfigSegura() {
+            document.getElementById('config-limite-diario').value = 50;
+            document.getElementById('config-limite-hora').value = 15;
+            document.getElementById('config-delay-min').value = 5;
+            document.getElementById('config-delay-max').value = 10;
+            document.getElementById('config-pausa-cada').value = 20;
+            document.getElementById('config-pausa-segundos').value = 120;
+            alert('🛡️ Aplicado! Salve.');
+        }
+
+        function usarConfigAgressiva() {
+            if (!confirm('⚠️ Maior risco!')) return;
+            document.getElementById('config-limite-diario').value = 300;
+            document.getElementById('config-delay-min').value = 2;
+            document.getElementById('config-delay-max').value = 5;
+            alert('🚀 Aplicado! Salve.');
+        }
+
+        // USUÁRIOS
+        async function carregarUsuarios() {
+            const res = await api(`${API}/usuarios`);
+            const data = await res.json();
+            const tbody = document.getElementById('tabela-usuarios');
+            if (!data.usuarios || data.usuarios.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty"><i class="fas fa-users"></i><p>Nenhum usuário</p></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.usuarios.map(u => `
+                <tr>
+                    <td><strong>${u.nome}</strong></td>
+                    <td>${u.email}</td>
+                    <td><span class="perfil-badge perfil-${u.perfil}">${u.perfil}</span></td>
+                    <td>${u.ativo ? '✅ Ativo' : '❌ Inativo'}</td>
+                    <td style="font-size:12px">${u.ultimo_login ? formatarData(u.ultimo_login) : 'Nunca'}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" onclick="toggleAtivo(${u.id}, ${u.ativo ? 0 : 1})">${u.ativo ? '🔒' : '🔓'}</button>
+                        ${u.id !== usuarioLogado.id ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function abrirModalUsuario() {
+            ['usuario-novo-nome', 'usuario-novo-email', 'usuario-novo-senha'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('modal-usuario').classList.add('ativo');
+        }
+
+        async function salvarUsuario() {
+            const dados = {
+                nome: document.getElementById('usuario-novo-nome').value,
+                email: document.getElementById('usuario-novo-email').value,
+                senha: document.getElementById('usuario-novo-senha').value,
+                perfil: document.getElementById('usuario-novo-perfil').value,
+                whatsapp: document.getElementById('usuario-novo-whatsapp').value
+            };
+            if (!dados.nome || !dados.email || !dados.senha) { alert('Preencha tudo'); return; }
+            
+            const res = await api(`${API}/usuarios`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
+            });
+            const data = await res.json();
+            if (data.sucesso) { fecharModal('modal-usuario'); carregarUsuarios(); }
+            else alert(data.erro);
+        }
+
+        async function toggleAtivo(id, ativo) {
+            await api(`${API}/usuarios/${id}`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ativo: ativo === 1 })
+            });
+            carregarUsuarios();
+        }
+
+        async function deletarUsuario(id) {
+            if (!confirm('Deletar usuário?')) return;
+            await api(`${API}/usuarios/${id}`, { method: 'DELETE' });
+            carregarUsuarios();
+        }
+
+        // CONFIG Z-API
+        async function carregarConfigZapi() {
+            const res = await api(`${API}/config/zapi`);
+            const data = await res.json();
+            if (data.configs) {
+                if (data.configs.atendimento) {
+                    document.getElementById('zapi-atend-instance').value = data.configs.atendimento.instance_id || '';
+                    document.getElementById('zapi-atend-token').value = data.configs.atendimento.token || '';
+                    document.getElementById('zapi-atend-client').value = data.configs.atendimento.client_token || '';
+                }
+                if (data.configs.disparos) {
+                    document.getElementById('zapi-disp-instance').value = data.configs.disparos.instance_id || '';
+                    document.getElementById('zapi-disp-token').value = data.configs.disparos.token || '';
+                    document.getElementById('zapi-disp-client').value = data.configs.disparos.client_token || '';
+                }
+            }
+        }
+
+        async function salvarZapi(tipo) {
+            const prefix = tipo === 'atendimento' ? 'zapi-atend' : 'zapi-disp';
+            const dados = {
+                tipo,
+                instance_id: document.getElementById(`${prefix}-instance`).value,
+                token: document.getElementById(`${prefix}-token`).value,
+                client_token: document.getElementById(`${prefix}-client`).value
+            };
+            const res = await api(`${API}/config/zapi`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
+            });
+            const data = await res.json();
+            if (data.sucesso) { alert(`✅ Z-API ${tipo} salva!`); verificarStatusZapi(); }
+        }
+
+        // RELATÓRIOS
+        async function carregarRelatorios() {
+            const res = await api(`${API}/relatorios`);
+            const data = await res.json();
+            const r = data.relatorios;
+            document.getElementById('stats-cards').innerHTML = `
+                <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-num">${r.totalConversas}</div><div class="stat-label">Conversas</div></div>
+                <div class="stat-card"><div class="stat-icon">📬</div><div class="stat-num" style="color:var(--warning)">${r.abertos}</div><div class="stat-label">Abertas</div></div>
+                <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-num" style="color:var(--success)">${r.fechados}</div><div class="stat-label">Fechadas</div></div>
+                <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-num" style="color:var(--info)">${r.tempoMedioMinutos}</div><div class="stat-label">Tempo Médio</div></div>
+                <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-num">${r.totalContatos}</div><div class="stat-label">Contatos</div></div>
+                <div class="stat-card"><div class="stat-icon">📢</div><div class="stat-num">${r.totalCampanhas}</div><div class="stat-label">Campanhas</div></div>
+                <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-num" style="color:var(--success)">${r.totalEnviadas}</div><div class="stat-label">Enviadas</div></div>
+                <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-num" style="color:var(--primary)">${r.enviadosHoje}</div><div class="stat-label">Hoje</div></div>
+            `;
+            
+            const topEl = document.getElementById('top-atendentes');
+            if (r.topAtendentes && r.topAtendentes.length > 0) {
+                topEl.innerHTML = r.topAtendentes.map((a, i) => `
+                    <div style="display:flex;justify-content:space-between;padding:0.75rem;border-bottom:1px solid var(--border)">
+                        <div><strong>${i+1}º</strong> ${a.fechado_por_nome}</div>
+                        <div style="color:var(--success);font-weight:600">${a.total} atendimentos</div>
+                    </div>
+                `).join('');
+            } else {
+                topEl.innerHTML = '<p style="color:var(--gray)">Sem dados ainda</p>';
+            }
+        }
+
+        function fecharModal(id) { document.getElementById(id).classList.remove('ativo'); }
+        function formatarData(data) {
+            if (!data) return '-';
+            return new Date(data).toLocaleString('pt-BR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Enter pra logar
+        document.getElementById('login-senha').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fazerLogin();
+        });
+    </script>
 </body>
 </html>
