@@ -54,6 +54,14 @@ def init():
     c.execute("CREATE TABLE IF NOT EXISTS conversas (id SERIAL PRIMARY KEY, numero_cliente TEXT NOT NULL, nome_cliente TEXT, status TEXT DEFAULT 'aberto', fechado_por_id INTEGER, fechado_por_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, fechado_em TIMESTAMP, observacoes TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS mensagens (id SERIAL PRIMARY KEY, conversa_id INTEGER NOT NULL, remetente TEXT NOT NULL, conteudo TEXT NOT NULL, usuario_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS contatos (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, numero TEXT UNIQUE NOT NULL, email TEXT, tags TEXT, observacoes TEXT, conhecimento_ia TEXT, responsaveis TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    
+    # Adiciona coluna responsaveis se não existir
+    try:
+        c.execute("ALTER TABLE contatos ADD COLUMN responsaveis TEXT")
+        conn.commit()
+    except:
+        conn.rollback()
+    
     c.execute("CREATE TABLE IF NOT EXISTS templates (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, conteudo TEXT NOT NULL, categoria TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS campanhas (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, template_id INTEGER, mensagem TEXT NOT NULL, imagem_url TEXT, total_contatos INTEGER DEFAULT 0, enviadas INTEGER DEFAULT 0, falhadas INTEGER DEFAULT 0, status TEXT DEFAULT 'pendente', criado_por_id INTEGER, criado_por_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, iniciado_em TIMESTAMP, finalizado_em TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS envios (id SERIAL PRIMARY KEY, campanha_id INTEGER, contato_id INTEGER, numero TEXT, nome TEXT, status TEXT DEFAULT 'pendente', resposta TEXT, enviado_em TIMESTAMP)")
