@@ -156,6 +156,9 @@
                     <i class="fas fa-comments"></i><span>Conversas</span>
                     <span class="badge" id="badge-conversas">0</span>
                 </div>
+                <div class="nav-item" id="nav-notificacoes" onclick="mudarPagina('notificacoes')">
+                    <i class="fas fa-bell"></i><span>Notificações</span>
+                </div>
                 <div class="nav-item" id="nav-contatos" onclick="mudarPagina('contatos')">
                     <i class="fas fa-address-book"></i><span>Contatos</span>
                 </div>
@@ -225,6 +228,19 @@
                         </div>
                     </div>
                     <div class="grid" id="grid-conversas"></div>
+                </div>
+
+                <!-- NOTIFICAÇÕES -->
+                <div id="page-notificacoes" class="page">
+                    <div class="toolbar">
+                        <h3>📬 Histórico de Notificações</h3>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Data/Hora</th><th>Hotel</th><th>Atendente</th><th>Mensagem</th></tr></thead>
+                            <tbody id="tabela-notificacoes"></tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- CONTATOS -->
@@ -389,6 +405,14 @@
             <div class="form-group"><label>Email</label><input type="email" id="contato-email"></div>
             <div class="form-group"><label>Tags</label><input type="text" id="contato-tags"></div>
             <div class="form-group">
+                <label>👥 Responsáveis (Atendentes)</label>
+                <p style="font-size:12px;color:var(--gray);margin-bottom:0.5rem">Selecione os atendentes responsáveis por este hotel. Eles serão notificados quando houver mensagens.</p>
+                <select id="contato-responsaveis" multiple style="min-height:100px">
+                    <!-- Carregado dinamicamente -->
+                </select>
+                <p style="font-size:11px;color:var(--gray);margin-top:0.3rem">Use Ctrl/Cmd + clique para selecionar múltiplos</p>
+            </div>
+            <div class="form-group">
                 <label>🧠 Base de Conhecimento da IA</label>
                 <p style="font-size:12px;color:var(--gray);margin-bottom:0.5rem">Informações que a IA usará ao responder este hotel (quartos, tarifas, procedimentos)</p>
                 <textarea id="contato-conhecimento" style="min-height:150px" placeholder="Hotel: [Nome do Hotel]
@@ -515,6 +539,11 @@ Procedimentos:
             <div class="form-group"><label>Nome *</label><input type="text" id="usuario-novo-nome"></div>
             <div class="form-group"><label>Email *</label><input type="email" id="usuario-novo-email"></div>
             <div class="form-group"><label>Senha *</label><input type="password" id="usuario-novo-senha"></div>
+            <div class="form-group">
+                <label>📱 WhatsApp (pra receber notificações)</label>
+                <input type="text" id="usuario-novo-whatsapp" placeholder="5511999999999">
+                <p style="font-size:11px;color:var(--gray);margin-top:0.3rem">Número com DDI (ex: 5511999999999)</p>
+            </div>
             <div class="form-group">
                 <label>Perfil *</label>
                 <select id="usuario-novo-perfil">
@@ -681,11 +710,12 @@ Procedimentos:
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('hidden'));
                 mudarPagina('conversas');
             } else if (perfil === 'atendente') {
-                // Só conversas
+                // conversas + notificacoes
                 document.getElementById('nav-conversas').classList.remove('hidden');
+                document.getElementById('nav-notificacoes').classList.remove('hidden');
                 mudarPagina('conversas');
             } else if (perfil === 'marketing') {
-                // Marketing: contatos, templates, campanhas, anti-ban
+                // Marketing: contatos, templates, campanhas, anti-ban (SEM notificacoes)
                 document.getElementById('nav-contatos').classList.remove('hidden');
                 document.getElementById('nav-templates').classList.remove('hidden');
                 document.getElementById('nav-campanhas').classList.remove('hidden');
@@ -701,12 +731,13 @@ Procedimentos:
             document.getElementById(`page-${pagina}`).classList.add('ativo');
             document.getElementById(`nav-${pagina}`).classList.add('ativo');
             document.getElementById('pagina-titulo').textContent = {
-                conversas: 'Conversas', contatos: 'Contatos', templates: 'Templates',
+                conversas: 'Conversas', notificacoes: 'Notificações', contatos: 'Contatos', templates: 'Templates',
                 campanhas: 'Disparos', antiban: 'Anti-Ban', usuarios: 'Usuários',
                 config: 'Configurações', relatorios: 'Relatórios'
             }[pagina];
             
             if (pagina === 'contatos') carregarContatos();
+            if (pagina === 'notificacoes') carregarNotificacoes();
             if (pagina === 'templates') carregarTemplates();
             if (pagina === 'campanhas') carregarCampanhas();
             if (pagina === 'antiban') carregarConfigAntiban();
@@ -809,11 +840,13 @@ Procedimentos:
                 grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><i class="fas fa-inbox"></i><p>Nenhuma conversa</p></div>`;
                 return;
             }
-            grid.innerHTML = conversas.map(c => `
-                <div class="conversa-card">
+            grid.innerHTML = conversas.map(c => {
+                const badgeResp = c.minha_responsabilidade ? '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:50%;margin-left:6px;vertical-align:middle" title="Você é responsável por este hotel"></span>' : '';
+                return `
+                <div class="conversa-card" style="${c.minha_responsabilidade ? 'border-left:3px solid #ef4444' : ''}">
                     <div class="conversa-header">
                         <div>
-                            <div class="conversa-numero"><i class="fas fa-phone"></i> ${c.numero_cliente || '-'}</div>
+                            <div class="conversa-numero"><i class="fas fa-phone"></i> ${c.numero_cliente || '-'}${badgeResp}</div>
                             ${c.nome_cliente ? `<div class="conversa-nome">${c.nome_cliente}</div>` : ''}
                             <div class="conversa-tempo">${formatarData(c.criado_em)}</div>
                             ${c.fechado_por_nome ? `<div style="font-size:10px;opacity:0.8;margin-top:4px">Fechado por: ${c.fechado_por_nome}</div>` : ''}
@@ -824,7 +857,9 @@ Procedimentos:
                     <div class="conversa-footer">
                         <button class="btn btn-primary btn-sm" style="flex:1" onclick="abrirConversa(${c.id})"><i class="fas fa-eye"></i> Abrir</button>
                     </div>
-                </div>
+                </div>`;
+            }).join('');
+        }
             `).join('');
         }
 
@@ -881,6 +916,28 @@ Procedimentos:
         }
 
         // CONTATOS
+        async function carregarNotificacoes() {
+            const res = await api(`${API}/notificacoes`);
+            const d = await res.json();
+            if (!d.sucesso) return;
+            const tb = document.getElementById('tabela-notificacoes');
+            if (d.notificacoes.length === 0) {
+                tb.innerHTML = '<tr><td colspan="4" class="empty"><i class="fas fa-bell-slash"></i><p>Nenhuma notificação enviada</p></td></tr>';
+                return;
+            }
+            tb.innerHTML = d.notificacoes.map(n => {
+                const dt = new Date(n.enviado_em);
+                const dtF = dt.toLocaleString('pt-BR');
+                const msgPrev = n.mensagem_original.length > 100 ? n.mensagem_original.substring(0,100) + '...' : n.mensagem_original;
+                return `<tr>
+                    <td>${dtF}</td>
+                    <td><strong>${n.hotel_nome}</strong><br><small style="color:var(--gray)">${n.hotel_numero}</small></td>
+                    <td>${n.usuario_nome}</td>
+                    <td>${msgPrev}</td>
+                </tr>`;
+            }).join('');
+        }
+
         async function carregarContatos() {
             const res = await api(`${API}/contatos`);
             const data = await res.json();
@@ -911,16 +968,34 @@ Procedimentos:
 
         function abrirModalContato() {
             ['contato-nome', 'contato-numero', 'contato-email', 'contato-tags', 'contato-conhecimento'].forEach(id => document.getElementById(id).value = '');
+            carregarUsuariosSelect();
             document.getElementById('modal-contato').classList.add('ativo');
         }
 
+        async function carregarUsuariosSelect() {
+            const res = await api(`${API}/usuarios`);
+            const data = await res.json();
+            if (!data.sucesso) return;
+            const select = document.getElementById('contato-responsaveis');
+            select.innerHTML = '';
+            data.usuarios.filter(u => u.perfil === 'atendente' || u.perfil === 'admin').forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = `${u.nome} (${u.perfil})`;
+                select.appendChild(opt);
+            });
+        }
+
         async function salvarContato() {
+            const select = document.getElementById('contato-responsaveis');
+            const responsaveis = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
             const dados = {
                 nome: document.getElementById('contato-nome').value,
                 numero: document.getElementById('contato-numero').value,
                 email: document.getElementById('contato-email').value,
                 tags: document.getElementById('contato-tags').value,
-                conhecimento_ia: document.getElementById('contato-conhecimento').value
+                conhecimento_ia: document.getElementById('contato-conhecimento').value,
+                responsaveis: responsaveis
             };
             if (!dados.nome || !dados.numero) { alert('Preencha nome e número'); return; }
             const res = await api(`${API}/contatos`, {
@@ -1289,7 +1364,8 @@ Procedimentos:
                 nome: document.getElementById('usuario-novo-nome').value,
                 email: document.getElementById('usuario-novo-email').value,
                 senha: document.getElementById('usuario-novo-senha').value,
-                perfil: document.getElementById('usuario-novo-perfil').value
+                perfil: document.getElementById('usuario-novo-perfil').value,
+                whatsapp: document.getElementById('usuario-novo-whatsapp').value
             };
             if (!dados.nome || !dados.email || !dados.senha) { alert('Preencha tudo'); return; }
             
