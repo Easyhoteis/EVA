@@ -238,18 +238,20 @@ TIPOS: Fecho, alteração tarifa, bloqueio quartos"""
         if conhec: prompt += f"\n\nHOTEL:\n{conhec}"
         prompt += f"\n\nCliente ({hotel}): \"{msg}\"\n\nConfirme:"
         
-        # Usa Groq (grátis)
-        groq_url = "https://api.groq.com/openai/v1/chat/completions"
-        groq_key = os.getenv("GROQ_API_KEY", "gsk_YourGroqKeyHere")
+        # Usa OpenRouter (grátis)
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        key = os.getenv("OPENROUTER_API_KEY", "")
+        
+        if not key:
+            return "Recebido! Atendente vai processar. ✅"
         
         payload = {
-            "model": "llama-3.1-70b-versatile",
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 250
+            "model": "meta-llama/llama-3.1-8b-instruct:free",
+            "messages": [{"role": "user", "content": prompt}]
         }
         
-        response = requests.post(groq_url, 
-            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+        response = requests.post(url, 
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             json=payload, timeout=10)
         
         if response.status_code == 200:
