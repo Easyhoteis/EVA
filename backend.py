@@ -231,15 +231,11 @@ def toggle_robo(on):
     return True
 
 def ia(msg, conhec="", hotel="Hotel", num_msgs=0):
-    # Menu interativo - responde só nas 2 primeiras interações
+    # Menu interativo - responde nas 3 primeiras mensagens
     msg_lower = msg.lower().strip()
     
-    # Se já tem mais de 2 mensagens do cliente, não responde mais (atendente assume)
-    if num_msgs > 2:
-        return None
-    
     # Primeira mensagem ou não é número -> mostra menu
-    if msg_lower not in ['1', '2', '3']:
+    if num_msgs == 1 and msg_lower not in ['1', '2', '3']:
         return f"""Olá! Sou a EVA, assistente da Easy Hotéis! 😊
 
 Como posso ajudar você hoje?
@@ -250,9 +246,10 @@ Como posso ajudar você hoje?
 
 Digite o número da opção desejada."""
     
-    # Cliente escolheu opção (segunda mensagem)
-    if msg_lower == '1':
-        return """✅ *Fecho de Disponibilidade*
+    # Segunda mensagem - Cliente escolheu opção
+    if num_msgs == 2:
+        if msg_lower == '1':
+            return """✅ *Fecho de Disponibilidade*
 
 Solicitação registrada com sucesso!
 
@@ -261,9 +258,9 @@ Um atendente já foi notificado e vai processar seu pedido em breve.
 Por favor, envie os detalhes:
 📅 Data(s)
 🛏️ Categoria(s)"""
-    
-    elif msg_lower == '2':
-        return """✅ *Atualização de Tarifas*
+        
+        elif msg_lower == '2':
+            return """✅ *Atualização de Tarifas*
 
 Solicitação registrada com sucesso!
 
@@ -273,9 +270,9 @@ Por favor, envie os detalhes:
 📅 Período
 🛏️ Categoria(s)
 💰 Novos valores"""
-    
-    elif msg_lower == '3':
-        return """✅ *Outros Assuntos*
+        
+        elif msg_lower == '3':
+            return """✅ *Outros Assuntos*
 
 Solicitação registrada com sucesso!
 
@@ -283,7 +280,20 @@ Um atendente já foi notificado e vai ajudá-lo em breve.
 
 Descreva sua solicitação que entraremos em contato."""
     
-    return None
+    # Terceira mensagem ou mais - Recebeu detalhes
+    if num_msgs >= 3:
+        return "✅ Detalhes recebidos! Atendente vai processar seu pedido em breve. 😊"
+    
+    # Primeira msg mas não é opção válida
+    return f"""Olá! Sou a EVA, assistente da Easy Hotéis! 😊
+
+Como posso ajudar você hoje?
+
+1️⃣ Fechar disponibilidade
+2️⃣ Atualizar tarifas  
+3️⃣ Outros assuntos
+
+Digite o número da opção desejada."""
 
 @app.get("/")
 async def root(): return {"ok": True}
@@ -558,12 +568,9 @@ Qualquer dúvida, estamos à disposição! 😊"""
     num_msgs_cliente = c.fetchone()['count']
     
     resp = ia(msg, conhec, hotel, num_msgs_cliente)
-    
-    # Só responde se ia() retornar algo (primeiras 2 mensagens)
-    if resp:
-        c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
-        conn.commit()
-        enviar(num, resp, "atendimento")
+    c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
+    conn.commit()
+    enviar(num, resp, "atendimento")
     
     if responsaveis_json:
         try:
