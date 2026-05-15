@@ -237,7 +237,7 @@ REGRAS:
 TIPOS: Fecho, alteração tarifa, bloqueio quartos"""
         if conhec: prompt += f"\n\nHOTEL:\n{conhec}"
         prompt += f"\n\nCliente ({hotel}): \"{msg}\"\n\nConfirme:"
-        r = claude.messages.create(model="claude-3-5-haiku-20241022", max_tokens=250, messages=[{"role": "user", "content": prompt}])
+        r = claude.messages.create(model="claude-3-5-sonnet-20241022", max_tokens=250, messages=[{"role": "user", "content": prompt}])
         return r.content[0].text
     except: return "Problema técnico. Atendente vai ajudar."
 
