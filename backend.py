@@ -237,9 +237,29 @@ REGRAS:
 TIPOS: Fecho, alteração tarifa, bloqueio quartos"""
         if conhec: prompt += f"\n\nHOTEL:\n{conhec}"
         prompt += f"\n\nCliente ({hotel}): \"{msg}\"\n\nConfirme:"
-        r = claude.messages.create(model="claude-3-5-sonnet-20241022", max_tokens=250, messages=[{"role": "user", "content": prompt}])
-        return r.content[0].text
-    except: return "Problema técnico. Atendente vai ajudar."
+        
+        # Usa Groq (grátis)
+        groq_url = "https://api.groq.com/openai/v1/chat/completions"
+        groq_key = os.getenv("GROQ_API_KEY", "gsk_YourGroqKeyHere")
+        
+        payload = {
+            "model": "llama-3.1-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 250
+        }
+        
+        response = requests.post(groq_url, 
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+            json=payload, timeout=10)
+        
+        if response.status_code == 200:
+            return response.json()['choices'][0]['message']['content']
+        else:
+            return "Recebido! Atendente vai processar. ✅"
+            
+    except Exception as e:
+        print(f"ERRO NA IA: {str(e)}")
+        return "Recebido! Atendente vai processar. ✅"
 
 @app.get("/")
 async def root(): return {"ok": True}
