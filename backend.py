@@ -41,6 +41,14 @@ def init():
     conn = db()
     c = conn.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, email TEXT UNIQUE NOT NULL, senha_hash TEXT NOT NULL, nome TEXT NOT NULL, perfil TEXT NOT NULL, whatsapp TEXT, ativo INTEGER DEFAULT 1, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, ultimo_login TIMESTAMP)")
+    
+    # Adiciona coluna whatsapp se não existir
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN whatsapp TEXT")
+        conn.commit()
+    except:
+        conn.rollback()
+    
     c.execute("CREATE TABLE IF NOT EXISTS sessoes (token TEXT PRIMARY KEY, usuario_id INTEGER, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS logs (id SERIAL PRIMARY KEY, usuario_id INTEGER, acao TEXT NOT NULL, detalhes TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS conversas (id SERIAL PRIMARY KEY, numero_cliente TEXT NOT NULL, nome_cliente TEXT, status TEXT DEFAULT 'aberto', fechado_por_id INTEGER, fechado_por_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, fechado_em TIMESTAMP, observacoes TEXT)")
@@ -307,10 +315,8 @@ async def criar_user(req: Request):
     except Exception as e:
         c.close()
         conn.close()
-        erro_msg = str(e)
-        if "duplicate key" in erro_msg.lower() or "unique" in erro_msg.lower():
-            return JSONResponse({"sucesso": False, "erro": f"Email {email} ja cadastrado no sistema"}, 400)
-        return JSONResponse({"sucesso": False, "erro": f"Erro ao criar usuario"}, 400)
+        print(f"ERRO AO CRIAR USUARIO: {str(e)}")
+        return JSONResponse({"sucesso": False, "erro": str(e)}, 400)
 
 @app.put("/api/usuarios/{uid}")
 async def update_user(uid: int, req: Request):
