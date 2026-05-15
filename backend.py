@@ -14,6 +14,12 @@ load_dotenv()
 CLAUDE_KEY = os.getenv("ANTHROPIC_API_KEY")
 PORT = int(os.getenv("PORT", 3000))
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    print("ERRO: DATABASE_URL não configurada!")
+    print("Adicione a variável DATABASE_URL no Railway")
+    exit(1)
+
 ZAPI_INST_AT = os.getenv("ZAPI_INSTANCE", "")
 ZAPI_TOK_AT = os.getenv("ZAPI_TOKEN", "")
 ZAPI_CLI_AT = os.getenv("ZAPI_CLIENT_TOKEN", "")
@@ -34,12 +40,12 @@ def token(): return secrets.token_urlsafe(32)
 def init():
     conn = db()
     c = conn.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, email TEXT UNIQUE NOT NULL, senha_hash TEXT NOT NULL, nome TEXT NOT NULL, perfil TEXT NOT NULL, ativo INTEGER DEFAULT 1, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, ultimo_login TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, email TEXT UNIQUE NOT NULL, senha_hash TEXT NOT NULL, nome TEXT NOT NULL, perfil TEXT NOT NULL, whatsapp TEXT, ativo INTEGER DEFAULT 1, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, ultimo_login TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS sessoes (token TEXT PRIMARY KEY, usuario_id INTEGER, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS logs (id SERIAL PRIMARY KEY, usuario_id INTEGER, acao TEXT NOT NULL, detalhes TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS conversas (id SERIAL PRIMARY KEY, numero_cliente TEXT NOT NULL, nome_cliente TEXT, status TEXT DEFAULT 'aberto', fechado_por_id INTEGER, fechado_por_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, fechado_em TIMESTAMP, observacoes TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS mensagens (id SERIAL PRIMARY KEY, conversa_id INTEGER NOT NULL, remetente TEXT NOT NULL, conteudo TEXT NOT NULL, usuario_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
-    c.execute("CREATE TABLE IF NOT EXISTS contatos (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, numero TEXT UNIQUE NOT NULL, email TEXT, tags TEXT, observacoes TEXT, conhecimento_ia TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS contatos (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, numero TEXT UNIQUE NOT NULL, email TEXT, tags TEXT, observacoes TEXT, conhecimento_ia TEXT, responsaveis TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS templates (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, conteudo TEXT NOT NULL, categoria TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS campanhas (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, template_id INTEGER, mensagem TEXT NOT NULL, imagem_url TEXT, total_contatos INTEGER DEFAULT 0, enviadas INTEGER DEFAULT 0, falhadas INTEGER DEFAULT 0, status TEXT DEFAULT 'pendente', criado_por_id INTEGER, criado_por_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, iniciado_em TIMESTAMP, finalizado_em TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS envios (id SERIAL PRIMARY KEY, campanha_id INTEGER, contato_id INTEGER, numero TEXT, nome TEXT, status TEXT DEFAULT 'pendente', resposta TEXT, enviado_em TIMESTAMP)")
@@ -47,6 +53,7 @@ def init():
     c.execute("CREATE TABLE IF NOT EXISTS envios_diarios (data TEXT PRIMARY KEY, total INTEGER DEFAULT 0)")
     c.execute("CREATE TABLE IF NOT EXISTS config_zapi (tipo TEXT PRIMARY KEY, instance_id TEXT, token TEXT, client_token TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS config_sistema (chave TEXT PRIMARY KEY, valor TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS notificacoes (id SERIAL PRIMARY KEY, hotel_nome TEXT, hotel_numero TEXT, usuario_id INTEGER, usuario_nome TEXT, mensagem_original TEXT, enviado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     conn.commit()
     
     c.execute("SELECT COUNT(*) as count FROM usuarios")
@@ -285,12 +292,13 @@ async def criar_user(req: Request):
     senha = d.get("senha", "")
     nome = d.get("nome", "")
     perfil = d.get("perfil", "atendente")
+    whatsapp = d.get("whatsapp", "")
     if not email or not senha or not nome: return JSONResponse({"sucesso": False, "erro": "Campos vazios"}, 400)
     if perfil not in ["admin", "atendente", "marketing"]: return JSONResponse({"sucesso": False, "erro": "Perfil invalido"}, 400)
     conn = db()
     c = conn.cursor()
     try:
-        c.execute("INSERT INTO usuarios (email, senha_hash, nome, perfil) VALUES (%s, %s, %s, %s)", (email, hash_pass(senha), nome, perfil))
+        c.execute("INSERT INTO usuarios (email, senha_hash, nome, perfil, whatsapp) VALUES (%s, %s, %s, %s, %s)", (email, hash_pass(senha), nome, perfil, whatsapp))
         conn.commit()
         log_acao(u['id'], "criar_user", f"{email}")
         c.close()
@@ -313,6 +321,7 @@ async def update_user(uid: int, req: Request):
     if "perfil" in d and d["perfil"] in ["admin", "atendente", "marketing"]: campos.append("perfil = %s"); valores.append(d["perfil"])
     if "ativo" in d: campos.append("ativo = %s"); valores.append(1 if d["ativo"] else 0)
     if "senha" in d and d["senha"]: campos.append("senha_hash = %s"); valores.append(hash_pass(d["senha"]))
+    if "whatsapp" in d: campos.append("whatsapp = %s"); valores.append(d["whatsapp"])
     if campos:
         valores.append(uid)
         c.execute(f"UPDATE usuarios SET {', '.join(campos)} WHERE id = %s", valores)
@@ -395,23 +404,45 @@ async def webhook(req: Request):
     if not cid:
         c.execute("INSERT INTO conversas (numero_cliente, nome_cliente) VALUES (%s, %s) RETURNING id", (num, nome))
         cid = c.fetchone()['id']
-    c.execute("SELECT conhecimento_ia, nome FROM contatos WHERE numero = %s", (num,))
+    
+    c.execute("SELECT conhecimento_ia, nome, responsaveis FROM contatos WHERE numero = %s", (num,))
     cont = c.fetchone()
     conhec = cont['conhecimento_ia'] if cont and cont['conhecimento_ia'] else ""
     hotel = cont['nome'] if cont else nome
+    responsaveis_json = cont['responsaveis'] if cont else None
+    
     c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "cliente", msg))
     conn.commit()
-    c.close()
-    conn.close()
     
     resp = ia(msg, conhec, hotel)
-    conn = db()
-    c = conn.cursor()
     c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
     conn.commit()
+    enviar(num, resp, "atendimento")
+    
+    if responsaveis_json:
+        try:
+            resp_ids = json.loads(responsaveis_json)
+            if resp_ids:
+                c.execute("SELECT id, nome, whatsapp FROM usuarios WHERE id = ANY(%s) AND whatsapp IS NOT NULL", (resp_ids,))
+                usuarios = c.fetchall()
+                for u in usuarios:
+                    msg_notif = f"""🔔 *NOVO PEDIDO - {hotel}*
+
+Cliente: {hotel}
+Número: {num}
+
+Mensagem:
+"{msg[:200]}"
+
+Acesse o painel para responder."""
+                    enviar(u['whatsapp'], msg_notif, "atendimento")
+                    c.execute("INSERT INTO notificacoes (hotel_nome, hotel_numero, usuario_id, usuario_nome, mensagem_original) VALUES (%s, %s, %s, %s, %s)",
+                        (hotel, num, u['id'], u['nome'], msg))
+                    conn.commit()
+        except: pass
+    
     c.close()
     conn.close()
-    enviar(num, resp, "atendimento")
     return {"success": True}
 
 @app.get("/api/conversas/abertas")
@@ -422,9 +453,24 @@ async def conv_abertas(req: Request):
     c = conn.cursor()
     c.execute("SELECT c.*, (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens, (SELECT conteudo FROM mensagens WHERE conversa_id = c.id ORDER BY criado_em DESC LIMIT 1) as ultima_mensagem FROM conversas c WHERE status = 'aberto' ORDER BY criado_em DESC")
     rows = c.fetchall()
+    
+    convs = []
+    for r in rows:
+        conv = dict(r)
+        conv['minha_responsabilidade'] = False
+        c.execute("SELECT responsaveis FROM contatos WHERE numero = %s", (r['numero_cliente'],))
+        cont = c.fetchone()
+        if cont and cont['responsaveis']:
+            try:
+                resp_ids = json.loads(cont['responsaveis'])
+                if u['id'] in resp_ids:
+                    conv['minha_responsabilidade'] = True
+            except: pass
+        convs.append(conv)
+    
     c.close()
     conn.close()
-    return {"sucesso": True, "conversas": [dict(r) for r in rows], "total": len(rows)}
+    return {"sucesso": True, "conversas": convs, "total": len(convs)}
 
 @app.get("/api/conversas/fechadas")
 async def conv_fechadas(req: Request):
@@ -512,8 +558,10 @@ async def criar_contato(req: Request):
     conn = db()
     c = conn.cursor()
     try:
-        c.execute("INSERT INTO contatos (nome, numero, email, tags, observacoes, conhecimento_ia) VALUES (%s, %s, %s, %s, %s, %s)",
-            (d["nome"], d["numero"], d.get("email", ""), d.get("tags", ""), d.get("observacoes", ""), d.get("conhecimento_ia", "")))
+        resp_ids = d.get("responsaveis", [])
+        resp_json = json.dumps(resp_ids) if resp_ids else None
+        c.execute("INSERT INTO contatos (nome, numero, email, tags, observacoes, conhecimento_ia, responsaveis) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (d["nome"], d["numero"], d.get("email", ""), d.get("tags", ""), d.get("observacoes", ""), d.get("conhecimento_ia", ""), resp_json))
         conn.commit()
         c.close()
         conn.close()
@@ -783,6 +831,21 @@ async def toggle_robo_api(req: Request):
     ok = toggle_robo(on)
     if ok: log_acao(u['id'], "toggle_robo", f"{'on' if on else 'off'}")
     return {"sucesso": ok, "ativo": on}
+
+@app.get("/api/notificacoes")
+async def list_notifs(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    conn = db()
+    c = conn.cursor()
+    if u['perfil'] == 'admin':
+        c.execute("SELECT * FROM notificacoes ORDER BY enviado_em DESC LIMIT 100")
+    else:
+        c.execute("SELECT * FROM notificacoes WHERE usuario_id = %s ORDER BY enviado_em DESC LIMIT 100", (u['id'],))
+    rows = c.fetchall()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "notificacoes": [dict(r) for r in rows]}
 
 if __name__ == "__main__":
     print("="*40)
