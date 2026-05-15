@@ -230,11 +230,15 @@ def toggle_robo(on):
     conn.close()
     return True
 
-def ia(msg, conhec="", hotel="Hotel"):
-    # Menu interativo - sem IA
+def ia(msg, conhec="", hotel="Hotel", num_msgs=0):
+    # Menu interativo - responde só nas 2 primeiras interações
     msg_lower = msg.lower().strip()
     
-    # Se é primeira mensagem ou não é número, mostra menu
+    # Se já tem mais de 2 mensagens do cliente, não responde mais (atendente assume)
+    if num_msgs > 2:
+        return None
+    
+    # Primeira mensagem ou não é número -> mostra menu
     if msg_lower not in ['1', '2', '3']:
         return f"""Olá! Sou a EVA, assistente da Easy Hotéis! 😊
 
@@ -246,7 +250,7 @@ Como posso ajudar você hoje?
 
 Digite o número da opção desejada."""
     
-    # Cliente escolheu opção
+    # Cliente escolheu opção (segunda mensagem)
     if msg_lower == '1':
         return """✅ *Fecho de Disponibilidade*
 
@@ -279,7 +283,7 @@ Um atendente já foi notificado e vai ajudá-lo em breve.
 
 Descreva sua solicitação que entraremos em contato."""
     
-    return "Recebido! Atendente vai processar. ✅"
+    return None
 
 @app.get("/")
 async def root(): return {"ok": True}
@@ -549,10 +553,17 @@ Qualquer dúvida, estamos à disposição! 😊"""
     
     conn.commit()
     
-    resp = ia(msg, conhec, hotel)
-    c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
-    conn.commit()
-    enviar(num, resp, "atendimento")
+    # Conta quantas mensagens do cliente já foram enviadas
+    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente'", (cid,))
+    num_msgs_cliente = c.fetchone()['count']
+    
+    resp = ia(msg, conhec, hotel, num_msgs_cliente)
+    
+    # Só responde se ia() retornar algo (primeiras 2 mensagens)
+    if resp:
+        c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
+        conn.commit()
+        enviar(num, resp, "atendimento")
     
     if responsaveis_json:
         try:
