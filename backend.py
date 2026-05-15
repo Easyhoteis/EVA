@@ -381,9 +381,75 @@ async def webhook(req: Request):
     msg = d.get("text", {}).get("message") if d.get("text") else None
     if not num or not msg: return {"success": False}
     
+    # verifica se é resposta de atendente (numero cadastrado como whatsapp de usuario)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT id, nome FROM usuarios WHERE whatsapp = %s", (num,))
+    atend = c.fetchone()
+    
+    if atend:
+        # é atendente respondendo! processa como conclusão
+        msg_lower = msg.lower()
+        palavras_conclusao = ['concluido', 'concluído', 'feito', 'realizado', 'ok', 'pronto', 'done', '✅', 'resolvido']
+        
+        if any(p in msg_lower for p in palavras_conclusao):
+            # busca ultima notificacao desse atendente pra saber qual hotel
+            c.execute("SELECT hotel_nome, hotel_numero, mensagem_original FROM notificacoes WHERE usuario_id = %s ORDER BY enviado_em DESC LIMIT 1", (atend['id'],))
+            notif = c.fetchone()
+            
+            if notif:
+                hotel_num = notif['hotel_numero']
+                hotel_nome = notif['hotel_nome']
+                
+                # responde pro hotel
+                msg_conclusao = f"""✅ *Concluído!*
+
+Sua solicitação foi processada com sucesso por nossa equipe.
+
+Qualquer dúvida, estamos à disposição! 😊"""
+                enviar(hotel_num, msg_conclusao, "atendimento")
+                
+                # fecha a conversa
+                c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (hotel_num,))
+                conv = c.fetchone()
+                if conv:
+                    c.execute("UPDATE conversas SET status = 'fechado', fechado_em = CURRENT_TIMESTAMP, fechado_por_id = %s, fechado_por_nome = %s WHERE id = %s",
+                        (atend['id'], atend['nome'], conv['id']))
+                    c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, 'eva', %s)", (conv['id'], msg_conclusao))
+                    conn.commit()
+                
+                # responde pro atendente confirmando
+                enviar(num, f"✅ Confirmado! Avisei o {hotel_nome} que foi concluído e fechei o atendimento.", "atendimento")
+            
+            c.close()
+            conn.close()
+            return {"success": True, "tipo": "conclusao_atendente"}
+    
+    # verifica se conversa foi fechada (cliente agradecendo depois)
+    c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'fechado' ORDER BY fechado_em DESC LIMIT 1", (num,))
+    conv_fechada = c.fetchone()
+    
+    if conv_fechada:
+        # reabre conversa
+        c.execute("UPDATE conversas SET status = 'aberto' WHERE id = %s", (conv_fechada['id'],))
+        c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, 'cliente', %s)", (conv_fechada['id'], msg))
+        conn.commit()
+        
+        # responde agradecimento e fecha de novo
+        msg_lower = msg.lower()
+        palavras_agradecimento = ['obrigado', 'obrigada', 'valeu', 'thanks', 'vlw', 'brigadão', '👍', '🙏']
+        
+        if any(p in msg_lower for p in palavras_agradecimento):
+            resp = "De nada! Estamos sempre à disposição. 😊"
+            c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, 'eva', %s)", (conv_fechada['id'], resp))
+            c.execute("UPDATE conversas SET status = 'fechado', fechado_em = CURRENT_TIMESTAMP WHERE id = %s", (conv_fechada['id'],))
+            conn.commit()
+            c.close()
+            conn.close()
+            enviar(num, resp, "atendimento")
+            return {"success": True, "tipo": "agradecimento_pos_fechamento"}
+    
     if not robo_on():
-        conn = db()
-        c = conn.cursor()
         c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (num,))
         r = c.fetchone()
         cid = r['id'] if r else None
@@ -396,8 +462,6 @@ async def webhook(req: Request):
         conn.close()
         return {"success": True, "robo": "pausado"}
     
-    conn = db()
-    c = conn.cursor()
     c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (num,))
     r = c.fetchone()
     cid = r['id'] if r else None
@@ -434,7 +498,7 @@ Número: {num}
 Mensagem:
 "{msg[:200]}"
 
-Acesse o painel para responder."""
+Responda aqui quando concluir!"""
                     enviar(u['whatsapp'], msg_notif, "atendimento")
                     c.execute("INSERT INTO notificacoes (hotel_nome, hotel_numero, usuario_id, usuario_nome, mensagem_original) VALUES (%s, %s, %s, %s, %s)",
                         (hotel, num, u['id'], u['nome'], msg))
