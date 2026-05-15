@@ -133,6 +133,7 @@ def init_db():
                 email TEXT,
                 tags TEXT,
                 observacoes TEXT,
+                conhecimento_ia TEXT,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -216,6 +217,14 @@ def init_db():
             )
         """)
         
+        # CONFIG SISTEMA (pausar robô, etc)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS config_sistema (
+                chave TEXT PRIMARY KEY,
+                valor TEXT
+            )
+        """)
+        
         conn.commit()
         
         # Cria admin padrão
@@ -241,6 +250,12 @@ def init_db():
                 "INSERT INTO config_zapi (tipo, instance_id, token, client_token) VALUES (?, ?, ?, ?)",
                 ("atendimento", ZAPI_INSTANCE_ATEND, ZAPI_TOKEN_ATEND, ZAPI_CLIENT_TOKEN_ATEND)
             )
+            conn.commit()
+        
+        # Config sistema padrão (robô ativo)
+        cur.execute("SELECT COUNT(*) FROM config_sistema WHERE chave = 'robo_ativo'")
+        if cur.fetchone()[0] == 0:
+            cur.execute("INSERT INTO config_sistema (chave, valor) VALUES ('robo_ativo', '1')")
             conn.commit()
         
         # Templates Easy
@@ -481,22 +496,75 @@ def pode_enviar():
     return True, "OK"
 
 # ============================================
+# CONFIG SISTEMA
+# ============================================
+
+def robo_esta_ativo():
+    conn = get_db()
+    if not conn: return True  # Default ativo se falhar
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT valor FROM config_sistema WHERE chave = 'robo_ativo'")
+        row = cur.fetchone()
+        return row[0] == '1' if row else True
+    finally:
+        cur.close()
+        conn.close()
+
+def toggle_robo(ativo: bool):
+    conn = get_db()
+    if not conn: return False
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO config_sistema (chave, valor) VALUES ('robo_ativo', ?)
+            ON CONFLICT(chave) DO UPDATE SET valor = ?
+        """, ('1' if ativo else '0', '1' if ativo else '0'))
+        conn.commit()
+        return True
+    finally:
+        cur.close()
+        conn.close()
+
+# ============================================
 # CLAUDE IA
 # ============================================
 
-def obter_resposta_ia(mensagem: str, contexto: str = "Hotel"):
+def obter_resposta_ia(mensagem: str, conhecimento_hotel: str = "", nome_hotel: str = "Hotel"):
+    # IA especializada em confirmar solicitações hoteleiras SEM opinar como RM
     try:
+        prompt_base = f"""Você é EVA, assistente operacional da Easy Hotéis para atendimento aos hotéis administrados.
+
+SEU PAPEL: Confirmar solicitações com CLAREZA. Você NÃO é um Revenue Manager.
+
+REGRAS IMPORTANTES:
+- SEMPRE confirme o pedido repetindo os detalhes específicos (hotel, categoria de quarto, data)
+- NÃO opine sobre preços ou estratégia de revenue
+- NÃO sugira alterações nas tarifas
+- NÃO faça recomendações de ocupação
+- Seja breve, claro e profissional (máximo 3-4 linhas)
+- Use emojis moderadamente (apenas ícones funcionais: 🏨 📅 🛏️ ✅)
+
+TIPOS DE SOLICITAÇÃO COMUNS:
+- Fecho de disponibilidade (bloquear categoria de quarto)
+- Alteração de tarifa
+- Liberação/bloqueio de quartos
+- Ajustes operacionais"""
+
+        if conhecimento_hotel:
+            prompt_base += f"\n\nCONTEXTO DO HOTEL:\n{conhecimento_hotel}"
+        
+        prompt_base += f"\n\nCliente ({nome_hotel}) disse: \"{mensagem}\"\n\nResponda confirmando a solicitação de forma clara:"
+        
         response = claude_client.messages.create(
             model="claude-3-5-haiku-20241022",
-            max_tokens=200,
-            messages=[{"role": "user", "content": f"""Você é um assistente de atendimento ao cliente de um {contexto}.
-Responda de forma breve, amigável e profissional. Máximo 2-3 linhas.
-Cliente disse: "{mensagem}"
-Responda:"""}]
+            max_tokens=250,
+            messages=[{"role": "user", "content": prompt_base}]
         )
         return response.content[0].text
     except Exception as e:
-        return "Desculpe, tive um problema. Vou chamar um atendente."
+        logger.error(f"Erro IA: {e}")
+        return "Desculpe, tive um problema técnico. Um atendente humano vai te ajudar em breve."
 
 # ============================================
 # ROTAS - AUTH
@@ -752,6 +820,25 @@ async def webhook(request: Request):
         if not numero or not mensagem:
             return {"success": False}
         
+        # Verifica se robô está ativo
+        if not robo_esta_ativo():
+            logger.info(f"Robô pausado - mensagem de {numero} não será respondida automaticamente")
+            # Só salva a mensagem, não responde
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM conversas WHERE numero_cliente = ? AND status = 'aberto' LIMIT 1", (numero,))
+            row = cur.fetchone()
+            if row:
+                conversa_id = row[0]
+            else:
+                cur.execute("INSERT INTO conversas (numero_cliente, nome_cliente, status) VALUES (?, ?, 'aberto')", (numero, nome))
+                conversa_id = cur.lastrowid
+            cur.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (?, ?, ?)", (conversa_id, "cliente", mensagem))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return {"success": True, "robo": "pausado"}
+        
         conn = get_db()
         cur = conn.cursor()
         
@@ -765,13 +852,19 @@ async def webhook(request: Request):
             cur.execute("INSERT INTO conversas (numero_cliente, nome_cliente, status) VALUES (?, ?, 'aberto')", (numero, nome))
             conversa_id = cur.lastrowid
         
+        # Busca conhecimento do hotel (se cadastrado como contato)
+        cur.execute("SELECT conhecimento_ia, nome FROM contatos WHERE numero = ?", (numero,))
+        contato = cur.fetchone()
+        conhecimento = contato[0] if contato and contato[0] else ""
+        nome_hotel = contato[1] if contato else nome or "Hotel"
+        
         cur.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (?, ?, ?)", (conversa_id, "cliente", mensagem))
         conn.commit()
         cur.close()
         conn.close()
         
-        # IA responde
-        resposta = obter_resposta_ia(mensagem)
+        # IA responde com contexto do hotel
+        resposta = obter_resposta_ia(mensagem, conhecimento, nome_hotel)
         
         conn = get_db()
         cur = conn.cursor()
@@ -783,6 +876,7 @@ async def webhook(request: Request):
         enviar_mensagem_zapi(numero, resposta, "atendimento")
         return {"success": True}
     except Exception as e:
+        logger.error(f"Erro webhook: {e}")
         return JSONResponse({"success": False, "erro": str(e)}, status_code=500)
 
 # ============================================
@@ -942,8 +1036,9 @@ async def criar_contato(request: Request):
         cur = conn.cursor()
         try:
             cur.execute(
-                "INSERT INTO contatos (nome, numero, email, tags, observacoes) VALUES (?, ?, ?, ?, ?)",
-                (data["nome"], data["numero"], data.get("email", ""), data.get("tags", ""), data.get("observacoes", ""))
+                "INSERT INTO contatos (nome, numero, email, tags, observacoes, conhecimento_ia) VALUES (?, ?, ?, ?, ?, ?)",
+                (data["nome"], data["numero"], data.get("email", ""), data.get("tags", ""), 
+                 data.get("observacoes", ""), data.get("conhecimento_ia", ""))
             )
             conn.commit()
             return {"sucesso": True, "id": cur.lastrowid}
@@ -1347,6 +1442,29 @@ async def relatorios(request: Request):
 @app.get("/api/zapi/status")
 async def zapi_status(request: Request):
     return {"atendimento": status_zapi("atendimento"), "disparos": status_zapi("disparos")}
+
+@app.get("/api/sistema/robo")
+async def get_status_robo(request: Request):
+    user = get_usuario(request)
+    if not user:
+        return JSONResponse({"sucesso": False}, status_code=401)
+    return {"sucesso": True, "ativo": robo_esta_ativo()}
+
+@app.post("/api/sistema/robo")
+async def toggle_status_robo(request: Request):
+    user = get_usuario(request)
+    if not user or user['perfil'] != 'admin':
+        return JSONResponse({"sucesso": False, "erro": "Sem permissão"}, status_code=403)
+    
+    try:
+        data = await request.json()
+        ativo = data.get("ativo", True)
+        sucesso = toggle_robo(ativo)
+        if sucesso:
+            registrar_log(user['id'], "toggle_robo", f"Robô {'ativado' if ativo else 'pausado'}")
+        return {"sucesso": sucesso, "ativo": ativo}
+    except Exception as e:
+        return JSONResponse({"sucesso": False, "erro": str(e)}, status_code=500)
 
 if __name__ == "__main__":
     print("\n" + "="*60)
