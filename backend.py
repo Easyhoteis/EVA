@@ -78,6 +78,7 @@ def init():
     c.execute("CREATE TABLE IF NOT EXISTS config_zapi (tipo TEXT PRIMARY KEY, instance_id TEXT, token TEXT, client_token TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS config_sistema (chave TEXT PRIMARY KEY, valor TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS notificacoes (id SERIAL PRIMARY KEY, hotel_nome TEXT, hotel_numero TEXT, usuario_id INTEGER, usuario_nome TEXT, mensagem_original TEXT, enviado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS listas_transmissao (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, hoteis_ids TEXT NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     conn.commit()
     
     c.execute("SELECT COUNT(*) as count FROM usuarios")
@@ -1002,6 +1003,64 @@ async def export_excel(req: Request):
 async def zapi_st(req: Request):
     return {"atendimento": status_zapi("atendimento"), "disparos": status_zapi("disparos")}
 
+@app.get("/api/listas")
+async def get_listas(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM listas_transmissao ORDER BY nome")
+    listas = [dict(r) for r in c.fetchall()]
+    c.close()
+    conn.close()
+    return {"sucesso": True, "listas": listas}
+
+@app.post("/api/listas")
+async def criar_lista(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    nome = d.get("nome", "")
+    hoteis_ids = d.get("hoteis_ids", [])
+    if not nome or not hoteis_ids:
+        return JSONResponse({"sucesso": False, "erro": "Nome e hotéis obrigatórios"}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("INSERT INTO listas_transmissao (nome, hoteis_ids) VALUES (%s, %s)", (nome, json.dumps(hoteis_ids)))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.put("/api/listas/{lid}")
+async def atualizar_lista(lid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    nome = d.get("nome", "")
+    hoteis_ids = d.get("hoteis_ids", [])
+    if not nome or not hoteis_ids:
+        return JSONResponse({"sucesso": False, "erro": "Nome e hotéis obrigatórios"}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("UPDATE listas_transmissao SET nome = %s, hoteis_ids = %s WHERE id = %s", (nome, json.dumps(hoteis_ids), lid))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.delete("/api/listas/{lid}")
+async def deletar_lista(lid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("DELETE FROM listas_transmissao WHERE id = %s", (lid,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
 @app.post("/api/transmissao")
 async def lista_transmissao(req: Request):
     u = get_user(req)
@@ -1009,26 +1068,43 @@ async def lista_transmissao(req: Request):
     
     d = await req.json()
     mensagem = d.get("mensagem", "")
+    lista_id = d.get("lista_id", None)
     
     if not mensagem:
         return JSONResponse({"sucesso": False, "erro": "Mensagem vazia"}, 400)
     
+    if not lista_id:
+        return JSONResponse({"sucesso": False, "erro": "Selecione uma lista"}, 400)
+    
     conn = db()
     c = conn.cursor()
-    c.execute("SELECT nome, numero FROM contatos ORDER BY nome")
+    
+    # Busca lista
+    c.execute("SELECT hoteis_ids FROM listas_transmissao WHERE id = %s", (lista_id,))
+    lista = c.fetchone()
+    if not lista:
+        c.close()
+        conn.close()
+        return JSONResponse({"sucesso": False, "erro": "Lista não encontrada"}, 400)
+    
+    hoteis_ids = json.loads(lista['hoteis_ids'])
+    
+    # Busca hotéis
+    placeholders = ','.join(['%s'] * len(hoteis_ids))
+    c.execute(f"SELECT nome, numero FROM contatos WHERE id IN ({placeholders}) ORDER BY nome", tuple(hoteis_ids))
     hoteis = c.fetchall()
     c.close()
     conn.close()
     
     if not hoteis:
-        return JSONResponse({"sucesso": False, "erro": "Nenhum hotel cadastrado"}, 400)
+        return JSONResponse({"sucesso": False, "erro": "Nenhum hotel na lista"}, 400)
     
     # Envia para todos
     enviados = 0
     falhados = 0
     
     for hotel in hoteis:
-        msg_final = f"📢 *AVISO EASY HOTÉIS*\n\n{mensagem}\n\n---\nMensagem enviada para todos os hotéis administrados."
+        msg_final = f"📢 *AVISO EASY HOTÉIS*\n\n{mensagem}\n\n---\nMensagem enviada para lista selecionada."
         result = enviar(hotel['numero'], msg_final, "atendimento")
         
         if result.get("ok"):
