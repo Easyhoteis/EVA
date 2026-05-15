@@ -194,6 +194,14 @@
                     <div class="limite-info" id="limite-info">
                         <i class="fas fa-shield-alt"></i> <span id="limite-texto">0 / 100</span>
                     </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;background:var(--color-background-secondary);border-radius:20px" id="robo-toggle-container">
+                        <i class="fas fa-robot" style="font-size:14px"></i>
+                        <span style="font-size:12px;font-weight:600" id="robo-status-text">Robô: ...</span>
+                        <label class="switch" style="margin:0">
+                            <input type="checkbox" id="robo-toggle" onchange="toggleRobo()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                     <div class="status-zapi offline" id="status-zapi-atend">
                         <i class="fas fa-circle"></i> Atend: ...
                     </div>
@@ -380,6 +388,22 @@
             <div class="form-group"><label>Número (com DDI) *</label><input type="text" id="contato-numero" placeholder="5511999999999"></div>
             <div class="form-group"><label>Email</label><input type="email" id="contato-email"></div>
             <div class="form-group"><label>Tags</label><input type="text" id="contato-tags"></div>
+            <div class="form-group">
+                <label>🧠 Base de Conhecimento da IA</label>
+                <p style="font-size:12px;color:var(--gray);margin-bottom:0.5rem">Informações que a IA usará ao responder este hotel (quartos, tarifas, procedimentos)</p>
+                <textarea id="contato-conhecimento" style="min-height:150px" placeholder="Hotel: [Nome do Hotel]
+Endereço: [Endereço completo]
+
+Quartos disponíveis:
+- Standard (30m²) - R$ XXX/diária
+- Superior (40m²) - R$ XXX/diária
+- Master Suite (60m²) - R$ XXX/diária
+
+Procedimentos:
+- Fecho de disponibilidade: [sistema usado]
+- Alteração de tarifa: [prazo/regra]
+- Cancelamento: [política]"></textarea>
+            </div>
             <div class="modal-actions">
                 <button class="btn btn-primary btn-block" onclick="salvarContato()"><i class="fas fa-save"></i> Salvar</button>
                 <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-contato')">Cancelar</button>
@@ -591,6 +615,7 @@
             carregarTudo();
             verificarStatusZapi();
             atualizarLimiteInfo();
+            carregarStatusRobo();
             
             setInterval(carregarConversas, 5000);
             setInterval(verificarStatusZapi, 30000);
@@ -598,11 +623,58 @@
             setInterval(() => { if (paginaAtual === 'campanhas') carregarCampanhas(); }, 3000);
         }
 
+        async function carregarStatusRobo() {
+            try {
+                const res = await api(`${API}/sistema/robo`);
+                const data = await res.json();
+                if (data.sucesso) {
+                    const ativo = data.ativo;
+                    document.getElementById('robo-toggle').checked = ativo;
+                    document.getElementById('robo-status-text').textContent = ativo ? 'Robô: ATIVO' : 'Robô: PAUSADO';
+                    document.getElementById('robo-toggle-container').style.background = ativo ? 'var(--color-background-success)' : 'var(--color-background-warning)';
+                    document.getElementById('robo-toggle-container').style.color = ativo ? 'var(--color-text-success)' : 'var(--color-text-warning)';
+                }
+            } catch (e) {}
+        }
+
+        async function toggleRobo() {
+            const checkbox = document.getElementById('robo-toggle');
+            const ativo = checkbox.checked;
+            
+            if (!confirm(ativo ? '✅ Ativar robô?\n\nEVA voltará a responder automaticamente.' : '⏸️ Pausar robô?\n\nEVA NÃO responderá automaticamente.\nSó atendentes humanos.')) {
+                checkbox.checked = !ativo;
+                return;
+            }
+            
+            try {
+                const res = await api(`${API}/sistema/robo`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ativo })
+                });
+                const data = await res.json();
+                if (data.sucesso) {
+                    carregarStatusRobo();
+                    alert(ativo ? '✅ Robô ATIVADO!\nEVA responde automaticamente.' : '⏸️ Robô PAUSADO!\nSó atendentes humanos respondem.');
+                } else {
+                    checkbox.checked = !ativo;
+                    alert('Erro: ' + (data.erro || 'desconhecido'));
+                }
+            } catch (e) {
+                checkbox.checked = !ativo;
+                alert('Erro ao alterar status do robô');
+            }
+        }
+
         function ajustarMenuPorPerfil() {
             const perfil = usuarioLogado.perfil;
             
             // Esconde tudo primeiro
             document.querySelectorAll('.nav-item').forEach(n => n.classList.add('hidden'));
+            
+            // Esconde/mostra toggle robô (só admin)
+            if (perfil !== 'admin') {
+                document.getElementById('robo-toggle-container').style.display = 'none';
+            }
             
             if (perfil === 'admin') {
                 // Admin vê tudo
@@ -838,7 +910,7 @@
         function filtrarContatos() { renderizarContatos(); }
 
         function abrirModalContato() {
-            ['contato-nome', 'contato-numero', 'contato-email', 'contato-tags'].forEach(id => document.getElementById(id).value = '');
+            ['contato-nome', 'contato-numero', 'contato-email', 'contato-tags', 'contato-conhecimento'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('modal-contato').classList.add('ativo');
         }
 
@@ -847,7 +919,8 @@
                 nome: document.getElementById('contato-nome').value,
                 numero: document.getElementById('contato-numero').value,
                 email: document.getElementById('contato-email').value,
-                tags: document.getElementById('contato-tags').value
+                tags: document.getElementById('contato-tags').value,
+                conhecimento_ia: document.getElementById('contato-conhecimento').value
             };
             if (!dados.nome || !dados.numero) { alert('Preencha nome e número'); return; }
             const res = await api(`${API}/contatos`, {
