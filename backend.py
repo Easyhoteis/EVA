@@ -51,7 +51,15 @@ def init():
     
     c.execute("CREATE TABLE IF NOT EXISTS sessoes (token TEXT PRIMARY KEY, usuario_id INTEGER, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS logs (id SERIAL PRIMARY KEY, usuario_id INTEGER, acao TEXT NOT NULL, detalhes TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
-    c.execute("CREATE TABLE IF NOT EXISTS conversas (id SERIAL PRIMARY KEY, numero_cliente TEXT NOT NULL, nome_cliente TEXT, status TEXT DEFAULT 'aberto', fechado_por_id INTEGER, fechado_por_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, fechado_em TIMESTAMP, observacoes TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS conversas (id SERIAL PRIMARY KEY, numero_cliente TEXT NOT NULL, nome_cliente TEXT, motivo TEXT, status TEXT DEFAULT 'aberto', fechado_por_id INTEGER, fechado_por_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, fechado_em TIMESTAMP, observacoes TEXT)")
+    
+    # Adiciona coluna motivo se não existir
+    try:
+        c.execute("ALTER TABLE conversas ADD COLUMN motivo TEXT")
+        conn.commit()
+    except:
+        conn.rollback()
+    
     c.execute("CREATE TABLE IF NOT EXISTS mensagens (id SERIAL PRIMARY KEY, conversa_id INTEGER NOT NULL, remetente TEXT NOT NULL, conteudo TEXT NOT NULL, usuario_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS contatos (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, numero TEXT UNIQUE NOT NULL, email TEXT, tags TEXT, observacoes TEXT, conhecimento_ia TEXT, responsaveis TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     
@@ -222,46 +230,55 @@ def toggle_robo(on):
     return True
 
 def ia(msg, conhec="", hotel="Hotel"):
-    try:
-        prompt = f"""Você é EVA, assistente da Easy Hotéis.
+    # Menu interativo - sem IA
+    msg_lower = msg.lower().strip()
+    
+    # Se é primeira mensagem ou não é número, mostra menu
+    if msg_lower not in ['1', '2', '3']:
+        return f"""Olá! Sou a EVA, assistente da Easy Hotéis! 😊
 
-PAPEL: Confirmar solicitações com CLAREZA. NÃO é Revenue Manager.
+Como posso ajudar você hoje?
 
-REGRAS:
-- Confirme repetindo detalhes (hotel, categoria, data)
-- NÃO opine sobre preços
-- NÃO sugira alterações
-- Breve (max 3-4 linhas)
-- Use: 🏨 📅 🛏️ ✅
+1️⃣ Fechar disponibilidade
+2️⃣ Atualizar tarifas  
+3️⃣ Outros assuntos
 
-TIPOS: Fecho, alteração tarifa, bloqueio quartos"""
-        if conhec: prompt += f"\n\nHOTEL:\n{conhec}"
-        prompt += f"\n\nCliente ({hotel}): \"{msg}\"\n\nConfirme:"
-        
-        # Usa OpenRouter (grátis)
-        url = "https://openrouter.ai/api/v1/chat/completions"
-        key = os.getenv("OPENROUTER_API_KEY", "")
-        
-        if not key:
-            return "Recebido! Atendente vai processar. ✅"
-        
-        payload = {
-            "model": "meta-llama/llama-3.1-8b-instruct:free",
-            "messages": [{"role": "user", "content": prompt}]
-        }
-        
-        response = requests.post(url, 
-            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-            json=payload, timeout=10)
-        
-        if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
-        else:
-            return "Recebido! Atendente vai processar. ✅"
-            
-    except Exception as e:
-        print(f"ERRO NA IA: {str(e)}")
-        return "Recebido! Atendente vai processar. ✅"
+Digite o número da opção desejada."""
+    
+    # Cliente escolheu opção
+    if msg_lower == '1':
+        return """✅ *Fecho de Disponibilidade*
+
+Solicitação registrada com sucesso!
+
+Um atendente já foi notificado e vai processar seu pedido em breve.
+
+Por favor, envie os detalhes:
+📅 Data(s)
+🛏️ Categoria(s)"""
+    
+    elif msg_lower == '2':
+        return """✅ *Atualização de Tarifas*
+
+Solicitação registrada com sucesso!
+
+Um atendente já foi notificado e vai processar seu pedido em breve.
+
+Por favor, envie os detalhes:
+📅 Período
+🛏️ Categoria(s)
+💰 Novos valores"""
+    
+    elif msg_lower == '3':
+        return """✅ *Outros Assuntos*
+
+Solicitação registrada com sucesso!
+
+Um atendente já foi notificado e vai ajudá-lo em breve.
+
+Descreva sua solicitação que entraremos em contato."""
+    
+    return "Recebido! Atendente vai processar. ✅"
 
 @app.get("/")
 async def root(): return {"ok": True}
@@ -514,7 +531,21 @@ Qualquer dúvida, estamos à disposição! 😊"""
     hotel = cont['nome'] if cont else nome
     responsaveis_json = cont['responsaveis'] if cont else None
     
+    # Detecta motivo baseado na mensagem
+    motivo = None
+    if msg.strip() == '1':
+        motivo = 'Fecho de Disponibilidade'
+    elif msg.strip() == '2':
+        motivo = 'Atualização de Tarifas'
+    elif msg.strip() == '3':
+        motivo = 'Outros Assuntos'
+    
     c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "cliente", msg))
+    
+    # Atualiza motivo se detectado
+    if motivo:
+        c.execute("UPDATE conversas SET motivo = %s WHERE id = %s", (motivo, cid))
+    
     conn.commit()
     
     resp = ia(msg, conhec, hotel)
@@ -910,14 +941,103 @@ async def relat(req: Request):
     tempo_med = int(tempo) if tempo else 0
     c.execute("SELECT fechado_por_nome, COUNT(*) as total FROM conversas WHERE status='fechado' AND fechado_por_nome IS NOT NULL GROUP BY fechado_por_nome ORDER BY total DESC LIMIT 5")
     top = [dict(r) for r in c.fetchall()]
+    
+    # Novos relatórios
+    c.execute("SELECT nome_cliente, COUNT(*) as total FROM conversas WHERE nome_cliente IS NOT NULL GROUP BY nome_cliente ORDER BY total DESC LIMIT 10")
+    top_hoteis = [dict(r) for r in c.fetchall()]
+    
+    c.execute("SELECT motivo, COUNT(*) as total FROM conversas WHERE motivo IS NOT NULL GROUP BY motivo ORDER BY total DESC")
+    por_motivo = [dict(r) for r in c.fetchall()]
+    
     c.close()
     conn.close()
     return {"sucesso": True, "relatorios": {"totalConversas": total_conv, "abertos": abertos, "fechados": fechados, "tempoMedioMinutos": tempo_med,
-        "totalContatos": conts, "totalCampanhas": camps, "totalEnviadas": env, "enviadosHoje": envios_hj(), "topAtendentes": top}}
+        "totalContatos": conts, "totalCampanhas": camps, "totalEnviadas": env, "enviadosHoje": envios_hj(), "topAtendentes": top,
+        "topHoteis": top_hoteis, "porMotivo": por_motivo}}
+
+@app.get("/api/relatorios/export")
+async def export_excel(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    
+    import io
+    from datetime import datetime
+    
+    conn = db()
+    c = conn.cursor()
+    
+    # Dados completos
+    c.execute("""
+        SELECT c.id, c.nome_cliente, c.numero_cliente, c.motivo, c.status, 
+               c.fechado_por_nome, c.criado_em, c.fechado_em,
+               EXTRACT(EPOCH FROM (c.fechado_em - c.criado_em))/60 as tempo_min
+        FROM conversas c
+        ORDER BY c.criado_em DESC
+    """)
+    conversas = c.fetchall()
+    
+    c.close()
+    conn.close()
+    
+    # Gera CSV
+    output = io.StringIO()
+    output.write("ID,Hotel,Numero,Motivo,Status,Atendente,Abertura,Fechamento,Tempo(min)\n")
+    
+    for conv in conversas:
+        tempo = int(conv['tempo_min']) if conv['tempo_min'] else 0
+        abertura = conv['criado_em'].strftime('%d/%m/%Y %H:%M') if conv['criado_em'] else ''
+        fechamento = conv['fechado_em'].strftime('%d/%m/%Y %H:%M') if conv['fechado_em'] else ''
+        output.write(f"{conv['id']},{conv['nome_cliente'] or conv['numero_cliente']},{conv['numero_cliente']},{conv['motivo'] or 'N/A'},{conv['status']},{conv['fechado_por_nome'] or 'N/A'},{abertura},{fechamento},{tempo}\n")
+    
+    csv_data = output.getvalue()
+    output.close()
+    
+    return JSONResponse({
+        "sucesso": True,
+        "filename": f"relatorio_eva_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        "data": csv_data
+    })
 
 @app.get("/api/zapi/status")
 async def zapi_st(req: Request):
     return {"atendimento": status_zapi("atendimento"), "disparos": status_zapi("disparos")}
+
+@app.post("/api/transmissao")
+async def lista_transmissao(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False, "erro": "Apenas Admin pode usar Lista de Transmissão"}, 403)
+    
+    d = await req.json()
+    mensagem = d.get("mensagem", "")
+    
+    if not mensagem:
+        return JSONResponse({"sucesso": False, "erro": "Mensagem vazia"}, 400)
+    
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT nome, numero FROM contatos ORDER BY nome")
+    hoteis = c.fetchall()
+    c.close()
+    conn.close()
+    
+    if not hoteis:
+        return JSONResponse({"sucesso": False, "erro": "Nenhum hotel cadastrado"}, 400)
+    
+    # Envia para todos
+    enviados = 0
+    falhados = 0
+    
+    for hotel in hoteis:
+        msg_final = f"📢 *AVISO EASY HOTÉIS*\n\n{mensagem}\n\n---\nMensagem enviada para todos os hotéis administrados."
+        result = enviar(hotel['numero'], msg_final, "atendimento")
+        
+        if result.get("ok"):
+            enviados += 1
+            await asyncio.sleep(2)  # Delay entre envios
+        else:
+            falhados += 1
+    
+    return {"sucesso": True, "enviados": enviados, "falhados": falhados, "total": len(hoteis)}
 
 @app.get("/api/sistema/robo")
 async def get_robo(req: Request):
