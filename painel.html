@@ -174,6 +174,9 @@
                 <div class="nav-item" id="nav-usuarios" onclick="mudarPagina('usuarios')">
                     <i class="fas fa-users"></i><span>Usuários</span>
                 </div>
+                <div class="nav-item hidden" id="nav-transmissao" onclick="abrirTransmissao()">
+                    <i class="fas fa-broadcast-tower"></i><span>Lista de Transmissão</span>
+                </div>
                 <div class="nav-item" id="nav-config" onclick="mudarPagina('config')">
                     <i class="fas fa-cog"></i><span>Configurações</span>
                 </div>
@@ -355,10 +358,22 @@
 
                 <!-- RELATÓRIOS -->
                 <div id="page-relatorios" class="page">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+                        <h2>📊 Relatórios</h2>
+                        <button class="btn btn-primary" onclick="exportarExcel()" style="display:none" id="btn-export"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                    </div>
                     <div class="grid-stats" id="stats-cards"></div>
                     <div class="card" style="padding:2rem;margin-top:2rem">
                         <h3 style="margin-bottom:1rem">🏆 Top Atendentes</h3>
                         <div id="top-atendentes"></div>
+                    </div>
+                    <div class="card" style="padding:2rem;margin-top:2rem">
+                        <h3 style="margin-bottom:1rem">🏨 Top 10 Hotéis que Mais Chamam</h3>
+                        <div id="top-hoteis"></div>
+                    </div>
+                    <div class="card" style="padding:2rem;margin-top:2rem">
+                        <h3 style="margin-bottom:1rem">📋 Chamados por Motivo</h3>
+                        <div id="por-motivo"></div>
                     </div>
                 </div>
             </div>
@@ -555,6 +570,21 @@ Procedimentos:
             <div class="modal-actions">
                 <button class="btn btn-primary btn-block" onclick="salvarUsuario()"><i class="fas fa-save"></i> Salvar</button>
                 <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-usuario')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-transmissao">
+        <div class="modal-content">
+            <div class="modal-title">📢 Lista de Transmissão</div>
+            <p style="color:var(--gray);margin-bottom:1.5rem">Envie uma mensagem para TODOS os hotéis cadastrados simultaneamente.</p>
+            <div class="form-group">
+                <label>Mensagem *</label>
+                <textarea id="transmissao-msg" style="min-height:150px" placeholder="Ex: Plantão de fim de semana: João - 11 99999-9999"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-block" onclick="enviarTransmissao()"><i class="fas fa-broadcast-tower"></i> Enviar para Todos</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-transmissao')">Cancelar</button>
             </div>
         </div>
     </div>
@@ -1426,6 +1456,12 @@ Procedimentos:
             const res = await api(`${API}/relatorios`);
             const data = await res.json();
             const r = data.relatorios;
+            
+            // Mostra botão export só para Admin
+            if (usuarioLogado.perfil === 'admin') {
+                document.getElementById('btn-export').style.display = 'block';
+            }
+            
             document.getElementById('stats-cards').innerHTML = `
                 <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-num">${r.totalConversas}</div><div class="stat-label">Conversas</div></div>
                 <div class="stat-card"><div class="stat-icon">📬</div><div class="stat-num" style="color:var(--warning)">${r.abertos}</div><div class="stat-label">Abertas</div></div>
@@ -1437,6 +1473,7 @@ Procedimentos:
                 <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-num" style="color:var(--primary)">${r.enviadosHoje}</div><div class="stat-label">Hoje</div></div>
             `;
             
+            // Top Atendentes
             const topEl = document.getElementById('top-atendentes');
             if (r.topAtendentes && r.topAtendentes.length > 0) {
                 topEl.innerHTML = r.topAtendentes.map((a, i) => `
@@ -1447,6 +1484,85 @@ Procedimentos:
                 `).join('');
             } else {
                 topEl.innerHTML = '<p style="color:var(--gray)">Sem dados ainda</p>';
+            }
+            
+            // Top Hotéis
+            const topHoteisEl = document.getElementById('top-hoteis');
+            if (r.topHoteis && r.topHoteis.length > 0) {
+                topHoteisEl.innerHTML = r.topHoteis.map((h, i) => `
+                    <div style="display:flex;justify-content:space-between;padding:0.75rem;border-bottom:1px solid var(--border)">
+                        <div><strong>${i+1}º</strong> ${h.nome_cliente}</div>
+                        <div style="color:var(--primary);font-weight:600">${h.total} chamados</div>
+                    </div>
+                `).join('');
+            } else {
+                topHoteisEl.innerHTML = '<p style="color:var(--gray)">Sem dados ainda</p>';
+            }
+            
+            // Por Motivo
+            const motivoEl = document.getElementById('por-motivo');
+            if (r.porMotivo && r.porMotivo.length > 0) {
+                motivoEl.innerHTML = r.porMotivo.map(m => `
+                    <div style="display:flex;justify-content:space-between;padding:0.75rem;border-bottom:1px solid var(--border)">
+                        <div>${m.motivo}</div>
+                        <div style="color:var(--info);font-weight:600">${m.total} chamados</div>
+                    </div>
+                `).join('');
+            } else {
+                motivoEl.innerHTML = '<p style="color:var(--gray)">Sem dados ainda</p>';
+            }
+        }
+
+        async function exportarExcel() {
+            try {
+                const res = await api(`${API}/relatorios/export`);
+                const data = await res.json();
+                if (data.sucesso) {
+                    // Cria arquivo CSV e baixa
+                    const blob = new Blob([data.data], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = data.filename;
+                    link.click();
+                    alert('✅ Relatório exportado com sucesso!');
+                } else {
+                    alert('❌ Erro ao exportar');
+                }
+            } catch (e) {
+                alert('❌ Erro ao exportar');
+            }
+        }
+        
+        function abrirTransmissao() {
+            document.getElementById('modal-transmissao').classList.add('ativo');
+            document.getElementById('transmissao-msg').value = '';
+        }
+        
+        async function enviarTransmissao() {
+            const msg = document.getElementById('transmissao-msg').value;
+            if (!msg) {
+                alert('Digite a mensagem');
+                return;
+            }
+            
+            if (!confirm('⚠️ Confirma envio para TODOS os hotéis cadastrados?')) {
+                return;
+            }
+            
+            try {
+                const res = await api(`${API}/transmissao`, {
+                    method: 'POST',
+                    body: JSON.stringify({ mensagem: msg })
+                });
+                const data = await res.json();
+                if (data.sucesso) {
+                    alert(`✅ Transmissão enviada!\n\nEnviados: ${data.enviados}\nFalhados: ${data.falhados}\nTotal: ${data.total}`);
+                    fecharModal('modal-transmissao');
+                } else {
+                    alert('❌ ' + (data.erro || 'Erro ao enviar'));
+                }
+            } catch (e) {
+                alert('❌ Erro ao enviar transmissão');
             }
         }
 
