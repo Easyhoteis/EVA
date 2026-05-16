@@ -5,13 +5,11 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn, os, hashlib, secrets, json, asyncio, csv, io, random, requests
 from datetime import datetime, date
 from dotenv import load_dotenv
-from anthropic import Anthropic
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 load_dotenv()
 
-CLAUDE_KEY = os.getenv("ANTHROPIC_API_KEY")
 PORT = int(os.getenv("PORT", 3000))
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -27,7 +25,6 @@ UPLOAD = "/tmp/uploads"
 os.makedirs(UPLOAD, exist_ok=True)
 
 app = FastAPI()
-claude = Anthropic(api_key=CLAUDE_KEY)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.mount("/uploads", StaticFiles(directory=UPLOAD), name="uploads")
 
