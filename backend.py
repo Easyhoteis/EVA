@@ -228,50 +228,49 @@ def toggle_robo(on):
     return True
 
 def ia(msg, conhec="", hotel="Hotel"):
-    try:
-        hf_token = os.getenv("HF_TOKEN", "")
-        
-        if not hf_token:
-            return "Olá! Sou a EVA da Easy Hotéis. Sua solicitação foi registrada e um atendente vai te ajudar em breve! 😊"
-        
-        prompt = f"""Você é EVA, assistente da Easy Hotéis para hotéis.
+    # Menu fixo - SEM IA - 100% confiável
+    msg_lower = msg.lower().strip()
+    
+    # Cliente escolheu opção 1, 2 ou 3
+    if msg_lower == '1':
+        return """✅ Fecho de disponibilidade registrado!
 
-SEJA: profissional, rápida, confirma pedidos claramente.
+Envie os detalhes em UMA mensagem:
+📅 Data(s)
+🛏️ Categoria(s)
 
-TIPOS: fecho disponibilidade, atualização tarifas, bloqueios.
+Exemplo: 14/05 suite master"""
+    
+    elif msg_lower == '2':
+        return """✅ Atualização de tarifas registrada!
 
-Hotel: {hotel}
-Cliente disse: "{msg}"
+Envie os detalhes em UMA mensagem:
+📅 Período
+🛏️ Categoria(s)
+💰 Novos valores
 
-Responda em 2-3 linhas confirmando o pedido."""
+Exemplo: 10/05 a 15/05 suite executiva R$350"""
+    
+    elif msg_lower == '3':
+        return """✅ Solicitação registrada!
 
-        if conhec:
-            prompt += f"\nInfo hotel: {conhec}"
-        
-        url = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-3B-Instruct"
-        
-        response = requests.post(
-            url,
-            headers={"Authorization": f"Bearer {hf_token}"},
-            json={"inputs": prompt, "parameters": {"max_new_tokens": 150, "temperature": 0.7}},
-            timeout=15
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            if isinstance(result, list) and len(result) > 0:
-                texto = result[0].get("generated_text", "")
-                # Remove o prompt da resposta
-                if prompt in texto:
-                    texto = texto.replace(prompt, "").strip()
-                return texto if texto else "Recebido! Atendente vai processar. 😊"
-            return "Recebido! Atendente vai processar. 😊"
-        else:
-            return "Olá! Sou a EVA. Sua solicitação foi registrada! 😊"
-            
-    except Exception as e:
-        print(f"ERRO IA: {str(e)}")
-        return "Olá! Sou a EVA da Easy Hotéis. Sua solicitação foi registrada e um atendente vai te ajudar em breve! 😊"
+Descreva o que precisa que um atendente vai ajudar em breve."""
+    
+    # Se mensagem tem palavras-chave de detalhes - confirma recebimento
+    palavras_detalhes = ['suite', 'standard', 'luxo', 'executiv', 'casal', 'solteiro', 'master', '/', 'r$', 'tarif', 'duplo', 'triplo']
+    if any(palavra in msg_lower for palavra in palavras_detalhes):
+        return "✅ Detalhes recebidos! Atendente vai processar em breve."
+    
+    # Primeira mensagem ou não reconheceu - mostra menu
+    return f"""Olá! Sou a EVA, assistente da Easy Hotéis! 😊
+
+Como posso ajudar?
+
+1️⃣ Fechar disponibilidade
+2️⃣ Atualizar tarifas
+3️⃣ Outros assuntos
+
+Digite o número da opção."""
 
 @app.get("/")
 async def root(): return {"ok": True}
