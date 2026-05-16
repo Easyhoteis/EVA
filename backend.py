@@ -230,70 +230,51 @@ def toggle_robo(on):
     conn.close()
     return True
 
-def ia(msg, conhec="", hotel="Hotel", num_msgs=0):
-    # Menu interativo - responde nas 3 primeiras mensagens
-    msg_lower = msg.lower().strip()
-    
-    # Primeira mensagem ou não é número -> mostra menu
-    if num_msgs == 1 and msg_lower not in ['1', '2', '3']:
-        return f"""Olá! Sou a EVA, assistente da Easy Hotéis! 😊
-
-Como posso ajudar você hoje?
-
-1️⃣ Fechar disponibilidade
-2️⃣ Atualizar tarifas  
-3️⃣ Outros assuntos
-
-Digite o número da opção desejada."""
-    
-    # Segunda mensagem - Cliente escolheu opção
-    if num_msgs == 2:
-        if msg_lower == '1':
-            return """✅ *Fecho de Disponibilidade*
-
-Solicitação registrada com sucesso!
-
-Um atendente já foi notificado e vai processar seu pedido em breve.
-
-Por favor, envie os detalhes:
-📅 Data(s)
-🛏️ Categoria(s)"""
+def ia(msg, conhec="", hotel="Hotel"):
+    try:
+        hf_token = os.getenv("HF_TOKEN", "")
         
-        elif msg_lower == '2':
-            return """✅ *Atualização de Tarifas*
-
-Solicitação registrada com sucesso!
-
-Um atendente já foi notificado e vai processar seu pedido em breve.
-
-Por favor, envie os detalhes:
-📅 Período
-🛏️ Categoria(s)
-💰 Novos valores"""
+        if not hf_token:
+            return "Olá! Sou a EVA da Easy Hotéis. Sua solicitação foi registrada e um atendente vai te ajudar em breve! 😊"
         
-        elif msg_lower == '3':
-            return """✅ *Outros Assuntos*
+        prompt = f"""Você é EVA, assistente da Easy Hotéis para hotéis.
 
-Solicitação registrada com sucesso!
+SEJA: profissional, rápida, confirma pedidos claramente.
 
-Um atendente já foi notificado e vai ajudá-lo em breve.
+TIPOS: fecho disponibilidade, atualização tarifas, bloqueios.
 
-Descreva sua solicitação que entraremos em contato."""
-    
-    # Terceira mensagem ou mais - Recebeu detalhes
-    if num_msgs >= 3:
-        return "✅ Detalhes recebidos! Atendente vai processar seu pedido em breve. 😊"
-    
-    # Primeira msg mas não é opção válida
-    return f"""Olá! Sou a EVA, assistente da Easy Hotéis! 😊
+Hotel: {hotel}
+Cliente disse: "{msg}"
 
-Como posso ajudar você hoje?
+Responda em 2-3 linhas confirmando o pedido."""
 
-1️⃣ Fechar disponibilidade
-2️⃣ Atualizar tarifas  
-3️⃣ Outros assuntos
-
-Digite o número da opção desejada."""
+        if conhec:
+            prompt += f"\nInfo hotel: {conhec}"
+        
+        url = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-3B-Instruct"
+        
+        response = requests.post(
+            url,
+            headers={"Authorization": f"Bearer {hf_token}"},
+            json={"inputs": prompt, "parameters": {"max_new_tokens": 150, "temperature": 0.7}},
+            timeout=15
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if isinstance(result, list) and len(result) > 0:
+                texto = result[0].get("generated_text", "")
+                # Remove o prompt da resposta
+                if prompt in texto:
+                    texto = texto.replace(prompt, "").strip()
+                return texto if texto else "Recebido! Atendente vai processar. 😊"
+            return "Recebido! Atendente vai processar. 😊"
+        else:
+            return "Olá! Sou a EVA. Sua solicitação foi registrada! 😊"
+            
+    except Exception as e:
+        print(f"ERRO IA: {str(e)}")
+        return "Olá! Sou a EVA da Easy Hotéis. Sua solicitação foi registrada e um atendente vai te ajudar em breve! 😊"
 
 @app.get("/")
 async def root(): return {"ok": True}
@@ -546,14 +527,15 @@ Qualquer dúvida, estamos à disposição! 😊"""
     hotel = cont['nome'] if cont else nome
     responsaveis_json = cont['responsaveis'] if cont else None
     
-    # Detecta motivo baseado na mensagem
+    # Detecta motivo baseado nas palavras-chave na mensagem
     motivo = None
-    if msg.strip() == '1':
+    msg_lower = msg.lower()
+    if 'fech' in msg_lower or 'disponibilidade' in msg_lower:
         motivo = 'Fecho de Disponibilidade'
-    elif msg.strip() == '2':
+    elif 'tarif' in msg_lower or 'preço' in msg_lower or 'valor' in msg_lower:
         motivo = 'Atualização de Tarifas'
-    elif msg.strip() == '3':
-        motivo = 'Outros Assuntos'
+    elif 'bloqu' in msg_lower:
+        motivo = 'Bloqueio de Quartos'
     
     c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "cliente", msg))
     
@@ -563,11 +545,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
     
     conn.commit()
     
-    # Conta quantas mensagens do cliente já foram enviadas
-    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente'", (cid,))
-    num_msgs_cliente = c.fetchone()['count']
-    
-    resp = ia(msg, conhec, hotel, num_msgs_cliente)
+    resp = ia(msg, conhec, hotel)
     c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
     conn.commit()
     enviar(num, resp, "atendimento")
