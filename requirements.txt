@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-anthropic
 python-dotenv
 requests
 python-multipart
