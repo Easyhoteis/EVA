@@ -367,6 +367,7 @@ async def update_user(uid: int, req: Request):
     c = conn.cursor()
     campos, valores = [], []
     if "nome" in d: campos.append("nome = %s"); valores.append(d["nome"])
+    if "email" in d: campos.append("email = %s"); valores.append(d["email"].lower().strip())
     if "perfil" in d and d["perfil"] in ["admin", "atendente", "marketing"]: campos.append("perfil = %s"); valores.append(d["perfil"])
     if "ativo" in d: campos.append("ativo = %s"); valores.append(1 if d["ativo"] else 0)
     if "senha" in d and d["senha"]: campos.append("senha_hash = %s"); valores.append(hash_pass(d["senha"]))
