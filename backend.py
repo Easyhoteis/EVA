@@ -721,6 +721,29 @@ async def criar_contato(req: Request):
         conn.close()
         return JSONResponse({"sucesso": False, "erro": "Numero ja cadastrado"}, 400)
 
+@app.put("/api/contatos/{cid}")
+async def editar_contato(cid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] not in ['admin', 'marketing']: return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    if not d.get("nome") or not d.get("numero"): return JSONResponse({"sucesso": False}, 400)
+    conn = db()
+    c = conn.cursor()
+    try:
+        resp_ids = d.get("responsaveis", [])
+        resp_json = json.dumps(resp_ids) if resp_ids else None
+        c.execute("UPDATE contatos SET nome = %s, numero = %s, email = %s, tags = %s, conhecimento_ia = %s, responsaveis = %s WHERE id = %s",
+            (d["nome"], d["numero"], d.get("email", ""), d.get("tags", ""), d.get("conhecimento_ia", ""), resp_json, cid))
+        conn.commit()
+        c.close()
+        conn.close()
+        return {"sucesso": True}
+    except Exception as e:
+        c.close()
+        conn.close()
+        print(f"ERRO EDITAR CONTATO: {str(e)}")
+        return JSONResponse({"sucesso": False, "erro": str(e)}, 400)
+
 @app.delete("/api/contatos/{cid}")
 async def del_contato(cid: int, req: Request):
     u = get_user(req)
