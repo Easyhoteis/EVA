@@ -1455,6 +1455,7 @@ Procedimentos:
                     <td>${u.ativo ? '✅ Ativo' : '❌ Inativo'}</td>
                     <td style="font-size:12px">${u.ultimo_login ? formatarData(u.ultimo_login) : 'Nunca'}</td>
                     <td>
+                        <button class="btn btn-sm" style="background:var(--warning);color:white;margin-right:0.5rem" onclick="editarUsuario(${u.id})"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-warning btn-sm" onclick="toggleAtivo(${u.id}, ${u.ativo ? 0 : 1})">${u.ativo ? '🔒' : '🔓'}</button>
                         ${u.id !== usuarioLogado.id ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` : ''}
                     </td>
@@ -1462,8 +1463,27 @@ Procedimentos:
             `).join('');
         }
 
+        let usuarioEditandoId = null;
+        
+        async function editarUsuario(id) {
+            const res = await api(`${API}/usuarios`);
+            const data = await res.json();
+            const usuario = data.usuarios.find(u => u.id === id);
+            if (!usuario) return;
+            
+            usuarioEditandoId = id;
+            document.getElementById('usuario-novo-nome').value = usuario.nome;
+            document.getElementById('usuario-novo-email').value = usuario.email;
+            document.getElementById('usuario-novo-senha').value = '';
+            document.getElementById('usuario-novo-whatsapp').value = usuario.whatsapp || '';
+            document.getElementById('usuario-novo-perfil').value = usuario.perfil;
+            
+            document.getElementById('modal-usuario').classList.add('ativo');
+        }
+
         function abrirModalUsuario() {
-            ['usuario-novo-nome', 'usuario-novo-email', 'usuario-novo-senha'].forEach(id => document.getElementById(id).value = '');
+            usuarioEditandoId = null;
+            ['usuario-novo-nome', 'usuario-novo-email', 'usuario-novo-senha', 'usuario-novo-whatsapp'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('modal-usuario').classList.add('ativo');
         }
 
@@ -1475,14 +1495,33 @@ Procedimentos:
                 perfil: document.getElementById('usuario-novo-perfil').value,
                 whatsapp: document.getElementById('usuario-novo-whatsapp').value
             };
-            if (!dados.nome || !dados.email || !dados.senha) { alert('Preencha tudo'); return; }
             
-            const res = await api(`${API}/usuarios`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
-            });
+            let res;
+            if (usuarioEditandoId) {
+                // Editando - senha é opcional
+                if (!dados.nome || !dados.email) { alert('Preencha nome e email'); return; }
+                const payload = { nome: dados.nome, perfil: dados.perfil, whatsapp: dados.whatsapp };
+                if (dados.senha) payload.senha = dados.senha;
+                
+                res = await api(`${API}/usuarios/${usuarioEditandoId}`, {
+                    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+                });
+            } else {
+                // Criando - senha é obrigatória
+                if (!dados.nome || !dados.email || !dados.senha) { alert('Preencha tudo'); return; }
+                res = await api(`${API}/usuarios`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
+                });
+            }
+            
             const data = await res.json();
-            if (data.sucesso) { fecharModal('modal-usuario'); carregarUsuarios(); }
-            else alert(data.erro);
+            if (data.sucesso) { 
+                usuarioEditandoId = null;
+                fecharModal('modal-usuario'); 
+                carregarUsuarios(); 
+            } else {
+                alert(data.erro);
+            }
         }
 
         async function toggleAtivo(id, ativo) {
