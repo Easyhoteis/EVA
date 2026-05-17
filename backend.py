@@ -637,9 +637,15 @@ async def fechar(cid: int, req: Request):
     c.execute("UPDATE conversas SET status = 'fechado', fechado_em = CURRENT_TIMESTAMP, fechado_por_id = %s, fechado_por_nome = %s, observacoes = %s WHERE id = %s",
         (u['id'], u['nome'], d.get("observacoes", ""), cid))
     conn.commit()
+    
+    # Só envia mensagem de fechamento se está em contatos
+    if num:
+        c.execute("SELECT id FROM contatos WHERE numero = %s", (num,))
+        if c.fetchone():
+            enviar(num, f"*{u['nome']}:*\nObrigado! Atendimento encerrado. 😊", "atendimento")
+    
     c.close()
     conn.close()
-    if num: enviar(num, f"*{u['nome']}:*\nObrigado! Atendimento encerrado. 😊", "atendimento")
     return {"sucesso": True}
 
 @app.post("/api/conversas/{cid}/responder")
