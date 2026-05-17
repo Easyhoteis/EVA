@@ -548,12 +548,16 @@ Qualquer dúvida, estamos à disposição! 😊"""
         enviar(num, resp, "atendimento")
     
     if responsaveis_json:
+        print(f"NOTIFICANDO RESPONSÁVEIS: {responsaveis_json}")
         try:
             resp_ids = json.loads(responsaveis_json)
+            print(f"IDs responsáveis: {resp_ids}")
             if resp_ids:
                 c.execute("SELECT id, nome, whatsapp FROM usuarios WHERE id = ANY(%s) AND whatsapp IS NOT NULL", (resp_ids,))
                 usuarios = c.fetchall()
+                print(f"Usuários encontrados: {len(usuarios)}")
                 for u in usuarios:
+                    print(f"Enviando notificação para {u['nome']} ({u['whatsapp']})")
                     msg_notif = f"""🔔 *NOVO PEDIDO - {hotel}*
 
 Cliente: {hotel}
@@ -567,7 +571,10 @@ Responda aqui quando concluir!"""
                     c.execute("INSERT INTO notificacoes (hotel_nome, hotel_numero, usuario_id, usuario_nome, mensagem_original) VALUES (%s, %s, %s, %s, %s)",
                         (hotel, num, u['id'], u['nome'], msg))
                     conn.commit()
-        except: pass
+        except Exception as e:
+            print(f"ERRO NOTIFICAÇÃO: {str(e)}")
+    else:
+        print("SEM RESPONSÁVEIS PARA NOTIFICAR")
     
     c.close()
     conn.close()
