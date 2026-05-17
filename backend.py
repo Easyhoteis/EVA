@@ -362,6 +362,7 @@ async def update_user(uid: int, req: Request):
     u = get_user(req)
     if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
     d = await req.json()
+    print(f"UPDATE USUARIO {uid}: payload recebido = {d}")
     conn = db()
     c = conn.cursor()
     campos, valores = [], []
@@ -369,11 +370,18 @@ async def update_user(uid: int, req: Request):
     if "perfil" in d and d["perfil"] in ["admin", "atendente", "marketing"]: campos.append("perfil = %s"); valores.append(d["perfil"])
     if "ativo" in d: campos.append("ativo = %s"); valores.append(1 if d["ativo"] else 0)
     if "senha" in d and d["senha"]: campos.append("senha_hash = %s"); valores.append(hash_pass(d["senha"]))
-    if "whatsapp" in d: campos.append("whatsapp = %s"); valores.append(d["whatsapp"])
+    if "whatsapp" in d: 
+        campos.append("whatsapp = %s")
+        valores.append(d["whatsapp"])
+        print(f"WhatsApp a ser salvo: {d['whatsapp']}")
     if campos:
         valores.append(uid)
-        c.execute(f"UPDATE usuarios SET {', '.join(campos)} WHERE id = %s", valores)
+        sql = f"UPDATE usuarios SET {', '.join(campos)} WHERE id = %s"
+        print(f"SQL: {sql}")
+        print(f"Valores: {valores}")
+        c.execute(sql, valores)
         conn.commit()
+        print(f"UPDATE executado! Linhas afetadas: {c.rowcount}")
     c.close()
     conn.close()
     return {"sucesso": True}
