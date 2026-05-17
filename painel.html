@@ -1500,7 +1500,7 @@ Procedimentos:
             if (usuarioEditandoId) {
                 // Editando - senha é opcional
                 if (!dados.nome || !dados.email) { alert('Preencha nome e email'); return; }
-                const payload = { nome: dados.nome, perfil: dados.perfil, whatsapp: dados.whatsapp };
+                const payload = { nome: dados.nome, email: dados.email, perfil: dados.perfil, whatsapp: dados.whatsapp };
                 if (dados.senha) payload.senha = dados.senha;
                 
                 res = await api(`${API}/usuarios/${usuarioEditandoId}`, {
