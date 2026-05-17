@@ -523,7 +523,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
     hotel = cont['nome'] if cont else nome
     responsaveis_json = cont['responsaveis'] if cont else None
     
-    # Detecta motivo baseado nas palavras-chave na mensagem
+    # Detecta motivo
     motivo = None
     msg_lower = msg.lower()
     if 'fech' in msg_lower or 'disponibilidade' in msg_lower:
@@ -535,16 +535,17 @@ Qualquer dúvida, estamos à disposição! 😊"""
     
     c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "cliente", msg))
     
-    # Atualiza motivo se detectado
     if motivo:
         c.execute("UPDATE conversas SET motivo = %s WHERE id = %s", (motivo, cid))
     
     conn.commit()
     
-    resp = ia(msg, conhec, hotel)
-    c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
-    conn.commit()
-    enviar(num, resp, "atendimento")
+    # SÓ RESPONDE SE ESTÁ EM CONTATOS
+    if cont:
+        resp = ia(msg, conhec, hotel)
+        c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
+        conn.commit()
+        enviar(num, resp, "atendimento")
     
     if responsaveis_json:
         try:
