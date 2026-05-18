@@ -1001,11 +1001,12 @@ async def export_excel(req: Request):
     
     import io
     from datetime import datetime
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     
     conn = db()
     c = conn.cursor()
     
-    # Dados completos
     c.execute("""
         SELECT c.id, c.nome_cliente, c.numero_cliente, c.motivo, c.status, 
                c.fechado_por_nome, c.criado_em, c.fechado_em,
@@ -1018,23 +1019,88 @@ async def export_excel(req: Request):
     c.close()
     conn.close()
     
-    # Gera CSV
-    output = io.StringIO()
-    output.write("ID,Hotel,Numero,Motivo,Status,Atendente,Abertura,Fechamento,Tempo(min)\n")
+    # Cria workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Relatório EVA"
     
-    for conv in conversas:
+    # Cores EVA (roxo/azul)
+    cor_header = "6C63FF"  # Roxo EVA
+    cor_header_text = "FFFFFF"  # Branco
+    cor_linha_par = "F5F5FF"  # Azul clarinho
+    
+    # Headers
+    headers = ["ID", "Hotel", "Número", "Motivo", "Status", "Atendente", "Abertura", "Fechamento", "Tempo (min)"]
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(1, col, header)
+        cell.font = Font(bold=True, color=cor_header_text, size=12)
+        cell.fill = PatternFill(start_color=cor_header, end_color=cor_header, fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+    
+    # Dados
+    for idx, conv in enumerate(conversas, 2):
         tempo = int(conv['tempo_min']) if conv['tempo_min'] else 0
         abertura = conv['criado_em'].strftime('%d/%m/%Y %H:%M') if conv['criado_em'] else ''
         fechamento = conv['fechado_em'].strftime('%d/%m/%Y %H:%M') if conv['fechado_em'] else ''
-        output.write(f"{conv['id']},{conv['nome_cliente'] or conv['numero_cliente']},{conv['numero_cliente']},{conv['motivo'] or 'N/A'},{conv['status']},{conv['fechado_por_nome'] or 'N/A'},{abertura},{fechamento},{tempo}\n")
+        
+        row_data = [
+            conv['id'],
+            conv['nome_cliente'] or conv['numero_cliente'],
+            conv['numero_cliente'],
+            conv['motivo'] or 'N/A',
+            conv['status'],
+            conv['fechado_por_nome'] or 'N/A',
+            abertura,
+            fechamento,
+            tempo
+        ]
+        
+        for col, value in enumerate(row_data, 1):
+            cell = ws.cell(idx, col, value)
+            cell.alignment = Alignment(horizontal="center" if col in [1, 5, 9] else "left", vertical="center")
+            cell.border = Border(
+                left=Side(style='thin', color='CCCCCC'),
+                right=Side(style='thin', color='CCCCCC'),
+                top=Side(style='thin', color='CCCCCC'),
+                bottom=Side(style='thin', color='CCCCCC')
+            )
+            # Linhas alternadas
+            if idx % 2 == 0:
+                cell.fill = PatternFill(start_color=cor_linha_par, end_color=cor_linha_par, fill_type="solid")
     
-    csv_data = output.getvalue()
-    output.close()
+    # Ajusta largura das colunas
+    ws.column_dimensions['A'].width = 8   # ID
+    ws.column_dimensions['B'].width = 25  # Hotel
+    ws.column_dimensions['C'].width = 18  # Número
+    ws.column_dimensions['D'].width = 25  # Motivo
+    ws.column_dimensions['E'].width = 12  # Status
+    ws.column_dimensions['F'].width = 20  # Atendente
+    ws.column_dimensions['G'].width = 18  # Abertura
+    ws.column_dimensions['H'].width = 18  # Fechamento
+    ws.column_dimensions['I'].width = 14  # Tempo
+    
+    # Congela primeira linha
+    ws.freeze_panes = "A2"
+    
+    # Salva em memória
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    import base64
+    excel_data = base64.b64encode(output.read()).decode()
     
     return JSONResponse({
         "sucesso": True,
-        "filename": f"relatorio_eva_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        "data": csv_data
+        "filename": f"relatorio_eva_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+        "data": excel_data
     })
 
 @app.get("/api/zapi/status")
