@@ -354,6 +354,29 @@
                         <div class="form-group"><label>Client/Security Token</label><input type="text" id="zapi-disp-client"></div>
                         <button class="btn btn-success" onclick="salvarZapi('disparos')"><i class="fas fa-save"></i> Salvar Disparos</button>
                     </div>
+                    <div class="config-zapi-box">
+                        <h4>🔔 Notificações em Grupo</h4>
+                        <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Envie notificações de novos pedidos em um grupo WhatsApp</p>
+                        <button class="btn btn-primary" onclick="listarGrupos()" style="margin-bottom:1rem"><i class="fas fa-sync"></i> Listar Grupos</button>
+                        <div class="form-group">
+                            <label>Grupo Selecionado</label>
+                            <input type="text" id="grupo-nome" readonly placeholder="Nenhum grupo selecionado">
+                            <input type="hidden" id="grupo-id">
+                        </div>
+                        <div class="form-group">
+                            <label style="display:flex;align-items:center;gap:0.5rem">
+                                <input type="checkbox" id="grupo-ativo">
+                                <span>Ativar notificações no grupo</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label style="display:flex;align-items:center;gap:0.5rem">
+                                <input type="checkbox" id="grupo-individual">
+                                <span>Também enviar individual para responsáveis</span>
+                            </label>
+                        </div>
+                        <button class="btn btn-success" onclick="salvarConfigNotificacao()"><i class="fas fa-save"></i> Salvar Configuração</button>
+                    </div>
                 </div>
 
                 <!-- RELATÓRIOS -->
@@ -396,6 +419,17 @@
     </div>
 
     <!-- MODAIS -->
+    <div class="modal" id="modal-grupos">
+        <div class="modal-content" style="max-width:600px">
+            <div class="modal-title">Selecionar Grupo WhatsApp</div>
+            <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Clique no grupo que deseja receber as notificações</p>
+            <div id="lista-grupos" style="max-height:400px;overflow-y:auto"></div>
+            <div class="modal-actions">
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-grupos')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="modal-conversa">
         <div class="modal-content">
             <div class="modal-title" id="modal-conversa-titulo">Conversa</div>
@@ -804,7 +838,7 @@ Procedimentos:
             if (pagina === 'campanhas') carregarCampanhas();
             if (pagina === 'antiban') carregarConfigAntiban();
             if (pagina === 'usuarios') carregarUsuarios();
-            if (pagina === 'config') carregarConfigZapi();
+            if (pagina === 'config') { carregarConfigZapi(); carregarConfigNotificacao(); }
             if (pagina === 'relatorios') carregarRelatorios();
         }
 
@@ -1824,6 +1858,83 @@ Procedimentos:
         function formatarData(data) {
             if (!data) return '-';
             return new Date(data).toLocaleString('pt-BR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Notificações em Grupo
+        async function carregarConfigNotificacao() {
+            const res = await api(`${API}/notificacao/config`);
+            const data = await res.json();
+            if (data.sucesso && data.config) {
+                document.getElementById('grupo-id').value = data.config.grupo_id || '';
+                document.getElementById('grupo-nome').value = data.config.grupo_nome || '';
+                document.getElementById('grupo-ativo').checked = data.config.ativo;
+                document.getElementById('grupo-individual').checked = data.config.enviar_individual;
+            }
+        }
+        
+        async function listarGrupos() {
+            try {
+                const res = await api(`${API}/zapi/grupos`);
+                const data = await res.json();
+                if (!data.sucesso) {
+                    alert('❌ Erro ao buscar grupos');
+                    return;
+                }
+                
+                if (data.grupos.length === 0) {
+                    alert('ℹ️ Nenhum grupo encontrado. Verifique se a EVA está em algum grupo no WhatsApp.');
+                    return;
+                }
+                
+                const lista = document.getElementById('lista-grupos');
+                lista.innerHTML = data.grupos.map(g => `
+                    <div onclick="selecionarGrupo('${g.id}', '${g.nome}')" style="padding:15px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f5f5ff'" onmouseout="this.style.background='white'">
+                        <div style="font-weight:bold">${g.nome}</div>
+                        <div style="font-size:12px;color:var(--gray)">${g.participantes} participantes</div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('modal-grupos').classList.add('ativo');
+            } catch (e) {
+                alert('❌ Erro ao listar grupos');
+            }
+        }
+        
+        function selecionarGrupo(id, nome) {
+            document.getElementById('grupo-id').value = id;
+            document.getElementById('grupo-nome').value = nome;
+            fecharModal('modal-grupos');
+            alert(`✅ Grupo "${nome}" selecionado!\n\nAgora ative as notificações e salve.`);
+        }
+        
+        async function salvarConfigNotificacao() {
+            const dados = {
+                grupo_id: document.getElementById('grupo-id').value,
+                grupo_nome: document.getElementById('grupo-nome').value,
+                ativo: document.getElementById('grupo-ativo').checked,
+                enviar_individual: document.getElementById('grupo-individual').checked
+            };
+            
+            if (dados.ativo && !dados.grupo_id) {
+                alert('⚠️ Selecione um grupo antes de ativar!');
+                return;
+            }
+            
+            try {
+                const res = await api(`${API}/notificacao/config`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(dados)
+                });
+                const data = await res.json();
+                if (data.sucesso) {
+                    alert('✅ Configuração salva com sucesso!');
+                } else {
+                    alert('❌ Erro ao salvar');
+                }
+            } catch (e) {
+                alert('❌ Erro ao salvar configuração');
+            }
         }
         
         // Enter pra logar
