@@ -99,7 +99,11 @@ def init():
     
     c.execute("SELECT COUNT(*) as count FROM config_notificacao")
     if c.fetchone()['count'] == 0:
-        c.execute("INSERT INTO config_notificacao VALUES (1, NULL, NULL, 0, 1)")
+        c.execute("INSERT INTO config_notificacao VALUES (1, '120363425856356188-group', 'Grupo Easy Hotéis', 1, 1)")
+        conn.commit()
+    else:
+        # Atualiza registro existente
+        c.execute("UPDATE config_notificacao SET grupo_id = '120363425856356188-group', grupo_nome = 'Grupo Easy Hotéis', ativo = 1, enviar_individual = 1 WHERE id = 1")
         conn.commit()
     
     c.execute("SELECT COUNT(*) as count FROM config_zapi WHERE tipo = 'atendimento'")
