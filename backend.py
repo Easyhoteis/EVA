@@ -88,6 +88,20 @@ def init():
         c.execute("INSERT INTO config_antiban VALUES (1, 100, 30, 3, 7, 30, 60, '08:00', '20:00', 1)")
         conn.commit()
     
+    # Tabela config notificação grupo
+    c.execute("""CREATE TABLE IF NOT EXISTS config_notificacao (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        grupo_id TEXT,
+        grupo_nome TEXT,
+        ativo INTEGER DEFAULT 0,
+        enviar_individual INTEGER DEFAULT 1
+    )""")
+    
+    c.execute("SELECT COUNT(*) as count FROM config_notificacao")
+    if c.fetchone()['count'] == 0:
+        c.execute("INSERT INTO config_notificacao VALUES (1, NULL, NULL, 0, 1)")
+        conn.commit()
+    
     c.execute("SELECT COUNT(*) as count FROM config_zapi WHERE tipo = 'atendimento'")
     if c.fetchone()['count'] == 0 and ZAPI_INST_AT:
         c.execute("INSERT INTO config_zapi VALUES (%s, %s, %s, %s)", ("atendimento", ZAPI_INST_AT, ZAPI_TOK_AT, ZAPI_CLI_AT))
@@ -556,7 +570,34 @@ Qualquer dúvida, estamos à disposição! 😊"""
         conn.commit()
         enviar(num, resp, "atendimento")
     
-    if responsaveis_json:
+    # Verifica config de notificação em grupo
+    c.execute("SELECT * FROM config_notificacao WHERE id = 1")
+    config_notif = c.fetchone()
+    
+    # Envia notificação no grupo (se configurado)
+    if config_notif and config_notif['ativo'] and config_notif['grupo_id']:
+        print(f"ENVIANDO NOTIFICAÇÃO NO GRUPO: {config_notif['grupo_nome']}")
+        msg_grupo = f"""🔔 *NOVO PEDIDO*
+
+🏨 *Hotel:* {hotel}
+📱 *Número:* {num}
+⏰ *Horário:* {datetime.now().strftime('%H:%M')}
+
+📝 *Mensagem:*
+"{msg[:200]}"
+
+🎯 *Motivo:* {motivo if motivo else 'N/A'}
+
+👉 *Acesse:* https://web-production-69fb05.up.railway.app/painel"""
+        
+        try:
+            enviar(config_notif['grupo_id'], msg_grupo, "atendimento")
+            print(f"✅ Notificação enviada no grupo")
+        except Exception as e:
+            print(f"ERRO ENVIAR GRUPO: {str(e)}")
+    
+    # Envia notificação individual (se configurado)
+    if responsaveis_json and (not config_notif or config_notif.get('enviar_individual', 1)):
         print(f"NOTIFICANDO RESPONSÁVEIS: {responsaveis_json}")
         try:
             resp_ids = json.loads(responsaveis_json)
@@ -1106,6 +1147,58 @@ async def export_excel(req: Request):
 @app.get("/api/zapi/status")
 async def zapi_st(req: Request):
     return {"atendimento": status_zapi("atendimento"), "disparos": status_zapi("disparos")}
+
+@app.get("/api/zapi/grupos")
+async def listar_grupos(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    
+    url = f"https://api.z-api.io/instances/{ZAPI_INST_AT}/token/{ZAPI_TOK_AT}/chats"
+    
+    try:
+        res = requests.get(url, timeout=10)
+        data = res.json()
+        
+        # Filtra apenas grupos
+        grupos = []
+        for chat in data:
+            if chat.get('isGroup', False):
+                grupos.append({
+                    'id': chat.get('id', {}).get('_serialized', ''),
+                    'nome': chat.get('name', 'Sem nome'),
+                    'participantes': len(chat.get('groupMetadata', {}).get('participants', []))
+                })
+        
+        return {"sucesso": True, "grupos": grupos}
+    except Exception as e:
+        print(f"ERRO LISTAR GRUPOS: {str(e)}")
+        return JSONResponse({"sucesso": False, "erro": str(e)}, 500)
+
+@app.get("/api/notificacao/config")
+async def get_config_notificacao(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM config_notificacao WHERE id = 1")
+    config = c.fetchone()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "config": dict(config) if config else {}}
+
+@app.post("/api/notificacao/config")
+async def salvar_config_notificacao(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    conn = db()
+    c = conn.cursor()
+    c.execute("UPDATE config_notificacao SET grupo_id = %s, grupo_nome = %s, ativo = %s, enviar_individual = %s WHERE id = 1",
+        (d.get('grupo_id'), d.get('grupo_nome'), 1 if d.get('ativo') else 0, 1 if d.get('enviar_individual') else 0))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
 
 @app.get("/api/listas")
 async def get_listas(req: Request):
