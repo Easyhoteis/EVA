@@ -1799,8 +1799,13 @@ Procedimentos:
                 const res = await api(`${API}/relatorios/export`);
                 const data = await res.json();
                 if (data.sucesso) {
-                    // Cria arquivo CSV e baixa
-                    const blob = new Blob([data.data], { type: 'text/csv;charset=utf-8;' });
+                    // Converte base64 para blob XLSX
+                    const binaryString = atob(data.data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     link.download = data.filename;
