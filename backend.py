@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn, os, hashlib, secrets, json, asyncio, csv, io, random, requests
 from datetime import datetime, date
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -29,7 +30,11 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 app.mount("/uploads", StaticFiles(directory=UPLOAD), name="uploads")
 
 def db():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    # Configura timezone para Brasília
+    with conn.cursor() as c:
+        c.execute("SET TIME ZONE 'America/Sao_Paulo'")
+    return conn
 
 def hash_pass(s): return hashlib.sha256(s.encode()).hexdigest()
 def token(): return secrets.token_urlsafe(32)
@@ -225,6 +230,10 @@ def pode_enviar():
     if agora < cfg['horario_inicio'] or agora > cfg['horario_fim']: return False, "horario"
     if envios_hj() >= cfg['limite_diario']: return False, "limite"
     return True, "ok"
+
+def now_br():
+    """Retorna datetime atual no horário de Brasília"""
+    return datetime.now(ZoneInfo("America/Sao_Paulo"))
 
 def robo_on():
     conn = db()
@@ -636,7 +645,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
 
 🏨 *Hotel:* {hotel}
 📱 *Número:* {num}
-⏰ *Horário:* {datetime.now().strftime('%H:%M')}
+⏰ *Horário:* {now_br().strftime('%H:%M')}
 
 📝 *Mensagem:*
 {msgs_texto}
