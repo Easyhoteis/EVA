@@ -584,9 +584,11 @@ Qualquer dúvida, estamos à disposição! 😊"""
     # Conta mensagens do cliente nesta conversa
     c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente'", (cid,))
     num_msgs = c.fetchone()['count']
+    print(f"DEBUG: Número de mensagens do cliente: {num_msgs}")
     
     # SÓ ENVIA NOTIFICAÇÃO NA TERCEIRA MENSAGEM
     if num_msgs == 3:
+        print("DEBUG: Terceira mensagem! Enviando notificação...")
         # Pega TODAS as mensagens do cliente
         c.execute("SELECT conteudo FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' ORDER BY id", (cid,))
         todas_msgs = c.fetchall()
@@ -614,6 +616,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
         # Verifica config de notificação em grupo
         c.execute("SELECT * FROM config_notificacao WHERE id = 1")
         config_notif = c.fetchone()
+        print(f"DEBUG: Config notificação: ativo={config_notif['ativo'] if config_notif else 'None'}, grupo_id={config_notif['grupo_id'] if config_notif else 'None'}")
         
         # Envia notificação no grupo (se configurado)
         if config_notif and config_notif['ativo'] and config_notif['grupo_id']:
