@@ -540,9 +540,11 @@ Qualquer dúvida, estamos à disposição! 😊"""
     c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (num,))
     r = c.fetchone()
     cid = r['id'] if r else None
+    sessao_nova = False
     if not cid:
         c.execute("INSERT INTO conversas (numero_cliente, nome_cliente) VALUES (%s, %s) RETURNING id", (num, nome))
         cid = c.fetchone()['id']
+        sessao_nova = True
     
     c.execute("SELECT conhecimento_ia, nome, responsaveis FROM contatos WHERE numero = %s", (num,))
     cont = c.fetchone()
@@ -581,12 +583,18 @@ Qualquer dúvida, estamos à disposição! 😊"""
         conn.commit()
         enviar(num, resp, "atendimento")
     
-    # Conta mensagens do cliente nesta conversa
-    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente'", (cid,))
-    num_msgs = c.fetchone()['count']
-    print(f"DEBUG: Número de mensagens do cliente: {num_msgs}")
+    # Conta mensagens do cliente desde que a conversa foi CRIADA/REABERTA
+    # Pega quando a conversa foi criada
+    c.execute("SELECT criado_em FROM conversas WHERE id = %s", (cid,))
+    conv_criado = c.fetchone()['criado_em']
     
-    # SÓ ENVIA NOTIFICAÇÃO NA TERCEIRA MENSAGEM
+    # Conta mensagens do cliente DESDE a criação desta sessão
+    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' AND enviado_em >= %s", (cid, conv_criado))
+    num_msgs = c.fetchone()['count']
+    print(f"DEBUG: Número de mensagens do cliente (sessão atual): {num_msgs}")
+    print(f"DEBUG: Sessão criada em: {conv_criado}")
+    
+    # SÓ ENVIA NOTIFICAÇÃO NA TERCEIRA MENSAGEM DA SESSÃO ATUAL
     if num_msgs == 3:
         print("DEBUG: Terceira mensagem! Enviando notificação...")
         # Pega TODAS as mensagens do cliente
