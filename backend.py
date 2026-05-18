@@ -550,10 +550,17 @@ Qualquer dúvida, estamos à disposição! 😊"""
     hotel = cont['nome'] if cont else nome
     responsaveis_json = cont['responsaveis'] if cont else None
     
-    # Detecta motivo
+    # Detecta motivo (primeiro por número, depois por palavra-chave)
     motivo = None
-    msg_lower = msg.lower()
-    if 'fech' in msg_lower or 'disponibilidade' in msg_lower:
+    msg_lower = msg.lower().strip()
+    
+    if msg_lower == '1':
+        motivo = 'Fecho de Disponibilidade'
+    elif msg_lower == '2':
+        motivo = 'Atualização de Tarifas'
+    elif msg_lower == '3':
+        motivo = 'Outros Assuntos'
+    elif 'fech' in msg_lower or 'disponibilidade' in msg_lower:
         motivo = 'Fecho de Disponibilidade'
     elif 'tarif' in msg_lower or 'preço' in msg_lower or 'valor' in msg_lower:
         motivo = 'Atualização de Tarifas'
@@ -574,35 +581,65 @@ Qualquer dúvida, estamos à disposição! 😊"""
         conn.commit()
         enviar(num, resp, "atendimento")
     
-    # Verifica config de notificação em grupo
-    c.execute("SELECT * FROM config_notificacao WHERE id = 1")
-    config_notif = c.fetchone()
+    # Conta mensagens do cliente nesta conversa
+    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente'", (cid,))
+    num_msgs = c.fetchone()['count']
     
-    # Envia notificação no grupo (se configurado)
-    if config_notif and config_notif['ativo'] and config_notif['grupo_id']:
-        print(f"ENVIANDO NOTIFICAÇÃO NO GRUPO: {config_notif['grupo_nome']}")
-        msg_grupo = f"""🔔 *NOVO PEDIDO*
+    # SÓ ENVIA NOTIFICAÇÃO NA TERCEIRA MENSAGEM
+    if num_msgs == 3:
+        # Pega TODAS as mensagens do cliente
+        c.execute("SELECT conteudo FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' ORDER BY id", (cid,))
+        todas_msgs = c.fetchall()
+        
+        # Formata mensagens (substitui número por texto)
+        msgs_formatadas = []
+        for m in todas_msgs:
+            conteudo = m['conteudo'].strip()
+            if conteudo == '1':
+                msgs_formatadas.append('"1 - Fecho de Disponibilidade"')
+            elif conteudo == '2':
+                msgs_formatadas.append('"2 - Atualização de Tarifas"')
+            elif conteudo == '3':
+                msgs_formatadas.append('"3 - Outros Assuntos"')
+            else:
+                msgs_formatadas.append(f'"{conteudo}"')
+        
+        msgs_texto = '\n'.join(msgs_formatadas)
+        
+        # Pega motivo atualizado
+        c.execute("SELECT motivo FROM conversas WHERE id = %s", (cid,))
+        conv = c.fetchone()
+        motivo_atual = conv['motivo'] if conv and conv['motivo'] else 'N/A'
+        
+        # Verifica config de notificação em grupo
+        c.execute("SELECT * FROM config_notificacao WHERE id = 1")
+        config_notif = c.fetchone()
+        
+        # Envia notificação no grupo (se configurado)
+        if config_notif and config_notif['ativo'] and config_notif['grupo_id']:
+            print(f"ENVIANDO NOTIFICAÇÃO NO GRUPO: {config_notif['grupo_nome']}")
+            msg_grupo = f"""🔔 *NOVO PEDIDO*
 
 🏨 *Hotel:* {hotel}
 📱 *Número:* {num}
 ⏰ *Horário:* {datetime.now().strftime('%H:%M')}
 
 📝 *Mensagem:*
-"{msg[:200]}"
+{msgs_texto}
 
-🎯 *Motivo:* {motivo if motivo else 'N/A'}
+🎯 *Motivo:* {motivo_atual}
 
 👉 *Acesse:* https://web-production-69fb05.up.railway.app/painel"""
+            
+            try:
+                enviar(config_notif['grupo_id'], msg_grupo, "atendimento")
+                print(f"✅ Notificação enviada no grupo")
+            except Exception as e:
+                print(f"ERRO ENVIAR GRUPO: {str(e)}")
         
-        try:
-            enviar(config_notif['grupo_id'], msg_grupo, "atendimento")
-            print(f"✅ Notificação enviada no grupo")
-        except Exception as e:
-            print(f"ERRO ENVIAR GRUPO: {str(e)}")
-    
-    # Envia notificação individual (se configurado)
-    if responsaveis_json and (not config_notif or config_notif.get('enviar_individual', 1)):
-        print(f"NOTIFICANDO RESPONSÁVEIS: {responsaveis_json}")
+        # Envia notificação individual (se configurado)
+        if responsaveis_json and (not config_notif or config_notif.get('enviar_individual', 1)):
+            print(f"NOTIFICANDO RESPONSÁVEIS: {responsaveis_json}")
         try:
             resp_ids = json.loads(responsaveis_json)
             print(f"IDs responsáveis: {resp_ids}")
