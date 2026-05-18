@@ -1153,7 +1153,8 @@ async def listar_grupos(req: Request):
     u = get_user(req)
     if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
     
-    url = f"https://api.z-api.io/instances/{ZAPI_INST_AT}/token/{ZAPI_TOK_AT}/chats"
+    # Tenta endpoint list-chats
+    url = f"https://api.z-api.io/instances/{ZAPI_INST_AT}/token/{ZAPI_TOK_AT}/list-chats"
     
     try:
         print(f"Buscando grupos na Z-API: {url}")
@@ -1161,58 +1162,65 @@ async def listar_grupos(req: Request):
         print(f"Status Z-API: {res.status_code}")
         
         if res.status_code != 200:
-            return JSONResponse({"sucesso": False, "erro": f"Z-API retornou status {res.status_code}"}, 500)
+            # Se list-chats não funcionar, tenta contacts
+            url2 = f"https://api.z-api.io/instances/{ZAPI_INST_AT}/token/{ZAPI_TOK_AT}/contacts"
+            print(f"Tentando endpoint alternativo: {url2}")
+            res = requests.get(url2, timeout=15)
+            print(f"Status Z-API (contacts): {res.status_code}")
+            
+            if res.status_code != 200:
+                return JSONResponse({"sucesso": False, "erro": f"Z-API retornou status {res.status_code}. Verifique se a instância está conectada."}, 500)
         
         data = res.json()
-        print(f"Resposta Z-API: {type(data)}, len={len(data) if isinstance(data, list) else 'N/A'}")
+        print(f"Resposta Z-API: {type(data)}")
         
         grupos = []
         
-        # Z-API pode retornar lista direta ou objeto com chave
-        chats = data if isinstance(data, list) else data.get('chats', [])
+        # Processa resposta
+        if isinstance(data, dict):
+            chats = data.get('chats', []) or data.get('contacts', [])
+        else:
+            chats = data
+        
+        print(f"Total de chats: {len(chats)}")
         
         for chat in chats:
             try:
-                # Verifica se é grupo
-                is_group = chat.get('isGroup', False) or chat.get('id', {}).get('server', '') == 'g.us'
+                # ID do chat
+                chat_id = chat.get('id', '')
                 
-                if is_group:
-                    # ID pode vir em formatos diferentes
-                    chat_id = chat.get('id', {})
-                    if isinstance(chat_id, dict):
-                        grupo_id = chat_id.get('_serialized') or chat_id.get('user', '') + '@g.us'
-                    else:
-                        grupo_id = str(chat_id)
+                # Verifica se é grupo (termina com @g.us)
+                if '@g.us' in str(chat_id):
+                    nome = chat.get('name', '') or chat.get('pushname', '') or chat.get('formattedTitle', '') or 'Sem nome'
                     
-                    # Nome
-                    nome = chat.get('name') or chat.get('formattedTitle') or chat.get('contact', {}).get('name', 'Sem nome')
+                    # Tenta pegar número de participantes
+                    num_participantes = 0
+                    if 'groupMetadata' in chat:
+                        num_participantes = len(chat['groupMetadata'].get('participants', []))
                     
-                    # Participantes
-                    metadata = chat.get('groupMetadata', {})
-                    participants = metadata.get('participants', [])
-                    num_participantes = len(participants) if isinstance(participants, list) else 0
+                    grupos.append({
+                        'id': chat_id,
+                        'nome': nome,
+                        'participantes': num_participantes
+                    })
+                    print(f"Grupo encontrado: {nome} ({chat_id})")
                     
-                    if grupo_id:
-                        grupos.append({
-                            'id': grupo_id,
-                            'nome': nome,
-                            'participantes': num_participantes
-                        })
             except Exception as e2:
                 print(f"Erro ao processar chat: {str(e2)}")
                 continue
         
         print(f"Total de grupos encontrados: {len(grupos)}")
+        
+        if len(grupos) == 0:
+            return JSONResponse({"sucesso": False, "erro": "Nenhum grupo encontrado. Verifique se o número está em algum grupo no WhatsApp."}, 400)
+        
         return {"sucesso": True, "grupos": grupos}
         
-    except requests.Timeout:
-        print("ERRO: Timeout ao buscar grupos")
-        return JSONResponse({"sucesso": False, "erro": "Timeout ao conectar com Z-API"}, 500)
     except Exception as e:
         print(f"ERRO LISTAR GRUPOS: {str(e)}")
         import traceback
         traceback.print_exc()
-        return JSONResponse({"sucesso": False, "erro": str(e)}, 500)
+        return JSONResponse({"sucesso": False, "erro": f"Erro ao conectar com Z-API: {str(e)}"}, 500)
 
 @app.get("/api/notificacao/config")
 async def get_config_notificacao(req: Request):
