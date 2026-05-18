@@ -505,16 +505,15 @@ Qualquer dúvida, estamos à disposição! 😊"""
     conv_fechada = c.fetchone()
     
     if conv_fechada:
-        # reabre conversa
-        c.execute("UPDATE conversas SET status = 'aberto' WHERE id = %s", (conv_fechada['id'],))
-        c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, 'cliente', %s)", (conv_fechada['id'], msg))
-        conn.commit()
-        
-        # responde agradecimento e fecha de novo
         msg_lower = msg.lower()
         palavras_agradecimento = ['obrigado', 'obrigada', 'valeu', 'thanks', 'vlw', 'brigadão', '👍', '🙏']
         
         if any(p in msg_lower for p in palavras_agradecimento):
+            # É agradecimento - responde e fecha de novo
+            c.execute("UPDATE conversas SET status = 'aberto' WHERE id = %s", (conv_fechada['id'],))
+            c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, 'cliente', %s)", (conv_fechada['id'], msg))
+            conn.commit()
+            
             resp = "De nada! Estamos sempre à disposição. 😊"
             c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, 'eva', %s)", (conv_fechada['id'], resp))
             c.execute("UPDATE conversas SET status = 'fechado', fechado_em = CURRENT_TIMESTAMP WHERE id = %s", (conv_fechada['id'],))
@@ -523,6 +522,10 @@ Qualquer dúvida, estamos à disposição! 😊"""
             conn.close()
             enviar(num, resp, "atendimento")
             return {"success": True, "tipo": "agradecimento_pos_fechamento"}
+        else:
+            # Não é agradecimento - abre conversa nova (não reabre a antiga)
+            # Deixa cair no código normal abaixo que vai criar conversa nova
+            pass
     
     if not robo_on():
         c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (num,))
@@ -589,7 +592,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
     conv_criado = c.fetchone()['criado_em']
     
     # Conta mensagens do cliente DESDE a criação desta sessão
-    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' AND enviado_em >= %s", (cid, conv_criado))
+    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' AND criado_em >= %s", (cid, conv_criado))
     num_msgs = c.fetchone()['count']
     print(f"DEBUG: Número de mensagens do cliente (sessão atual): {num_msgs}")
     print(f"DEBUG: Sessão criada em: {conv_criado}")
