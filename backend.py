@@ -26,7 +26,17 @@ UPLOAD = "/tmp/uploads"
 os.makedirs(UPLOAD, exist_ok=True)
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware, 
+    allow_origins=[
+        "https://eva-easyhoteis-83036260b078.herokuapp.com",
+        "http://localhost:3000",
+        "http://localhost:5000"
+    ], 
+    allow_credentials=True, 
+    allow_methods=["*"], 
+    allow_headers=["*"]
+)
 app.mount("/uploads", StaticFiles(directory=UPLOAD), name="uploads")
 
 def db():
@@ -344,6 +354,7 @@ async def login(req: Request):
         key="token",
         value=tok,
         httponly=True,
+        secure=True,  # HTTPS only
         samesite="lax",
         max_age=30*24*60*60  # 30 dias
     )
