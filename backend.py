@@ -595,8 +595,8 @@ Qualquer dúvida, estamos à disposição! 😊"""
     c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' AND criado_em >= %s", (cid, conv_criado))
     num_msgs = c.fetchone()['count']
     
-    # SÓ RESPONDE SE ESTÁ EM CONTATOS E É 1ª OU 2ª MENSAGEM
-    if cont and num_msgs <= 2:
+    # SÓ RESPONDE SE ESTÁ EM CONTATOS E É 1ª, 2ª OU 3ª MENSAGEM
+    if cont and num_msgs <= 3:
         resp = ia(msg, conhec, hotel)
         c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
         conn.commit()
