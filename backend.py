@@ -588,15 +588,21 @@ Qualquer dúvida, estamos à disposição! 😊"""
     
     conn.commit()
     
-    # SÓ RESPONDE SE ESTÁ EM CONTATOS
-    if cont:
+    # Conta mensagens ANTES de responder pra decidir se responde
+    c.execute("SELECT criado_em FROM conversas WHERE id = %s", (cid,))
+    conv_criado = c.fetchone()['criado_em']
+    
+    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' AND criado_em >= %s", (cid, conv_criado))
+    num_msgs = c.fetchone()['count']
+    
+    # SÓ RESPONDE SE ESTÁ EM CONTATOS E É 1ª OU 2ª MENSAGEM
+    if cont and num_msgs <= 2:
         resp = ia(msg, conhec, hotel)
         c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
         conn.commit()
         enviar(num, resp, "atendimento")
     
-    # Conta mensagens do cliente desde que a conversa foi CRIADA/REABERTA
-    # Pega quando a conversa foi criada
+    # Conta mensagens do cliente desde que a conversa foi CRIADA/REABERTA (atualiza contagem)
     c.execute("SELECT criado_em FROM conversas WHERE id = %s", (cid,))
     conv_criado = c.fetchone()['criado_em']
     
@@ -652,7 +658,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
 
 🎯 *Motivo:* {motivo_atual}
 
-👉 *Acesse:* https://web-production-69fb05.up.railway.app/painel"""
+👉 *Acesse:* https://eva-easyhoteis-83036260b078.herokuapp.com/painel"""
             
             try:
                 enviar(config_notif['grupo_id'], msg_grupo, "atendimento")
