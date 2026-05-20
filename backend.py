@@ -145,8 +145,14 @@ def valid_token(tok):
     return dict(r) if r and r['ativo'] else None
 
 def get_user(req):
+    # Tenta pegar do header Authorization (padrão)
     auth = req.headers.get("Authorization", "")
     tok = auth.replace("Bearer ", "") if auth else None
+    
+    # Se não tem no header, tenta cookie (mobile)
+    if not tok:
+        tok = req.cookies.get("token")
+    
     return valid_token(tok)
 
 def log_acao(uid, acao, det=""):
