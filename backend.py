@@ -254,9 +254,13 @@ def toggle_robo(on):
     conn.close()
     return True
 
-def ia(msg, conhec="", hotel="Hotel"):
+def ia(msg, conhec="", hotel="Hotel", num_msg=1):
     # Menu fixo - SEM IA - 100% confiável
     msg_lower = msg.lower().strip()
+    
+    # 3ª mensagem SEMPRE confirma detalhes
+    if num_msg == 3:
+        return "✅ Detalhes recebidos! Atendente vai processar em breve."
     
     # Cliente escolheu opção 1, 2 ou 3
     if msg_lower == '1':
@@ -282,11 +286,6 @@ Exemplo: 10/05 a 15/05 suite executiva R$350"""
         return """✅ Solicitação registrada!
 
 Descreva o que precisa que um atendente vai ajudar em breve."""
-    
-    # Se mensagem tem palavras-chave de detalhes - confirma recebimento
-    palavras_detalhes = ['suite', 'standard', 'luxo', 'executiv', 'casal', 'solteiro', 'master', '/', 'r$', 'tarif', 'duplo', 'triplo']
-    if any(palavra in msg_lower for palavra in palavras_detalhes):
-        return "✅ Detalhes recebidos! Atendente vai processar em breve."
     
     # Primeira mensagem ou não reconheceu - mostra menu
     return f"""Olá! Sou a EVA, assistente da Easy Hotéis! 😊
@@ -597,7 +596,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
     
     # SÓ RESPONDE SE ESTÁ EM CONTATOS E É 1ª, 2ª OU 3ª MENSAGEM
     if cont and num_msgs <= 3:
-        resp = ia(msg, conhec, hotel)
+        resp = ia(msg, conhec, hotel, num_msgs)
         c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
         conn.commit()
         enviar(num, resp, "atendimento")
