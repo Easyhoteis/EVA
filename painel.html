@@ -1,2059 +1,1499 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EVA - Painel</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-            --primary: #667eea; --secondary: #764ba2;
-            --success: #48bb78; --danger: #f56565;
-            --warning: #ed8936; --info: #4299e1;
-            --light: #f7fafc; --dark: #2d3748;
-            --gray: #718096; --border: #e2e8f0;
-        }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--light); color: var(--dark); min-height: 100vh; }
-        .main { display: flex; height: 100vh; }
-        .sidebar { width: 260px; background: white; box-shadow: 2px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-        .logo-section { padding: 1.5rem; border-bottom: 1px solid var(--border); }
-        .logo { display: flex; align-items: center; gap: 1rem; }
-        .logo-icon { width: 45px; height: 45px; border-radius: 10px; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; }
-        .logo h1 { font-size: 22px; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .logo p { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; }
-        .nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
-        .nav-item { padding: 0.85rem 1.5rem; cursor: pointer; border-left: 4px solid transparent; display: flex; align-items: center; gap: 1rem; color: var(--gray); font-weight: 500; font-size: 14px; transition: all 0.3s; }
-        .nav-item:hover { background: var(--light); color: var(--primary); }
-        .nav-item.ativo { border-left-color: var(--primary); background: rgba(102, 126, 234, 0.1); color: var(--primary); }
-        .nav-item i { width: 20px; text-align: center; }
-        .nav-item.hidden { display: none; }
-        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
-        .user-section { padding: 1rem; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
-        .user-avatar { width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .user-info { flex: 1; }
-        .user-name { font-weight: 600; font-size: 13px; }
-        .user-perfil { font-size: 10px; color: var(--gray); text-transform: uppercase; }
-        .btn-logout { background: var(--light); border: none; padding: 0.4rem; border-radius: 6px; cursor: pointer; color: var(--danger); }
-        .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .header { background: white; padding: 1.25rem 2rem; box-shadow: 0 1px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .header h2 { font-size: 22px; font-weight: 700; }
-        .header-actions { display: flex; gap: 1rem; align-items: center; }
-        .status-zapi { padding: 0.5rem 1rem; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .status-zapi.online { background: #c6f6d5; color: #22543d; }
-        .status-zapi.offline { background: #fed7d7; color: #742a2a; }
-        .limite-info { padding: 0.5rem 1rem; border-radius: 20px; font-size: 12px; font-weight: 600; background: var(--light); color: var(--dark); }
-        .limite-info.alerta { background: #feebc8; color: #7c2d12; }
-        .limite-info.bloqueado { background: #fed7d7; color: #742a2a; }
-        .page-content { flex: 1; overflow-y: auto; padding: 2rem; }
-        .page { display: none; }
-        .page.ativo { display: block; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
-        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; transition: all 0.3s; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-        .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; }
-        .stat-icon { font-size: 28px; margin-bottom: 0.5rem; }
-        .stat-num { font-size: 28px; font-weight: 700; }
-        .stat-label { font-size: 12px; color: var(--gray); text-transform: uppercase; margin-top: 0.5rem; }
-        .conversa-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; height: 320px; }
-        .conversa-header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 1rem 1.25rem; display: flex; justify-content: space-between; }
-        .conversa-numero { font-weight: 700; font-size: 16px; }
-        .conversa-nome { font-size: 12px; opacity: 0.9; margin-top: 2px; }
-        .conversa-tempo { font-size: 11px; opacity: 0.9; }
-        .conversa-body { flex: 1; padding: 1rem; overflow-y: auto; background: #fafbfc; font-size: 13px; }
-        .conversa-footer { padding: 1rem; background: white; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
-        .btn { padding: 0.65rem 1.25rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s; }
-        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
-        .btn-primary:hover { transform: scale(1.03); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-warning { background: var(--warning); color: white; }
-        .btn-info { background: var(--info); color: white; }
-        .btn-sm { padding: 0.4rem 0.8rem; font-size: 12px; }
-        .btn-block { width: 100%; }
-        .table-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border); }
-        th { background: var(--light); font-weight: 600; font-size: 12px; text-transform: uppercase; color: var(--gray); }
-        tr:hover { background: #f9fafb; }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 13px; }
-        input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; }
-        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
-        textarea { resize: vertical; min-height: 100px; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
-        .modal.ativo { display: flex; }
-        .modal-content { background: white; padding: 2rem; border-radius: 12px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; }
-        .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 1.5rem; }
-        .modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
-        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
-        .search-box { flex: 1; max-width: 400px; position: relative; }
-        .search-box input { padding-left: 2.5rem; }
-        .search-box i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--gray); }
-        .mensagem { margin-bottom: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 13px; }
-        .mensagem-cliente { background: #e0e7ff; border-left: 3px solid var(--primary); }
-        .mensagem-eva { background: #dbeafe; border-left: 3px solid var(--info); }
-        .mensagem-atendente { background: #c6f6d5; border-left: 3px solid var(--success); }
-        .mensagem-label { font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 0.25rem; opacity: 0.7; }
-        .modal-chat { height: 350px; overflow-y: auto; padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; }
-        .responder-area { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-        .responder-area textarea { flex: 1; min-height: 60px; }
-        .checkbox-list { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
-        .checkbox-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; border-radius: 6px; cursor: pointer; }
-        .checkbox-item:hover { background: var(--light); }
-        .checkbox-item input { width: auto; }
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 11px; font-weight: 600; }
-        .status-pendente { background: #feebc8; color: #7c2d12; }
-        .status-enviando { background: #bee3f8; color: #2c5282; }
-        .status-finalizada { background: #c6f6d5; color: #22543d; }
-        .status-erro { background: #fed7d7; color: #742a2a; }
-        .perfil-badge { padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 11px; font-weight: 600; }
-        .perfil-admin { background: #fed7d7; color: #742a2a; }
-        .perfil-atendente { background: #bee3f8; color: #2c5282; }
-        .perfil-marketing { background: #c6f6d5; color: #22543d; }
-        .empty { text-align: center; padding: 3rem; color: var(--gray); }
-        .empty i { font-size: 48px; opacity: 0.3; margin-bottom: 1rem; display: block; }
-        .progress { width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 0.5rem; }
-        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.3s; }
-        .antiban-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 2rem; margin-bottom: 1.5rem; }
-        .antiban-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
-        .uso-diario { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 1.5rem; }
-        .uso-grande { font-size: 48px; font-weight: 700; }
-        .uso-progress { width: 100%; height: 12px; background: rgba(255,255,255,0.3); border-radius: 6px; margin-top: 1rem; overflow: hidden; }
-        .uso-progress-bar { height: 100%; background: white; transition: width 0.3s; }
-        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 26px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--success); }
-        input:checked + .slider:before { transform: translateX(24px); }
-        .upload-area { border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--light); }
-        .upload-area:hover { border-color: var(--primary); background: rgba(102, 126, 234, 0.05); }
-        .upload-area i { font-size: 32px; color: var(--gray); margin-bottom: 0.5rem; }
-        .upload-area p { color: var(--gray); font-size: 13px; }
-        .imagem-preview { margin-top: 1rem; position: relative; display: inline-block; }
-        .imagem-preview img { max-width: 200px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .imagem-preview button { position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; }
-        .tabs-contatos { display: flex; gap: 1rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border); }
-        .tab-contato { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; font-size: 13px; color: var(--gray); }
-        .tab-contato.ativo { border-bottom-color: var(--primary); color: var(--primary); }
-        .config-zapi-box { background: var(--light); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
-        .config-zapi-box h4 { margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-        
-        /* RESPONSIVO MOBILE */
-        @media (max-width: 768px) {
-            .main { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .nav { display: flex; overflow-x: auto; padding: 0; }
-            .nav-item { padding: 1rem; white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; }
-            .nav-item.ativo { border-left: none; border-bottom-color: var(--primary); }
-            .user-section { padding: 1rem; }
-            .content { height: auto; }
-            .header { padding: 1rem; flex-direction: column; gap: 1rem; align-items: flex-start; }
-            .header h2 { font-size: 18px; }
-            .header-actions { width: 100%; flex-wrap: wrap; }
-            .page-content { padding: 1rem; }
-            .grid { grid-template-columns: 1fr; }
-            .grid-stats { grid-template-columns: repeat(2, 1fr); }
-            .stat-card { padding: 1rem; }
-            .stat-num { font-size: 24px; }
-            .stat-icon { font-size: 22px; }
-            .conversa-card { height: auto; min-height: 280px; }
-            .modal-content { width: 95%; padding: 1.5rem; max-height: 85vh; }
-            .modal-title { font-size: 18px; }
-            .toolbar { flex-direction: column; align-items: stretch; }
-            .search-box { max-width: 100%; }
-            .table-container { overflow-x: auto; }
-            table { min-width: 600px; }
-            th, td { padding: 0.75rem 0.5rem; font-size: 12px; }
-            .btn { padding: 0.6rem 1rem; font-size: 12px; }
-            .antiban-grid { grid-template-columns: 1fr; }
-            .modal-actions { flex-direction: column; }
-            .modal-actions .btn { width: 100%; }
-            .responder-area { flex-direction: column; }
-            .responder-area textarea { min-height: 80px; }
-            .config-zapi-box { padding: 1rem; }
-            input, select, textarea { font-size: 16px; } /* Evita zoom no iOS */
-        }
-        
-        @media (max-width: 480px) {
-            .grid-stats { grid-template-columns: 1fr; }
-            .logo h1 { font-size: 18px; }
-            .logo-icon { width: 35px; height: 35px; font-size: 20px; }
-            .nav-item { padding: 0.75rem 1rem; font-size: 13px; }
-            .nav-item i { font-size: 14px; }
-            .conversa-header { padding: 0.75rem 1rem; }
-            .conversa-numero { font-size: 14px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="main" id="app-content" style="display:none">
-        <div class="sidebar">
-            <div class="logo-section">
-                <div class="logo">
-                    <div class="logo-icon">🤖</div>
-                    <div><h1>EVA</h1><p>Hotel AI</p></div>
-                </div>
-            </div>
-            <div class="nav">
-                <div class="nav-item" id="nav-conversas" onclick="mudarPagina('conversas')">
-                    <i class="fas fa-comments"></i><span>Conversas</span>
-                    <span class="badge" id="badge-conversas">0</span>
-                </div>
-                <div class="nav-item" id="nav-notificacoes" onclick="mudarPagina('notificacoes')">
-                    <i class="fas fa-bell"></i><span>Notificações</span>
-                </div>
-                <div class="nav-item" id="nav-contatos" onclick="mudarPagina('contatos')">
-                    <i class="fas fa-address-book"></i><span>Contatos</span>
-                </div>
-                <div class="nav-item" id="nav-templates" onclick="mudarPagina('templates')">
-                    <i class="fas fa-file-alt"></i><span>Templates</span>
-                </div>
-                <div class="nav-item" id="nav-campanhas" onclick="mudarPagina('campanhas')">
-                    <i class="fas fa-paper-plane"></i><span>Disparos</span>
-                </div>
-                <div class="nav-item" id="nav-antiban" onclick="mudarPagina('antiban')">
-                    <i class="fas fa-shield-alt"></i><span>Anti-Ban</span>
-                </div>
-                <div class="nav-item" id="nav-usuarios" onclick="mudarPagina('usuarios')">
-                    <i class="fas fa-users"></i><span>Usuários</span>
-                </div>
-                <div class="nav-item hidden" id="nav-transmissao" onclick="abrirTransmissao()">
-                    <i class="fas fa-broadcast-tower"></i><span>Lista de Transmissão</span>
-                </div>
-                <div class="nav-item" id="nav-config" onclick="mudarPagina('config')">
-                    <i class="fas fa-cog"></i><span>Configurações</span>
-                </div>
-                <div class="nav-item" id="nav-relatorios" onclick="mudarPagina('relatorios')">
-                    <i class="fas fa-chart-bar"></i><span>Relatórios</span>
-                </div>
-            </div>
-            <div class="user-section">
-                <div class="user-avatar" id="avatar">D</div>
-                <div class="user-info">
-                    <div class="user-name" id="usuario-nome">Usuário</div>
-                    <div class="user-perfil" id="usuario-perfil">Perfil</div>
-                </div>
-                <button class="btn-logout" onclick="fazerLogout()"><i class="fas fa-sign-out-alt"></i></button>
-            </div>
-        </div>
-        <div class="content">
-            <div class="header">
-                <h2 id="pagina-titulo">Conversas</h2>
-                <div class="header-actions">
-                    <div class="limite-info" id="limite-info">
-                        <i class="fas fa-shield-alt"></i> <span id="limite-texto">0 / 100</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;background:var(--color-background-secondary);border-radius:20px" id="robo-toggle-container">
-                        <i class="fas fa-robot" style="font-size:14px"></i>
-                        <span style="font-size:12px;font-weight:600" id="robo-status-text">Robô: ...</span>
-                        <label class="switch" style="margin:0">
-                            <input type="checkbox" id="robo-toggle" onchange="toggleRobo()">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="status-zapi offline" id="status-zapi-atend">
-                        <i class="fas fa-circle"></i> Atend: ...
-                    </div>
-                    <div class="status-zapi offline" id="status-zapi-disp">
-                        <i class="fas fa-circle"></i> Disp: ...
-                    </div>
-                </div>
-            </div>
-            <div class="page-content">
-                <!-- CONVERSAS -->
-                <div id="page-conversas" class="page">
-                    <div class="toolbar">
-                        <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..."></div>
-                        <div>
-                            <button class="btn btn-primary btn-sm" onclick="mudarTabConversa('abertos')" id="tab-abertos">
-                                <i class="fas fa-inbox"></i> Abertos <span id="count-abertos">0</span>
-                            </button>
-                            <button class="btn btn-sm" style="background:#e2e8f0;color:var(--dark)" onclick="mudarTabConversa('fechados')" id="tab-fechados">
-                                <i class="fas fa-check"></i> Fechados <span id="count-fechados">0</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="grid" id="grid-conversas"></div>
-                </div>
+from fastapi import FastAPI, Request, UploadFile, File
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import uvicorn, os, hashlib, secrets, json, asyncio, csv, io, random, requests
+from datetime import datetime, date
+from zoneinfo import ZoneInfo
+from dotenv import load_dotenv
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-                <!-- NOTIFICAÇÕES -->
-                <div id="page-notificacoes" class="page">
-                    <div class="toolbar">
-                        <h3>📬 Histórico de Notificações</h3>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Data/Hora</th><th>Hotel</th><th>Atendente</th><th>Mensagem</th></tr></thead>
-                            <tbody id="tabela-notificacoes"></tbody>
-                        </table>
-                    </div>
-                </div>
+load_dotenv()
 
-                <!-- CONTATOS -->
-                <div id="page-contatos" class="page">
-                    <div class="toolbar">
-                        <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..." id="busca-contatos" onkeyup="filtrarContatos()"></div>
-                        <div style="display:flex;gap:0.5rem">
-                            <button class="btn btn-info btn-sm" onclick="abrirModalImportar()"><i class="fas fa-upload"></i> CSV</button>
-                            <button class="btn btn-primary btn-sm" onclick="abrirModalContato()"><i class="fas fa-plus"></i> Novo</button>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Nome</th><th>Número</th><th>Email</th><th>Tags</th><th>Ações</th></tr></thead>
-                            <tbody id="tabela-contatos"></tbody>
-                        </table>
-                    </div>
-                </div>
+PORT = int(os.getenv("PORT", 3000))
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-                <!-- TEMPLATES -->
-                <div id="page-templates" class="page">
-                    <div class="toolbar">
-                        <h3>Templates</h3>
-                        <button class="btn btn-primary btn-sm" onclick="abrirModalTemplate()"><i class="fas fa-plus"></i> Novo</button>
-                    </div>
-                    <div class="grid" id="grid-templates"></div>
-                </div>
+if not DATABASE_URL:
+    print("ERRO: DATABASE_URL não configurada!")
+    print("Adicione a variável DATABASE_URL no Railway")
+    exit(1)
 
-                <!-- CAMPANHAS -->
-                <div id="page-campanhas" class="page">
-                    <div class="toolbar">
-                        <h3>Campanhas</h3>
-                        <button class="btn btn-primary btn-sm" onclick="abrirModalCampanha()"><i class="fas fa-paper-plane"></i> Nova Campanha</button>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Nome</th><th>Criada por</th><th>Total</th><th>Enviadas</th><th>Status</th><th>Progresso</th><th>Data</th></tr></thead>
-                            <tbody id="tabela-campanhas"></tbody>
-                        </table>
-                    </div>
-                </div>
+ZAPI_INST_AT = os.getenv("ZAPI_INSTANCE", "")
+ZAPI_TOK_AT = os.getenv("ZAPI_TOKEN", "")
+ZAPI_CLI_AT = os.getenv("ZAPI_CLIENT_TOKEN", "")
+UPLOAD = "/tmp/uploads"
+os.makedirs(UPLOAD, exist_ok=True)
 
-                <!-- ANTI-BAN -->
-                <div id="page-antiban" class="page">
-                    <div class="uso-diario">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                            <div>
-                                <p style="font-size:14px;opacity:0.9;text-transform:uppercase;letter-spacing:1px">Uso Diário</p>
-                                <div class="uso-grande" id="uso-grande">0 / 100</div>
-                                <p style="font-size:13px;opacity:0.9;margin-top:0.5rem" id="uso-texto">Pode enviar mais 100 hoje</p>
-                            </div>
-                            <div style="font-size:48px">🛡️</div>
-                        </div>
-                        <div class="uso-progress"><div class="uso-progress-bar" id="uso-progress-bar" style="width:0%"></div></div>
-                    </div>
-                    <div class="antiban-card">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
-                            <h3>⚙️ Configurações</h3>
-                            <label class="switch"><input type="checkbox" id="antiban-ativo" checked><span class="slider"></span></label>
-                        </div>
-                        <div class="antiban-grid">
-                            <div class="form-group"><label>Limite Diário</label><input type="number" id="config-limite-diario" value="100"></div>
-                            <div class="form-group"><label>Limite/Hora</label><input type="number" id="config-limite-hora" value="30"></div>
-                            <div class="form-group"><label>Delay Mín (s)</label><input type="number" id="config-delay-min" value="3"></div>
-                            <div class="form-group"><label>Delay Máx (s)</label><input type="number" id="config-delay-max" value="7"></div>
-                            <div class="form-group"><label>Pausa a cada</label><input type="number" id="config-pausa-cada" value="30"></div>
-                            <div class="form-group"><label>Pausa (s)</label><input type="number" id="config-pausa-segundos" value="60"></div>
-                            <div class="form-group"><label>Início</label><input type="time" id="config-horario-inicio" value="08:00"></div>
-                            <div class="form-group"><label>Fim</label><input type="time" id="config-horario-fim" value="20:00"></div>
-                        </div>
-                        <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap">
-                            <button class="btn btn-success" onclick="salvarConfigAntiban()"><i class="fas fa-save"></i> Salvar</button>
-                            <button class="btn btn-warning" onclick="usarConfigSegura()">🛡️ Segura</button>
-                            <button class="btn btn-info" onclick="usarConfigAgressiva()">🚀 Agressiva</button>
-                        </div>
-                    </div>
-                </div>
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.mount("/uploads", StaticFiles(directory=UPLOAD), name="uploads")
 
-                <!-- USUÁRIOS -->
-                <div id="page-usuarios" class="page">
-                    <div class="toolbar">
-                        <h3>Gerenciar Usuários</h3>
-                        <button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()"><i class="fas fa-user-plus"></i> Novo Usuário</button>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Status</th><th>Último Login</th><th>Ações</th></tr></thead>
-                            <tbody id="tabela-usuarios"></tbody>
-                        </table>
-                    </div>
-                </div>
+def db():
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    # Configura timezone para Brasília
+    with conn.cursor() as c:
+        c.execute("SET TIME ZONE 'America/Sao_Paulo'")
+    return conn
 
-                <!-- CONFIGURAÇÕES -->
-                <div id="page-config" class="page">
-                    <div class="config-zapi-box">
-                        <h4>📞 Z-API Atendimento</h4>
-                        <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Número usado pra responder clientes automaticamente</p>
-                        <div class="form-group"><label>Instance ID</label><input type="text" id="zapi-atend-instance"></div>
-                        <div class="form-group"><label>Token</label><input type="text" id="zapi-atend-token"></div>
-                        <div class="form-group"><label>Client/Security Token</label><input type="text" id="zapi-atend-client"></div>
-                        <button class="btn btn-success" onclick="salvarZapi('atendimento')"><i class="fas fa-save"></i> Salvar Atendimento</button>
-                    </div>
-                    <div class="config-zapi-box">
-                        <h4>📢 Z-API Disparos</h4>
-                        <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Número usado pra disparos em massa (separado pra proteger atendimento)</p>
-                        <div class="form-group"><label>Instance ID</label><input type="text" id="zapi-disp-instance"></div>
-                        <div class="form-group"><label>Token</label><input type="text" id="zapi-disp-token"></div>
-                        <div class="form-group"><label>Client/Security Token</label><input type="text" id="zapi-disp-client"></div>
-                        <button class="btn btn-success" onclick="salvarZapi('disparos')"><i class="fas fa-save"></i> Salvar Disparos</button>
-                    </div>
-                    <div class="config-zapi-box">
-                        <h4>🔔 Notificações em Grupo</h4>
-                        <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Envie notificações de novos pedidos em um grupo WhatsApp</p>
-                        <button class="btn btn-primary" onclick="listarGrupos()" style="margin-bottom:1rem"><i class="fas fa-sync"></i> Listar Grupos</button>
-                        <div class="form-group">
-                            <label>Grupo Selecionado</label>
-                            <input type="text" id="grupo-nome" readonly placeholder="Nenhum grupo selecionado">
-                            <input type="hidden" id="grupo-id">
-                        </div>
-                        <div class="form-group">
-                            <label style="display:flex;align-items:center;gap:0.5rem">
-                                <input type="checkbox" id="grupo-ativo">
-                                <span>Ativar notificações no grupo</span>
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label style="display:flex;align-items:center;gap:0.5rem">
-                                <input type="checkbox" id="grupo-individual">
-                                <span>Também enviar individual para responsáveis</span>
-                            </label>
-                        </div>
-                        <button class="btn btn-success" onclick="salvarConfigNotificacao()"><i class="fas fa-save"></i> Salvar Configuração</button>
-                    </div>
-                </div>
+def hash_pass(s): return hashlib.sha256(s.encode()).hexdigest()
+def token(): return secrets.token_urlsafe(32)
 
-                <!-- RELATÓRIOS -->
-                <div id="page-relatorios" class="page">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
-                        <h2>📊 Relatórios</h2>
-                        <button class="btn btn-primary" onclick="exportarExcel()" style="display:none" id="btn-export"><i class="fas fa-file-excel"></i> Exportar Excel</button>
-                    </div>
-                    <div class="grid-stats" id="stats-cards"></div>
-                    <div class="card" style="padding:2rem;margin-top:2rem">
-                        <h3 style="margin-bottom:1rem">🏆 Top Atendentes</h3>
-                        <div id="top-atendentes"></div>
-                    </div>
-                    <div class="card" style="padding:2rem;margin-top:2rem">
-                        <h3 style="margin-bottom:1rem">🏨 Top 10 Hotéis que Mais Chamam</h3>
-                        <div id="top-hoteis"></div>
-                    </div>
-                    <div class="card" style="padding:2rem;margin-top:2rem">
-                        <h3 style="margin-bottom:1rem">📋 Chamados por Motivo</h3>
-                        <div id="por-motivo"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- LOGIN -->
-    <div id="login-screen" style="height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2)">
-        <div style="background:white;padding:3rem;border-radius:16px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-            <div style="text-align:center;margin-bottom:2rem">
-                <div style="font-size:60px">🤖</div>
-                <h2 style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:32px">EVA</h2>
-                <p style="color:#718096;font-size:11px;text-transform:uppercase;letter-spacing:2px">Hotel AI</p>
-            </div>
-            <div id="erro-login" style="display:none;background:#fed7d7;color:#742a2a;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:13px"></div>
-            <input type="email" id="login-email" placeholder="Email" style="width:100%;padding:12px;margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px">
-            <input type="password" id="login-senha" placeholder="Senha" style="width:100%;padding:12px;margin-bottom:20px;border:1px solid #e2e8f0;border-radius:8px">
-            <button onclick="fazerLogin()" id="btn-login" style="width:100%;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">Entrar</button>
-        </div>
-    </div>
-
-    <!-- MODAIS -->
-    <div class="modal" id="modal-grupos">
-        <div class="modal-content" style="max-width:600px">
-            <div class="modal-title">Selecionar Grupo WhatsApp</div>
-            <p style="font-size:12px;color:var(--gray);margin-bottom:1rem">Clique no grupo que deseja receber as notificações</p>
-            <div id="lista-grupos" style="max-height:400px;overflow-y:auto"></div>
-            <div class="modal-actions">
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-grupos')">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="modal-conversa">
-        <div class="modal-content">
-            <div class="modal-title" id="modal-conversa-titulo">Conversa</div>
-            <div class="modal-chat" id="modal-chat"></div>
-            <div class="responder-area">
-                <textarea id="modal-resposta" placeholder="Digite sua resposta..."></textarea>
-                <button class="btn btn-primary" onclick="enviarResposta()" style="height:fit-content;align-self:flex-end"><i class="fas fa-paper-plane"></i></button>
-            </div>
-            <div class="form-group"><label>Observações</label><textarea id="modal-observacoes" style="min-height:60px"></textarea></div>
-            <div class="modal-actions">
-                <button class="btn btn-success btn-block" onclick="fecharAtendimentoModal()"><i class="fas fa-check"></i> Fechar Atendimento</button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-conversa')">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="modal-contato">
-        <div class="modal-content">
-            <div class="modal-title">Novo Contato</div>
-            <div class="form-group"><label>Nome *</label><input type="text" id="contato-nome"></div>
-            <div class="form-group"><label>Número (com DDI) *</label><input type="text" id="contato-numero" placeholder="5511999999999"></div>
-            <div class="form-group"><label>Email</label><input type="email" id="contato-email"></div>
-            <div class="form-group"><label>Tags</label><input type="text" id="contato-tags"></div>
-            <div class="form-group">
-                <label>👥 Responsáveis (Atendentes)</label>
-                <p style="font-size:12px;color:var(--gray);margin-bottom:0.5rem">Selecione os atendentes responsáveis por este hotel. Eles serão notificados quando houver mensagens.</p>
-                <select id="contato-responsaveis" multiple style="min-height:100px">
-                    <!-- Carregado dinamicamente -->
-                </select>
-                <p style="font-size:11px;color:var(--gray);margin-top:0.3rem">Use Ctrl/Cmd + clique para selecionar múltiplos</p>
-            </div>
-            <div class="form-group">
-                <label>🧠 Base de Conhecimento da IA</label>
-                <p style="font-size:12px;color:var(--gray);margin-bottom:0.5rem">Informações que a IA usará ao responder este hotel (quartos, tarifas, procedimentos)</p>
-                <textarea id="contato-conhecimento" style="min-height:150px" placeholder="Hotel: [Nome do Hotel]
-Endereço: [Endereço completo]
-
-Quartos disponíveis:
-- Standard (30m²) - R$ XXX/diária
-- Superior (40m²) - R$ XXX/diária
-- Master Suite (60m²) - R$ XXX/diária
-
-Procedimentos:
-- Fecho de disponibilidade: [sistema usado]
-- Alteração de tarifa: [prazo/regra]
-- Cancelamento: [política]"></textarea>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="salvarContato()"><i class="fas fa-save"></i> Salvar</button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-contato')">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="modal-importar">
-        <div class="modal-content">
-            <div class="modal-title">Importar CSV</div>
-            <p style="margin-bottom:1rem;font-size:13px;color:var(--gray)">Colunas: nome, numero, email</p>
-            <div class="form-group"><label>Arquivo</label><input type="file" id="arquivo-csv" accept=".csv"></div>
-            <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="importarCSV()"><i class="fas fa-upload"></i> Importar</button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-importar')">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="modal-template">
-        <div class="modal-content">
-            <div class="modal-title">Novo Template</div>
-            <div class="form-group"><label>Nome *</label><input type="text" id="template-nome"></div>
-            <div class="form-group">
-                <label>Categoria</label>
-                <select id="template-categoria">
-                    <option value="geral">Geral</option>
-                    <option value="regional">Regional</option>
-                    <option value="lancamento">Lançamento</option>
-                    <option value="promocao">Promoção</option>
-                    <option value="aniversario">Aniversário</option>
-                    <option value="reserva">Reserva</option>
-                    <option value="lembrete">Lembrete</option>
-                    <option value="feedback">Feedback</option>
-                </select>
-            </div>
-            <div class="form-group"><label>Conteúdo *</label><textarea id="template-conteudo" placeholder="Olá {nome}!"></textarea></div>
-            <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="salvarTemplate()"><i class="fas fa-save"></i> Salvar</button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-template')">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="modal-campanha">
-        <div class="modal-content">
-            <div class="modal-title">Nova Campanha</div>
-            <div class="form-group"><label>Nome *</label><input type="text" id="campanha-nome"></div>
-            <div class="form-group">
-                <label>Template</label>
-                <select id="campanha-template" onchange="usarTemplate()">
-                    <option value="">Selecione ou escreva manualmente</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>📸 Imagem (opcional)</label>
-                <div class="upload-area" onclick="document.getElementById('campanha-imagem').click()">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p><strong>Clique para enviar</strong> (JPG, PNG, WEBP)</p>
-                </div>
-                <input type="file" id="campanha-imagem" accept="image/*" style="display:none" onchange="uploadImagem(this)">
-                <div id="imagem-preview-container"></div>
-            </div>
-            <div class="form-group"><label>Mensagem *</label><textarea id="campanha-mensagem"></textarea></div>
-            
-            <!-- NOVO: TABS DE CONTATOS -->
-            <div class="form-group">
-                <label>Contatos *</label>
-                <div class="tabs-contatos">
-                    <div class="tab-contato ativo" onclick="mudarTabContato('cadastrados')">
-                        <i class="fas fa-address-book"></i> Cadastrados
-                    </div>
-                    <div class="tab-contato" onclick="mudarTabContato('csv')">
-                        <i class="fas fa-file-csv"></i> Importar CSV
-                    </div>
-                </div>
-                
-                <div id="tab-cadastrados">
-                    <div style="margin-bottom:0.5rem">
-                        <button class="btn btn-sm btn-info" onclick="selecionarTodosContatos()"><i class="fas fa-check-double"></i> Todos</button>
-                        <button class="btn btn-sm" style="background:#e2e8f0;color:var(--dark)" onclick="desmarcarTodosContatos()"><i class="fas fa-times"></i> Desmarcar</button>
-                        <span id="contatos-selecionados" style="margin-left:1rem;font-size:13px;color:var(--gray)">0 selecionados</span>
-                    </div>
-                    <div class="checkbox-list" id="lista-contatos-checkbox"></div>
-                </div>
-                
-                <div id="tab-csv" style="display:none">
-                    <div class="upload-area" onclick="document.getElementById('campanha-csv').click()">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <p><strong>Clique para enviar CSV</strong></p>
-                        <p style="font-size:11px">Colunas: nome, numero</p>
-                    </div>
-                    <input type="file" id="campanha-csv" accept=".csv" style="display:none" onchange="processarCSVCampanha(this)">
-                    <div id="csv-preview" style="margin-top:1rem"></div>
-                </div>
-            </div>
-            
-            <div id="aviso-limite" style="display:none;padding:1rem;background:#feebc8;color:#7c2d12;border-radius:8px;margin-bottom:1rem"></div>
-            <div class="modal-actions">
-                <button class="btn btn-success btn-block" onclick="dispararCampanha()"><i class="fas fa-paper-plane"></i> Disparar</button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-campanha')">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="modal-usuario">
-        <div class="modal-content">
-            <div class="modal-title" id="modal-usuario-titulo">Novo Usuário</div>
-            <div class="form-group"><label>Nome *</label><input type="text" id="usuario-novo-nome"></div>
-            <div class="form-group"><label>Email *</label><input type="email" id="usuario-novo-email"></div>
-            <div class="form-group"><label>Senha *</label><input type="password" id="usuario-novo-senha"></div>
-            <div class="form-group">
-                <label>📱 WhatsApp (pra receber notificações)</label>
-                <input type="text" id="usuario-novo-whatsapp" placeholder="5511999999999">
-                <p style="font-size:11px;color:var(--gray);margin-top:0.3rem">Número com DDI (ex: 5511999999999)</p>
-            </div>
-            <div class="form-group">
-                <label>Perfil *</label>
-                <select id="usuario-novo-perfil">
-                    <option value="atendente">🔵 Atendente</option>
-                    <option value="marketing">🟢 Marketing</option>
-                    <option value="admin">🔴 Admin</option>
-                </select>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="salvarUsuario()"><i class="fas fa-save"></i> Salvar</button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-usuario')">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="modal-transmissao">
-        <div class="modal-content">
-            <div class="modal-title">📢 Lista de Transmissão</div>
-            <p style="color:var(--gray);margin-bottom:1.5rem">Envie mensagem para uma lista de hotéis selecionados.</p>
-            
-            <div style="margin-bottom:1.5rem">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-                    <h4 style="margin:0">Minhas Listas</h4>
-                    <button class="btn btn-primary btn-sm" onclick="abrirModalNovaLista()"><i class="fas fa-plus"></i> Nova Lista</button>
-                </div>
-                <div id="lista-listas" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:0.5rem"></div>
-            </div>
-            
-            <div class="form-group">
-                <label>Lista Selecionada</label>
-                <select id="transmissao-lista">
-                    <option value="">Selecione uma lista</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Mensagem *</label>
-                <textarea id="transmissao-msg" style="min-height:150px" placeholder="Ex: Plantão de fim de semana: João - 11 99999-9999"></textarea>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="enviarTransmissao()"><i class="fas fa-broadcast-tower"></i> Enviar para Lista</button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-transmissao')">Cancelar</button>
-            </div>
-        </div>
-    </div>
+def init():
+    conn = db()
+    c = conn.cursor()
+    c.execute("CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, email TEXT UNIQUE NOT NULL, senha_hash TEXT NOT NULL, nome TEXT NOT NULL, perfil TEXT NOT NULL, whatsapp TEXT, ativo INTEGER DEFAULT 1, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, ultimo_login TIMESTAMP)")
     
-    <div class="modal" id="modal-lista">
-        <div class="modal-content">
-            <div class="modal-title">Nova Lista de Transmissão</div>
-            <div class="form-group"><label>Nome da Lista *</label><input type="text" id="lista-nome" placeholder="Ex: Hotéis Rio de Janeiro"></div>
-            <div class="form-group">
-                <label>Selecione os Hotéis *</label>
-                <p style="font-size:12px;color:var(--gray);margin-bottom:0.5rem">Use Ctrl/Cmd + clique para selecionar múltiplos</p>
-                <select id="lista-hoteis" multiple style="min-height:200px"></select>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-primary btn-block" onclick="salvarLista()"><i class="fas fa-save"></i> Salvar Lista</button>
-                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-lista')">Cancelar</button>
-            </div>
-        </div>
-    </div>
+    # Adiciona coluna whatsapp se não existir
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN whatsapp TEXT")
+        conn.commit()
+    except:
+        conn.rollback()
+    
+    c.execute("CREATE TABLE IF NOT EXISTS sessoes (id SERIAL PRIMARY KEY, token TEXT UNIQUE NOT NULL, usuario_id INTEGER NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS logs (id SERIAL PRIMARY KEY, usuario_id INTEGER, acao TEXT NOT NULL, detalhes TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS conversas (id SERIAL PRIMARY KEY, numero_cliente TEXT NOT NULL, nome_cliente TEXT, motivo TEXT, status TEXT DEFAULT 'aberto', fechado_por_id INTEGER, fechado_por_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, fechado_em TIMESTAMP, observacoes TEXT)")
+    
+    # Adiciona coluna motivo se não existir
+    try:
+        c.execute("ALTER TABLE conversas ADD COLUMN motivo TEXT")
+        conn.commit()
+    except:
+        conn.rollback()
+    
+    c.execute("CREATE TABLE IF NOT EXISTS mensagens (id SERIAL PRIMARY KEY, conversa_id INTEGER NOT NULL, remetente TEXT NOT NULL, conteudo TEXT NOT NULL, usuario_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS contatos (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, numero TEXT UNIQUE NOT NULL, email TEXT, tags TEXT, observacoes TEXT, conhecimento_ia TEXT, responsaveis TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    
+    # Adiciona coluna responsaveis se não existir
+    try:
+        c.execute("ALTER TABLE contatos ADD COLUMN responsaveis TEXT")
+        conn.commit()
+    except:
+        conn.rollback()
+    
+    c.execute("CREATE TABLE IF NOT EXISTS templates (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, conteudo TEXT NOT NULL, categoria TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS campanhas (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, template_id INTEGER, mensagem TEXT NOT NULL, imagem_url TEXT, total_contatos INTEGER DEFAULT 0, enviadas INTEGER DEFAULT 0, falhadas INTEGER DEFAULT 0, status TEXT DEFAULT 'pendente', criado_por_id INTEGER, criado_por_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP, iniciado_em TIMESTAMP, finalizado_em TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS envios (id SERIAL PRIMARY KEY, campanha_id INTEGER, contato_id INTEGER, numero TEXT, nome TEXT, status TEXT DEFAULT 'pendente', resposta TEXT, enviado_em TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS config_antiban (id INTEGER PRIMARY KEY DEFAULT 1, limite_diario INTEGER DEFAULT 100, limite_por_hora INTEGER DEFAULT 30, delay_min INTEGER DEFAULT 3, delay_max INTEGER DEFAULT 7, pausa_a_cada INTEGER DEFAULT 30, pausa_segundos INTEGER DEFAULT 60, horario_inicio TEXT DEFAULT '08:00', horario_fim TEXT DEFAULT '20:00', ativo INTEGER DEFAULT 1)")
+    c.execute("CREATE TABLE IF NOT EXISTS envios_diarios (data TEXT PRIMARY KEY, total INTEGER DEFAULT 0)")
+    c.execute("CREATE TABLE IF NOT EXISTS config_zapi (tipo TEXT PRIMARY KEY, instance_id TEXT, token TEXT, client_token TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS config_sistema (chave TEXT PRIMARY KEY, valor TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS notificacoes (id SERIAL PRIMARY KEY, hotel_nome TEXT, hotel_numero TEXT, usuario_id INTEGER, usuario_nome TEXT, mensagem_original TEXT, enviado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS listas_transmissao (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, hoteis_ids TEXT NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    conn.commit()
+    
+    c.execute("SELECT COUNT(*) as count FROM usuarios")
+    if c.fetchone()['count'] == 0:
+        c.execute("INSERT INTO usuarios (email, senha_hash, nome, perfil) VALUES (%s, %s, %s, %s)", ("admin@easy.com", hash_pass("admin123"), "Administrador", "admin"))
+        conn.commit()
+    
+    c.execute("SELECT COUNT(*) as count FROM config_antiban")
+    if c.fetchone()['count'] == 0:
+        c.execute("INSERT INTO config_antiban VALUES (1, 100, 30, 3, 7, 30, 60, '08:00', '20:00', 1)")
+        conn.commit()
+    
+    # Tabela config notificação grupo
+    c.execute("""CREATE TABLE IF NOT EXISTS config_notificacao (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        grupo_id TEXT,
+        grupo_nome TEXT,
+        ativo INTEGER DEFAULT 0,
+        enviar_individual INTEGER DEFAULT 1
+    )""")
+    
+    c.execute("SELECT COUNT(*) as count FROM config_notificacao")
+    if c.fetchone()['count'] == 0:
+        c.execute("INSERT INTO config_notificacao VALUES (1, '120363425856356188-group', 'Grupo Easy Hotéis', 1, 1)")
+        conn.commit()
+    else:
+        # Atualiza registro existente
+        c.execute("UPDATE config_notificacao SET grupo_id = '120363425856356188-group', grupo_nome = 'Grupo Easy Hotéis', ativo = 1, enviar_individual = 1 WHERE id = 1")
+        conn.commit()
+    
+    c.execute("SELECT COUNT(*) as count FROM config_zapi WHERE tipo = 'atendimento'")
+    if c.fetchone()['count'] == 0 and ZAPI_INST_AT:
+        c.execute("INSERT INTO config_zapi VALUES (%s, %s, %s, %s)", ("atendimento", ZAPI_INST_AT, ZAPI_TOK_AT, ZAPI_CLI_AT))
+        conn.commit()
+    
+    c.execute("SELECT COUNT(*) as count FROM config_sistema WHERE chave = 'robo_ativo'")
+    if c.fetchone()['count'] == 0:
+        c.execute("INSERT INTO config_sistema VALUES ('robo_ativo', '1')")
+        conn.commit()
+    
+    c.execute("SELECT COUNT(*) as count FROM templates")
+    if c.fetchone()['count'] == 0:
+        temps = [
+            ("Regional - Easy 10 Anos", "Olá {nome}! 🏨\n\nConfira os destaques da semana em [REGIÃO]:\n\n🌟 [Hotel 1]\n🌟 [Hotel 2]\n🌟 [Hotel 3]\n\n🎉 Comemorando 10 anos da Easy, use o cupom EASY10 e ganhe 10% OFF!\n\nReserve já: [link]\n\n---\nNão quer mais receber? Responda SAIR", "regional"),
+            ("Lançamento - Hotéis Parceiros", "Olá {nome}! ✨\n\nNOVOS PARCEIROS chegaram à Easy!\n\n🆕 [Hotel 1]\n🆕 [Hotel 2]\n🆕 [Hotel 3]\n\n🎊 10 anos Easy: cupom EASY10 = 10% OFF\n\nConheça: [link]\n\n---\nNão quer mais receber? Responda SAIR", "lancamento"),
+            ("Promo - Ofertas Exclusivas", "Olá {nome}! 🔥\n\nOFERTAS IMPERDÍVEIS:\n\n💰 [Hotel 1] - de R$X por R$Y\n💰 [Hotel 2] - de R$X por R$Y\n\n✨ Use EASY10 e ganhe MAIS 10% OFF\n🎉 10 anos da Easy\n\nAproveite: [link]\n\n---\nNão quer mais receber? Responda SAIR", "promocao"),
+            ("Aniversário 10 Anos", "Olá {nome}! 🎉\n\nA EASY ESTÁ DE PARABÉNS! 🎂\n\n10 anos transformando viagens em experiências!\n\n🎁 Cupom EASY10 com 10% OFF\nEm TODOS os hotéis parceiros!\n\nUse agora: [link]\n\nObrigado! ❤️\n\n---\nNão quer mais receber? Responda SAIR", "aniversario"),
+        ]
+        c.executemany("INSERT INTO templates (nome, conteudo, categoria) VALUES (%s, %s, %s)", temps)
+        conn.commit()
+    c.close()
+    conn.close()
 
-    <script>
-        const API = "/api";
-        let token = localStorage.getItem("eva-token");
-        let usuarioLogado = null;
-        let paginaAtual = 'conversas';
-        let tabConversaAtual = 'abertos';
-        let tabContatoAtual = 'cadastrados';
-        let conversaSelecionada = null;
-        let conversasAbertas = [], conversasFechadas = [];
-        let ultimaContagemAbertas = 0;
-        let somNotificacao = null;
+def valid_token(tok):
+    if not tok: return None
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT u.id, u.email, u.nome, u.perfil, u.ativo FROM sessoes s JOIN usuarios u ON s.usuario_id = u.id WHERE s.token = %s", (tok,))
+    r = c.fetchone()
+    c.close()
+    conn.close()
+    return dict(r) if r and r['ativo'] else None
+
+def get_user(req):
+    # Tenta pegar do header Authorization (padrão)
+    auth = req.headers.get("Authorization", "")
+    tok = auth.replace("Bearer ", "") if auth else None
+    
+    # Se não tem no header, tenta cookie (mobile)
+    if not tok:
+        tok = req.cookies.get("token")
+    
+    return valid_token(tok)
+
+def log_acao(uid, acao, det=""):
+    conn = db()
+    c = conn.cursor()
+    c.execute("INSERT INTO logs (usuario_id, acao, detalhes) VALUES (%s, %s, %s)", (uid, acao, det))
+    conn.commit()
+    c.close()
+    conn.close()
+
+def get_zapi(tipo="atendimento"):
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM config_zapi WHERE tipo = %s", (tipo,))
+    r = c.fetchone()
+    c.close()
+    conn.close()
+    return dict(r) if r else None
+
+def enviar(num, msg, tipo="atendimento"):
+    cfg = get_zapi(tipo)
+    if not cfg: return {"ok": False}
+    n = num.replace("+","").replace(" ","").replace("-","")
+    url = f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/send-text"
+    try:
+        r = requests.post(url, json={"phone": n, "message": msg}, headers={"Content-Type": "application/json", "Client-Token": cfg['client_token']}, timeout=30)
+        return {"ok": r.status_code == 200}
+    except: return {"ok": False}
+
+def enviar_img(num, img, leg="", tipo="disparos"):
+    cfg = get_zapi(tipo)
+    if not cfg: return {"ok": False}
+    n = num.replace("+","").replace(" ","").replace("-","")
+    url = f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/send-image"
+    payload = {"phone": n, "image": img}
+    if leg: payload["caption"] = leg
+    try:
+        r = requests.post(url, json=payload, headers={"Content-Type": "application/json", "Client-Token": cfg['client_token']}, timeout=60)
+        return {"ok": r.status_code == 200}
+    except: return {"ok": False}
+
+def status_zapi(tipo="atendimento"):
+    cfg = get_zapi(tipo)
+    if not cfg: return {"conectado": False}
+    try:
+        r = requests.get(f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/status", headers={"Client-Token": cfg['client_token']}, timeout=10)
+        return {"conectado": r.status_code == 200, "data": r.json() if r.status_code == 200 else None}
+    except: return {"conectado": False}
+
+def cfg_antiban():
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM config_antiban WHERE id = 1")
+    r = c.fetchone()
+    c.close()
+    conn.close()
+    return dict(r) if r else None
+
+def envios_hj():
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT total FROM envios_diarios WHERE data = %s", (date.today().isoformat(),))
+    r = c.fetchone()
+    c.close()
+    conn.close()
+    return r['total'] if r else 0
+
+def add_envio():
+    conn = db()
+    c = conn.cursor()
+    hj = date.today().isoformat()
+    c.execute("INSERT INTO envios_diarios (data, total) VALUES (%s, 1) ON CONFLICT(data) DO UPDATE SET total = envios_diarios.total + 1", (hj,))
+    conn.commit()
+    c.close()
+    conn.close()
+
+def pode_enviar():
+    cfg = cfg_antiban()
+    if not cfg or not cfg['ativo']: return True, "ok"
+    agora = datetime.now().strftime("%H:%M")
+    if agora < cfg['horario_inicio'] or agora > cfg['horario_fim']: return False, "horario"
+    if envios_hj() >= cfg['limite_diario']: return False, "limite"
+    return True, "ok"
+
+def now_br():
+    """Retorna datetime atual no horário de Brasília"""
+    return datetime.now(ZoneInfo("America/Sao_Paulo"))
+
+def robo_on():
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT valor FROM config_sistema WHERE chave = 'robo_ativo'")
+    r = c.fetchone()
+    c.close()
+    conn.close()
+    return r['valor'] == '1' if r else True
+
+def toggle_robo(on):
+    conn = db()
+    c = conn.cursor()
+    v = '1' if on else '0'
+    c.execute("INSERT INTO config_sistema (chave, valor) VALUES ('robo_ativo', %s) ON CONFLICT(chave) DO UPDATE SET valor = %s", (v, v))
+    conn.commit()
+    c.close()
+    conn.close()
+    return True
+
+def ia(msg, conhec="", hotel="Hotel", num_msg=1):
+    # Menu fixo - SEM IA - 100% confiável
+    msg_lower = msg.lower().strip()
+    
+    # 3ª mensagem SEMPRE confirma detalhes
+    if num_msg == 3:
+        return "✅ Detalhes recebidos! Atendente vai processar em breve."
+    
+    # Cliente escolheu opção 1, 2 ou 3
+    if msg_lower == '1':
+        return """✅ Fecho de disponibilidade registrado!
+
+Envie os detalhes em UMA mensagem:
+📅 Data(s)
+🛏️ Categoria(s)
+
+Exemplo: 14/05 suite master"""
+    
+    elif msg_lower == '2':
+        return """✅ Atualização de tarifas registrada!
+
+Envie os detalhes em UMA mensagem:
+📅 Período
+🛏️ Categoria(s)
+💰 Novos valores
+
+Exemplo: 10/05 a 15/05 suite executiva R$350"""
+    
+    elif msg_lower == '3':
+        return """✅ Solicitação registrada!
+
+Descreva o que precisa que um atendente vai ajudar em breve."""
+    
+    # Primeira mensagem ou não reconheceu - mostra menu
+    return f"""Olá! Sou a EVA, assistente da Easy Hotéis! 😊
+
+Como posso ajudar?
+
+1️⃣ Fechar disponibilidade
+2️⃣ Atualizar tarifas
+3️⃣ Outros assuntos
+
+Digite o número da opção."""
+
+@app.get("/")
+async def root(): return {"ok": True}
+
+@app.get("/painel")
+async def painel(): return FileResponse("painel.html")
+
+@app.post("/api/login")
+async def login(req: Request):
+    d = await req.json()
+    email = d.get("email", "").lower().strip()
+    senha = d.get("senha", "")
+    if not email or not senha: return JSONResponse({"sucesso": False, "erro": "Campos vazios"}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM usuarios WHERE email = %s AND ativo = 1", (email,))
+    u = c.fetchone()
+    if not u or u['senha_hash'] != hash_pass(senha): 
+        c.close()
+        conn.close()
+        return JSONResponse({"sucesso": False, "erro": "Email ou senha incorretos"}, 401)
+    tok = token()
+    c.execute("INSERT INTO sessoes (token, usuario_id) VALUES (%s, %s)", (tok, u['id']))
+    c.execute("UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = %s", (u['id'],))
+    conn.commit()
+    c.close()
+    conn.close()
+    log_acao(u['id'], "login", "ok")
+    
+    # Cria response com cookie
+    response = JSONResponse({
+        "sucesso": True, 
+        "token": tok, 
+        "usuario": {"id": u['id'], "nome": u['nome'], "email": u['email'], "perfil": u['perfil']}
+    })
+    
+    # Seta cookie (mobile)
+    response.set_cookie(
+        key="token",
+        value=tok,
+        httponly=True,
+        samesite="lax",
+        max_age=30*24*60*60  # 30 dias
+    )
+    
+    return response
+
+@app.post("/api/logout")
+async def logout(req: Request):
+    tok = req.headers.get("Authorization", "").replace("Bearer ", "")
+    if tok:
+        conn = db()
+        c = conn.cursor()
+        c.execute("DELETE FROM sessoes WHERE token = %s", (tok,))
+        conn.commit()
+        c.close()
+        conn.close()
+    return {"sucesso": True}
+
+@app.get("/api/me")
+async def me(req: Request):
+    u = get_user(req)
+    return {"sucesso": True, "usuario": u} if u else JSONResponse({"sucesso": False}, 401)
+
+@app.get("/api/usuarios")
+async def list_users(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT id, email, nome, perfil, ativo, criado_em, ultimo_login FROM usuarios ORDER BY nome")
+    rows = c.fetchall()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "usuarios": [dict(r) for r in rows]}
+
+@app.post("/api/usuarios")
+async def criar_user(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    email = d.get("email", "").lower().strip()
+    senha = d.get("senha", "")
+    nome = d.get("nome", "")
+    perfil = d.get("perfil", "atendente")
+    whatsapp = d.get("whatsapp", "")
+    if not email or not senha or not nome: return JSONResponse({"sucesso": False, "erro": "Campos vazios"}, 400)
+    if perfil not in ["admin", "atendente", "marketing"]: return JSONResponse({"sucesso": False, "erro": "Perfil invalido"}, 400)
+    conn = db()
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO usuarios (email, senha_hash, nome, perfil, whatsapp) VALUES (%s, %s, %s, %s, %s)", (email, hash_pass(senha), nome, perfil, whatsapp))
+        conn.commit()
+        log_acao(u['id'], "criar_user", f"{email}")
+        c.close()
+        conn.close()
+        return {"sucesso": True}
+    except Exception as e:
+        c.close()
+        conn.close()
+        print(f"ERRO AO CRIAR USUARIO: {str(e)}")
+        return JSONResponse({"sucesso": False, "erro": str(e)}, 400)
+
+@app.put("/api/usuarios/{uid}")
+async def update_user(uid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    print(f"UPDATE USUARIO {uid}: payload recebido = {d}")
+    conn = db()
+    c = conn.cursor()
+    campos, valores = [], []
+    if "nome" in d: campos.append("nome = %s"); valores.append(d["nome"])
+    if "email" in d: campos.append("email = %s"); valores.append(d["email"].lower().strip())
+    if "perfil" in d and d["perfil"] in ["admin", "atendente", "marketing"]: campos.append("perfil = %s"); valores.append(d["perfil"])
+    if "ativo" in d: campos.append("ativo = %s"); valores.append(1 if d["ativo"] else 0)
+    if "senha" in d and d["senha"]: campos.append("senha_hash = %s"); valores.append(hash_pass(d["senha"]))
+    if "whatsapp" in d: 
+        campos.append("whatsapp = %s")
+        valores.append(d["whatsapp"])
+        print(f"WhatsApp a ser salvo: {d['whatsapp']}")
+    if campos:
+        valores.append(uid)
+        sql = f"UPDATE usuarios SET {', '.join(campos)} WHERE id = %s"
+        print(f"SQL: {sql}")
+        print(f"Valores: {valores}")
+        c.execute(sql, valores)
+        conn.commit()
+        print(f"UPDATE executado! Linhas afetadas: {c.rowcount}")
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.delete("/api/usuarios/{uid}")
+async def del_user(uid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    if uid == u['id']: return JSONResponse({"sucesso": False, "erro": "Nao pode deletar a si mesmo"}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("DELETE FROM usuarios WHERE id = %s", (uid,))
+    c.execute("DELETE FROM sessoes WHERE usuario_id = %s", (uid,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.get("/api/config/zapi")
+async def get_cfg_zapi(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM config_zapi")
+    rows = c.fetchall()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "configs": {r['tipo']: dict(r) for r in rows}}
+
+@app.post("/api/config/zapi")
+async def save_cfg_zapi(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    tipo = d.get("tipo")
+    if tipo not in ["atendimento", "disparos"]: return JSONResponse({"sucesso": False}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("INSERT INTO config_zapi (tipo, instance_id, token, client_token) VALUES (%s, %s, %s, %s) ON CONFLICT(tipo) DO UPDATE SET instance_id = %s, token = %s, client_token = %s",
+        (tipo, d.get("instance_id"), d.get("token"), d.get("client_token"), d.get("instance_id"), d.get("token"), d.get("client_token")))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.post("/webhook/zapi")
+async def webhook(req: Request):
+    d = await req.json()
+    if d.get("fromMe"): return {"success": True}
+    num = d.get("phone")
+    nome = d.get("senderName", "")
+    msg = d.get("text", {}).get("message") if d.get("text") else None
+    if not num or not msg: return {"success": False}
+    
+    # verifica se é resposta de atendente (numero cadastrado como whatsapp de usuario)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT id, nome FROM usuarios WHERE whatsapp = %s", (num,))
+    atend = c.fetchone()
+    
+    if atend:
+        # é atendente respondendo! processa como conclusão
+        msg_lower = msg.lower()
+        palavras_conclusao = ['concluido', 'concluído', 'feito', 'realizado', 'ok', 'pronto', 'done', '✅', 'resolvido']
         
-        // Cria som de notificação
-        function criarSomNotificacao() {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const duracao = 0.3;
+        if any(p in msg_lower for p in palavras_conclusao):
+            # busca ultima notificacao desse atendente pra saber qual hotel
+            c.execute("SELECT hotel_nome, hotel_numero, mensagem_original FROM notificacoes WHERE usuario_id = %s ORDER BY enviado_em DESC LIMIT 1", (atend['id'],))
+            notif = c.fetchone()
             
-            return function tocar() {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
+            if notif:
+                hotel_num = notif['hotel_numero']
+                hotel_nome = notif['hotel_nome']
                 
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duracao);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + duracao);
-                
-                // Segunda nota
-                setTimeout(() => {
-                    const osc2 = audioContext.createOscillator();
-                    const gain2 = audioContext.createGain();
-                    osc2.connect(gain2);
-                    gain2.connect(audioContext.destination);
-                    osc2.frequency.value = 1000;
-                    osc2.type = 'sine';
-                    gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duracao);
-                    osc2.start(audioContext.currentTime);
-                    osc2.stop(audioContext.currentTime + duracao);
-                }, 150);
-            };
-        }
-        let contatos = [], templates = [], campanhas = [];
-        let configAntiban = null;
-        let imagemUploadUrl = null;
-        let contatosCsv = [];
+                # responde pro hotel
+                msg_conclusao = f"""✅ *Concluído!*
 
-        document.addEventListener("DOMContentLoaded", () => {
-            if (token) verificarToken();
-        });
+Sua solicitação foi processada com sucesso por nossa equipe.
 
-        async function verificarToken() {
-            try {
-                const res = await fetch(`${API}/me`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const data = await res.json();
-                if (data.sucesso) {
-                    usuarioLogado = data.usuario;
-                    iniciarApp();
-                } else {
-                    localStorage.removeItem("eva-token");
-                    token = null;
-                }
-            } catch (e) { localStorage.removeItem("eva-token"); }
-        }
-
-        async function fazerLogin() {
-            const email = document.getElementById("login-email").value;
-            const senha = document.getElementById("login-senha").value;
-            const erroEl = document.getElementById("erro-login");
+Qualquer dúvida, estamos à disposição! 😊"""
+                enviar(hotel_num, msg_conclusao, "atendimento")
+                
+                # fecha a conversa
+                c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (hotel_num,))
+                conv = c.fetchone()
+                if conv:
+                    c.execute("UPDATE conversas SET status = 'fechado', fechado_em = CURRENT_TIMESTAMP, fechado_por_id = %s, fechado_por_nome = %s WHERE id = %s",
+                        (atend['id'], atend['nome'], conv['id']))
+                    c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, 'eva', %s)", (conv['id'], msg_conclusao))
+                    conn.commit()
+                
+                # responde pro atendente confirmando
+                enviar(num, f"✅ Confirmado! Avisei o {hotel_nome} que foi concluído e fechei o atendimento.", "atendimento")
             
-            if (!email || !senha) {
-                erroEl.style.display = 'block';
-                erroEl.textContent = 'Preencha email e senha';
-                return;
-            }
+            c.close()
+            conn.close()
+            return {"success": True, "tipo": "conclusao_atendente"}
+    
+    # verifica se conversa foi fechada (cliente agradecendo depois)
+    c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'fechado' ORDER BY fechado_em DESC LIMIT 1", (num,))
+    conv_fechada = c.fetchone()
+    
+    if conv_fechada:
+        msg_lower = msg.lower()
+        palavras_agradecimento = ['obrigado', 'obrigada', 'valeu', 'thanks', 'vlw', 'brigadão', '👍', '🙏']
+        
+        if any(p in msg_lower for p in palavras_agradecimento):
+            # É agradecimento - responde e fecha de novo
+            c.execute("UPDATE conversas SET status = 'aberto' WHERE id = %s", (conv_fechada['id'],))
+            c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, 'cliente', %s)", (conv_fechada['id'], msg))
+            conn.commit()
             
-            try {
-                const res = await fetch(`${API}/login`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ email, senha })
-                });
-                const data = await res.json();
+            resp = "De nada! Estamos sempre à disposição. 😊"
+            c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, 'eva', %s)", (conv_fechada['id'], resp))
+            c.execute("UPDATE conversas SET status = 'fechado', fechado_em = CURRENT_TIMESTAMP WHERE id = %s", (conv_fechada['id'],))
+            conn.commit()
+            c.close()
+            conn.close()
+            enviar(num, resp, "atendimento")
+            return {"success": True, "tipo": "agradecimento_pos_fechamento"}
+        else:
+            # Não é agradecimento - abre conversa nova (não reabre a antiga)
+            # Deixa cair no código normal abaixo que vai criar conversa nova
+            pass
+    
+    if not robo_on():
+        c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (num,))
+        r = c.fetchone()
+        cid = r['id'] if r else None
+        if not cid:
+            c.execute("INSERT INTO conversas (numero_cliente, nome_cliente) VALUES (%s, %s) RETURNING id", (num, nome))
+            cid = c.fetchone()['id']
+        c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "cliente", msg))
+        conn.commit()
+        c.close()
+        conn.close()
+        return {"success": True, "robo": "pausado"}
+    
+    c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (num,))
+    r = c.fetchone()
+    cid = r['id'] if r else None
+    sessao_nova = False
+    if not cid:
+        c.execute("INSERT INTO conversas (numero_cliente, nome_cliente) VALUES (%s, %s) RETURNING id", (num, nome))
+        cid = c.fetchone()['id']
+        sessao_nova = True
+    
+    c.execute("SELECT conhecimento_ia, nome, responsaveis FROM contatos WHERE numero = %s", (num,))
+    cont = c.fetchone()
+    conhec = cont['conhecimento_ia'] if cont and cont['conhecimento_ia'] else ""
+    hotel = cont['nome'] if cont else nome
+    responsaveis_json = cont['responsaveis'] if cont else None
+    
+    # Detecta motivo (primeiro por número, depois por palavra-chave)
+    motivo = None
+    msg_lower = msg.lower().strip()
+    
+    if msg_lower == '1':
+        motivo = 'Fecho de Disponibilidade'
+    elif msg_lower == '2':
+        motivo = 'Atualização de Tarifas'
+    elif msg_lower == '3':
+        motivo = 'Outros Assuntos'
+    elif 'fech' in msg_lower or 'disponibilidade' in msg_lower:
+        motivo = 'Fecho de Disponibilidade'
+    elif 'tarif' in msg_lower or 'preço' in msg_lower or 'valor' in msg_lower:
+        motivo = 'Atualização de Tarifas'
+    elif 'bloqu' in msg_lower:
+        motivo = 'Bloqueio de Quartos'
+    
+    c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "cliente", msg))
+    
+    if motivo:
+        c.execute("UPDATE conversas SET motivo = %s WHERE id = %s", (motivo, cid))
+    
+    conn.commit()
+    
+    # Conta mensagens ANTES de responder pra decidir se responde
+    c.execute("SELECT criado_em FROM conversas WHERE id = %s", (cid,))
+    conv_criado = c.fetchone()['criado_em']
+    
+    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' AND criado_em >= %s", (cid, conv_criado))
+    num_msgs = c.fetchone()['count']
+    
+    # SÓ RESPONDE SE ESTÁ EM CONTATOS E É 1ª, 2ª OU 3ª MENSAGEM
+    if cont and num_msgs <= 3:
+        resp = ia(msg, conhec, hotel, num_msgs)
+        c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
+        conn.commit()
+        enviar(num, resp, "atendimento")
+    
+    # Conta mensagens do cliente desde que a conversa foi CRIADA/REABERTA (atualiza contagem)
+    c.execute("SELECT criado_em FROM conversas WHERE id = %s", (cid,))
+    conv_criado = c.fetchone()['criado_em']
+    
+    # Conta mensagens do cliente DESDE a criação desta sessão
+    c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' AND criado_em >= %s", (cid, conv_criado))
+    num_msgs = c.fetchone()['count']
+    print(f"DEBUG: Número de mensagens do cliente (sessão atual): {num_msgs}")
+    print(f"DEBUG: Sessão criada em: {conv_criado}")
+    
+    # SÓ ENVIA NOTIFICAÇÃO NA TERCEIRA MENSAGEM DA SESSÃO ATUAL
+    if num_msgs == 3:
+        print("DEBUG: Terceira mensagem! Enviando notificação...")
+        # Pega TODAS as mensagens do cliente
+        c.execute("SELECT conteudo FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' ORDER BY id", (cid,))
+        todas_msgs = c.fetchall()
+        
+        # Formata mensagens (substitui número por texto)
+        msgs_formatadas = []
+        for m in todas_msgs:
+            conteudo = m['conteudo'].strip()
+            if conteudo == '1':
+                msgs_formatadas.append('"1 - Fecho de Disponibilidade"')
+            elif conteudo == '2':
+                msgs_formatadas.append('"2 - Atualização de Tarifas"')
+            elif conteudo == '3':
+                msgs_formatadas.append('"3 - Outros Assuntos"')
+            else:
+                msgs_formatadas.append(f'"{conteudo}"')
+        
+        msgs_texto = '\n'.join(msgs_formatadas)
+        
+        # Pega motivo atualizado
+        c.execute("SELECT motivo FROM conversas WHERE id = %s", (cid,))
+        conv = c.fetchone()
+        motivo_atual = conv['motivo'] if conv and conv['motivo'] else 'N/A'
+        
+        # Verifica config de notificação em grupo
+        c.execute("SELECT * FROM config_notificacao WHERE id = 1")
+        config_notif = c.fetchone()
+        print(f"DEBUG: Config notificação: ativo={config_notif['ativo'] if config_notif else 'None'}, grupo_id={config_notif['grupo_id'] if config_notif else 'None'}")
+        
+        # Envia notificação no grupo (se configurado)
+        if config_notif and config_notif['ativo'] and config_notif['grupo_id']:
+            print(f"ENVIANDO NOTIFICAÇÃO NO GRUPO: {config_notif['grupo_nome']}")
+            msg_grupo = f"""🔔 *NOVO PEDIDO*
+
+🏨 *Hotel:* {hotel}
+📱 *Número:* {num}
+⏰ *Horário:* {now_br().strftime('%H:%M')}
+
+📝 *Mensagem:*
+{msgs_texto}
+
+🎯 *Motivo:* {motivo_atual}
+
+👉 *Acesse:* https://eva-easyhoteis-83036260b078.herokuapp.com/painel"""
+            
+            try:
+                enviar(config_notif['grupo_id'], msg_grupo, "atendimento")
+                print(f"✅ Notificação enviada no grupo")
+            except Exception as e:
+                print(f"ERRO ENVIAR GRUPO: {str(e)}")
+        
+        # Envia notificação individual (se configurado)
+        if responsaveis_json and (not config_notif or config_notif.get('enviar_individual', 1)):
+            print(f"NOTIFICANDO RESPONSÁVEIS: {responsaveis_json}")
+            try:
+                resp_ids = json.loads(responsaveis_json)
+                print(f"IDs responsáveis: {resp_ids}")
+                if resp_ids:
+                    c.execute("SELECT id, nome, whatsapp FROM usuarios WHERE id = ANY(%s) AND whatsapp IS NOT NULL", (resp_ids,))
+                    usuarios = c.fetchall()
+                    print(f"Usuários encontrados: {len(usuarios)}")
+                    for u in usuarios:
+                        print(f"Enviando notificação para {u['nome']} ({u['whatsapp']})")
+                        msg_notif = f"""🔔 *NOVO PEDIDO - {hotel}*
+
+Cliente: {hotel}
+Número: {num}
+
+Mensagem:
+{msgs_texto}
+
+Responda aqui quando concluir!"""
+                        enviar(u['whatsapp'], msg_notif, "atendimento")
+                        c.execute("INSERT INTO notificacoes (hotel_nome, hotel_numero, usuario_id, usuario_nome, mensagem_original) VALUES (%s, %s, %s, %s, %s)",
+                            (hotel, num, u['id'], u['nome'], msg))
+                        conn.commit()
+            except Exception as e:
+                print(f"ERRO NOTIFICAÇÃO: {str(e)}")
+        else:
+            print("SEM RESPONSÁVEIS PARA NOTIFICAR")
+    
+    c.close()
+    conn.close()
+    return {"success": True}
+
+@app.get("/api/conversas/abertas")
+async def conv_abertas(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT c.*, (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens, (SELECT conteudo FROM mensagens WHERE conversa_id = c.id ORDER BY criado_em DESC LIMIT 1) as ultima_mensagem FROM conversas c WHERE status = 'aberto' ORDER BY criado_em DESC")
+    rows = c.fetchall()
+    
+    convs = []
+    for r in rows:
+        conv = dict(r)
+        conv['minha_responsabilidade'] = False
+        c.execute("SELECT responsaveis FROM contatos WHERE numero = %s", (r['numero_cliente'],))
+        cont = c.fetchone()
+        if cont and cont['responsaveis']:
+            try:
+                resp_ids = json.loads(cont['responsaveis'])
+                if u['id'] in resp_ids:
+                    conv['minha_responsabilidade'] = True
+            except: pass
+        convs.append(conv)
+    
+    c.close()
+    conn.close()
+    return {"sucesso": True, "conversas": convs, "total": len(convs)}
+
+@app.get("/api/conversas/fechadas")
+async def conv_fechadas(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT c.*, (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens FROM conversas c WHERE status = 'fechado' ORDER BY fechado_em DESC")
+    rows = c.fetchall()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "conversas": [dict(r) for r in rows], "total": len(rows)}
+
+@app.get("/api/conversas/{cid}/mensagens")
+async def msgs(cid: int, req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM mensagens WHERE conversa_id = %s ORDER BY criado_em", (cid,))
+    rows = c.fetchall()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "mensagens": [dict(r) for r in rows]}
+
+@app.post("/api/conversas/{cid}/fechar")
+async def fechar(cid: int, req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    d = await req.json()
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT numero_cliente FROM conversas WHERE id = %s", (cid,))
+    r = c.fetchone()
+    num = r['numero_cliente'] if r else None
+    c.execute("UPDATE conversas SET status = 'fechado', fechado_em = CURRENT_TIMESTAMP, fechado_por_id = %s, fechado_por_nome = %s, observacoes = %s WHERE id = %s",
+        (u['id'], u['nome'], d.get("observacoes", ""), cid))
+    conn.commit()
+    
+    # Só envia mensagem de fechamento se está em contatos
+    if num:
+        c.execute("SELECT id FROM contatos WHERE numero = %s", (num,))
+        if c.fetchone():
+            enviar(num, f"*{u['nome']}:*\nObrigado! Atendimento encerrado. 😊", "atendimento")
+    
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.post("/api/conversas/{cid}/responder")
+async def responder(cid: int, req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    d = await req.json()
+    msg = d.get("mensagem", "")
+    if not msg: return JSONResponse({"sucesso": False}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT numero_cliente FROM conversas WHERE id = %s", (cid,))
+    r = c.fetchone()
+    if not r:
+        c.close()
+        conn.close()
+        return JSONResponse({"sucesso": False}, 404)
+    num = r['numero_cliente']
+    msg_final = f"*{u['nome']}:*\n{msg}"
+    c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo, usuario_nome) VALUES (%s, %s, %s, %s)", (cid, "atendente", msg_final, u['nome']))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "envio": enviar(num, msg_final, "atendimento")}
+
+@app.get("/api/contatos")
+async def list_contatos(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM contatos ORDER BY nome")
+    rows = c.fetchall()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "contatos": [dict(r) for r in rows], "total": len(rows)}
+
+@app.post("/api/contatos")
+async def criar_contato(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] not in ['admin', 'marketing']: return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    if not d.get("nome") or not d.get("numero"): return JSONResponse({"sucesso": False}, 400)
+    conn = db()
+    c = conn.cursor()
+    try:
+        resp_ids = d.get("responsaveis", [])
+        resp_json = json.dumps(resp_ids) if resp_ids else None
+        c.execute("INSERT INTO contatos (nome, numero, email, tags, observacoes, conhecimento_ia, responsaveis) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (d["nome"], d["numero"], d.get("email", ""), d.get("tags", ""), d.get("observacoes", ""), d.get("conhecimento_ia", ""), resp_json))
+        conn.commit()
+        c.close()
+        conn.close()
+        return {"sucesso": True}
+    except Exception as e:
+        c.close()
+        conn.close()
+        erro_msg = str(e)
+        if "duplicate key" in erro_msg or "unique constraint" in erro_msg:
+            return JSONResponse({"sucesso": False, "erro": "Numero ja cadastrado"}, 400)
+        else:
+            print(f"ERRO CRIAR CONTATO: {erro_msg}")
+            return JSONResponse({"sucesso": False, "erro": f"Erro ao salvar: {erro_msg}"}, 400)
+
+@app.put("/api/contatos/{cid}")
+async def editar_contato(cid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] not in ['admin', 'marketing']: return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    if not d.get("nome") or not d.get("numero"): return JSONResponse({"sucesso": False}, 400)
+    conn = db()
+    c = conn.cursor()
+    try:
+        resp_ids = d.get("responsaveis", [])
+        resp_json = json.dumps(resp_ids) if resp_ids else None
+        c.execute("UPDATE contatos SET nome = %s, numero = %s, email = %s, tags = %s, conhecimento_ia = %s, responsaveis = %s WHERE id = %s",
+            (d["nome"], d["numero"], d.get("email", ""), d.get("tags", ""), d.get("conhecimento_ia", ""), resp_json, cid))
+        conn.commit()
+        c.close()
+        conn.close()
+        return {"sucesso": True}
+    except Exception as e:
+        c.close()
+        conn.close()
+        print(f"ERRO EDITAR CONTATO: {str(e)}")
+        return JSONResponse({"sucesso": False, "erro": str(e)}, 400)
+
+@app.delete("/api/contatos/{cid}")
+async def del_contato(cid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] not in ['admin', 'marketing']: return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("DELETE FROM contatos WHERE id = %s", (cid,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.post("/api/contatos/importar")
+async def importar(file: UploadFile = File(...)):
+    content = await file.read()
+    text = content.decode('utf-8')
+    reader = csv.DictReader(io.StringIO(text))
+    conn = db()
+    c = conn.cursor()
+    imp, err = 0, 0
+    for row in reader:
+        nome = row.get('nome') or row.get('Nome') or row.get('NOME')
+        numero = row.get('numero') or row.get('Numero') or row.get('NUMERO') or row.get('telefone')
+        email = row.get('email') or row.get('Email') or ""
+        if nome and numero:
+            try:
+                c.execute("INSERT INTO contatos (nome, numero, email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING", (nome, numero, email))
+                if c.rowcount > 0: imp += 1
+                else: err += 1
+            except: err += 1
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "importados": imp, "erros": err}
+
+@app.post("/api/contatos/preview-csv")
+async def preview(file: UploadFile = File(...)):
+    content = await file.read()
+    text = content.decode('utf-8')
+    reader = csv.DictReader(io.StringIO(text))
+    conts = []
+    for row in reader:
+        nome = row.get('nome') or row.get('Nome') or row.get('NOME')
+        numero = row.get('numero') or row.get('Numero') or row.get('NUMERO') or row.get('telefone')
+        if nome and numero: conts.append({"nome": nome, "numero": numero})
+    return {"sucesso": True, "contatos": conts, "total": len(conts)}
+
+@app.post("/api/upload/imagem")
+async def upload(file: UploadFile = File(...)):
+    ext = file.filename.split(".")[-1].lower()
+    if ext not in ["jpg", "jpeg", "png", "webp"]: return JSONResponse({"sucesso": False}, 400)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    nome = f"camp_{ts}.{ext}"
+    path = os.path.join(UPLOAD, nome)
+    content = await file.read()
+    with open(path, "wb") as f: f.write(content)
+    return {"sucesso": True, "url": f"/uploads/{nome}"}
+
+@app.get("/api/templates")
+async def list_temps(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM templates ORDER BY nome")
+    rows = c.fetchall()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "templates": [dict(r) for r in rows]}
+
+@app.post("/api/templates")
+async def criar_temp(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] not in ['admin', 'marketing']: return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    if not d.get("nome") or not d.get("conteudo"): return JSONResponse({"sucesso": False}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("INSERT INTO templates (nome, conteudo, categoria) VALUES (%s, %s, %s)", (d["nome"], d["conteudo"], d.get("categoria", "geral")))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.delete("/api/templates/{tid}")
+async def del_temp(tid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] not in ['admin', 'marketing']: return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("DELETE FROM templates WHERE id = %s", (tid,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.get("/api/campanhas")
+async def list_camps(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM campanhas ORDER BY criado_em DESC")
+    rows = c.fetchall()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "campanhas": [dict(r) for r in rows]}
+
+@app.post("/api/campanhas")
+async def criar_camp(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] not in ['admin', 'marketing']: return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    nome = d.get("nome")
+    msg = d.get("mensagem")
+    cids = d.get("contato_ids", [])
+    csvs = d.get("contatos_csv", [])
+    img = d.get("imagem_url")
+    if not nome or not msg: return JSONResponse({"sucesso": False}, 400)
+    total = len(cids) + len(csvs)
+    if total == 0: return JSONResponse({"sucesso": False, "erro": "Selecione contatos"}, 400)
+    cfg = cfg_antiban()
+    hj = envios_hj()
+    if cfg and cfg['ativo']:
+        disp = cfg['limite_diario'] - hj
+        if total > disp: return JSONResponse({"sucesso": False, "erro": f"Limite {disp}"}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("INSERT INTO campanhas (nome, template_id, mensagem, imagem_url, total_contatos, status, criado_por_id, criado_por_nome) VALUES (%s, %s, %s, %s, %s, 'pendente', %s, %s) RETURNING id",
+        (nome, d.get("template_id"), msg, img, total, u['id'], u['nome']))
+    cid = c.fetchone()['id']
+    for cid_cont in cids:
+        c.execute("SELECT nome, numero FROM contatos WHERE id = %s", (cid_cont,))
+        r = c.fetchone()
+        if r: c.execute("INSERT INTO envios (campanha_id, contato_id, numero, nome, status) VALUES (%s, %s, %s, %s, 'pendente')", (cid, cid_cont, r['numero'], r['nome']))
+    for cont in csvs:
+        c.execute("INSERT INTO envios (campanha_id, contato_id, numero, nome, status) VALUES (%s, NULL, %s, %s, 'pendente')", (cid, cont['numero'], cont['nome']))
+    conn.commit()
+    c.close()
+    conn.close()
+    asyncio.create_task(processar(cid))
+    return {"sucesso": True, "campanha_id": cid}
+
+async def processar(cid):
+    conn = db()
+    c = conn.cursor()
+    c.execute("UPDATE campanhas SET status = 'enviando', iniciado_em = CURRENT_TIMESTAMP WHERE id = %s", (cid,))
+    conn.commit()
+    c.execute("SELECT mensagem, imagem_url FROM campanhas WHERE id = %s", (cid,))
+    camp = c.fetchone()
+    if not camp: 
+        c.close()
+        conn.close()
+        return
+    msg_base, img = camp['mensagem'], camp['imagem_url']
+    cfg = cfg_antiban()
+    img_url = None
+    if img:
+        base = os.getenv("RAILWAY_PUBLIC_DOMAIN", "web-production-69fb05.up.railway.app")
+        img_url = f"https://{base}{img}" if base else None
+    c.execute("SELECT id, numero, nome FROM envios WHERE campanha_id = %s AND status = 'pendente'", (cid,))
+    envs = c.fetchall()
+    env, falh = 0, 0
+    for idx, e in enumerate(envs):
+        eid, num, nm = e['id'], e['numero'], e['nome']
+        ok, _ = pode_enviar()
+        if not ok:
+            c.execute("UPDATE envios SET status = 'pausado' WHERE id = %s", (eid,))
+            conn.commit()
+            continue
+        if cfg and idx > 0 and idx % cfg['pausa_a_cada'] == 0: await asyncio.sleep(cfg['pausa_segundos'])
+        msg_final = msg_base.replace("{nome}", nm or "").replace("{numero}", num or "")
+        if img_url: result = enviar_img(num, img_url, msg_final, "disparos")
+        else: result = enviar(num, msg_final, "disparos")
+        if result.get("ok"):
+            c.execute("UPDATE envios SET status = 'enviado', enviado_em = CURRENT_TIMESTAMP WHERE id = %s", (eid,))
+            env += 1
+            add_envio()
+        else:
+            c.execute("UPDATE envios SET status = 'falhou' WHERE id = %s", (eid,))
+            falh += 1
+        c.execute("UPDATE campanhas SET enviadas = %s, falhadas = %s WHERE id = %s", (env, falh, cid))
+        conn.commit()
+        delay = random.uniform(cfg['delay_min'], cfg['delay_max']) if cfg else 4
+        await asyncio.sleep(delay)
+    c.execute("UPDATE campanhas SET status = 'finalizada', finalizado_em = CURRENT_TIMESTAMP WHERE id = %s", (cid,))
+    conn.commit()
+    c.close()
+    conn.close()
+
+@app.get("/api/antiban/config")
+async def get_antiban(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    cfg = cfg_antiban()
+    hj = envios_hj()
+    return {"sucesso": True, "config": cfg, "envios_hoje": hj, "disponivel_hoje": (cfg['limite_diario'] - hj) if cfg else 0}
+
+@app.post("/api/antiban/config")
+async def save_antiban(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    conn = db()
+    c = conn.cursor()
+    c.execute("UPDATE config_antiban SET limite_diario=%s, limite_por_hora=%s, delay_min=%s, delay_max=%s, pausa_a_cada=%s, pausa_segundos=%s, horario_inicio=%s, horario_fim=%s, ativo=%s WHERE id=1",
+        (d.get("limite_diario",100), d.get("limite_por_hora",30), d.get("delay_min",3), d.get("delay_max",7), d.get("pausa_a_cada",30), d.get("pausa_segundos",60),
+         d.get("horario_inicio","08:00"), d.get("horario_fim","20:00"), 1 if d.get("ativo",True) else 0))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
+
+@app.get("/api/relatorios")
+async def relat(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) as count FROM conversas")
+    total_conv = c.fetchone()['count']
+    c.execute("SELECT COUNT(*) as count FROM conversas WHERE status='aberto'")
+    abertos = c.fetchone()['count']
+    c.execute("SELECT COUNT(*) as count FROM conversas WHERE status='fechado'")
+    fechados = c.fetchone()['count']
+    c.execute("SELECT COUNT(*) as count FROM contatos")
+    conts = c.fetchone()['count']
+    c.execute("SELECT COUNT(*) as count FROM campanhas")
+    camps = c.fetchone()['count']
+    c.execute("SELECT SUM(enviadas) as total FROM campanhas")
+    env = c.fetchone()['total'] or 0
+    c.execute("SELECT AVG(EXTRACT(EPOCH FROM (fechado_em - criado_em))/60) as tempo FROM conversas WHERE status='fechado'")
+    tempo = c.fetchone()['tempo']
+    tempo_med = int(tempo) if tempo else 0
+    c.execute("SELECT fechado_por_nome, COUNT(*) as total FROM conversas WHERE status='fechado' AND fechado_por_nome IS NOT NULL GROUP BY fechado_por_nome ORDER BY total DESC LIMIT 5")
+    top = [dict(r) for r in c.fetchall()]
+    
+    # Novos relatórios
+    c.execute("SELECT nome_cliente, COUNT(*) as total FROM conversas WHERE nome_cliente IS NOT NULL GROUP BY nome_cliente ORDER BY total DESC LIMIT 10")
+    top_hoteis = [dict(r) for r in c.fetchall()]
+    
+    c.execute("SELECT motivo, COUNT(*) as total FROM conversas WHERE motivo IS NOT NULL GROUP BY motivo ORDER BY total DESC")
+    por_motivo = [dict(r) for r in c.fetchall()]
+    
+    c.close()
+    conn.close()
+    return {"sucesso": True, "relatorios": {"totalConversas": total_conv, "abertos": abertos, "fechados": fechados, "tempoMedioMinutos": tempo_med,
+        "totalContatos": conts, "totalCampanhas": camps, "totalEnviadas": env, "enviadosHoje": envios_hj(), "topAtendentes": top,
+        "topHoteis": top_hoteis, "porMotivo": por_motivo}}
+
+@app.get("/api/relatorios/export")
+async def export_excel(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    
+    import io
+    from datetime import datetime
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    
+    conn = db()
+    c = conn.cursor()
+    
+    c.execute("""
+        SELECT c.id, c.nome_cliente, c.numero_cliente, c.motivo, c.status, 
+               c.fechado_por_nome, c.criado_em, c.fechado_em,
+               EXTRACT(EPOCH FROM (c.fechado_em - c.criado_em))/60 as tempo_min
+        FROM conversas c
+        ORDER BY c.criado_em DESC
+    """)
+    conversas = c.fetchall()
+    
+    c.close()
+    conn.close()
+    
+    # Cria workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Relatório EVA"
+    
+    # Cores EVA (roxo/azul)
+    cor_header = "6C63FF"  # Roxo EVA
+    cor_header_text = "FFFFFF"  # Branco
+    cor_linha_par = "F5F5FF"  # Azul clarinho
+    
+    # Headers
+    headers = ["ID", "Hotel", "Número", "Motivo", "Status", "Atendente", "Abertura", "Fechamento", "Tempo (min)"]
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(1, col, header)
+        cell.font = Font(bold=True, color=cor_header_text, size=12)
+        cell.fill = PatternFill(start_color=cor_header, end_color=cor_header, fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+    
+    # Dados
+    for idx, conv in enumerate(conversas, 2):
+        tempo = int(conv['tempo_min']) if conv['tempo_min'] else 0
+        abertura = conv['criado_em'].strftime('%d/%m/%Y %H:%M') if conv['criado_em'] else ''
+        fechamento = conv['fechado_em'].strftime('%d/%m/%Y %H:%M') if conv['fechado_em'] else ''
+        
+        row_data = [
+            conv['id'],
+            conv['nome_cliente'] or conv['numero_cliente'],
+            conv['numero_cliente'],
+            conv['motivo'] or 'N/A',
+            conv['status'],
+            conv['fechado_por_nome'] or 'N/A',
+            abertura,
+            fechamento,
+            tempo
+        ]
+        
+        for col, value in enumerate(row_data, 1):
+            cell = ws.cell(idx, col, value)
+            cell.alignment = Alignment(horizontal="center" if col in [1, 5, 9] else "left", vertical="center")
+            cell.border = Border(
+                left=Side(style='thin', color='CCCCCC'),
+                right=Side(style='thin', color='CCCCCC'),
+                top=Side(style='thin', color='CCCCCC'),
+                bottom=Side(style='thin', color='CCCCCC')
+            )
+            # Linhas alternadas
+            if idx % 2 == 0:
+                cell.fill = PatternFill(start_color=cor_linha_par, end_color=cor_linha_par, fill_type="solid")
+    
+    # Ajusta largura das colunas
+    ws.column_dimensions['A'].width = 8   # ID
+    ws.column_dimensions['B'].width = 25  # Hotel
+    ws.column_dimensions['C'].width = 18  # Número
+    ws.column_dimensions['D'].width = 25  # Motivo
+    ws.column_dimensions['E'].width = 12  # Status
+    ws.column_dimensions['F'].width = 20  # Atendente
+    ws.column_dimensions['G'].width = 18  # Abertura
+    ws.column_dimensions['H'].width = 18  # Fechamento
+    ws.column_dimensions['I'].width = 14  # Tempo
+    
+    # Congela primeira linha
+    ws.freeze_panes = "A2"
+    
+    # Salva em memória
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    import base64
+    excel_data = base64.b64encode(output.read()).decode()
+    
+    return JSONResponse({
+        "sucesso": True,
+        "filename": f"relatorio_eva_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+        "data": excel_data
+    })
+
+@app.get("/api/zapi/status")
+async def zapi_st(req: Request):
+    return {"atendimento": status_zapi("atendimento"), "disparos": status_zapi("disparos")}
+
+@app.get("/api/zapi/grupos")
+async def listar_grupos(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    
+    # Tenta endpoint list-chats
+    url = f"https://api.z-api.io/instances/{ZAPI_INST_AT}/token/{ZAPI_TOK_AT}/list-chats"
+    
+    try:
+        print(f"Buscando grupos na Z-API: {url}")
+        res = requests.get(url, timeout=15)
+        print(f"Status Z-API: {res.status_code}")
+        
+        if res.status_code != 200:
+            # Se list-chats não funcionar, tenta contacts
+            url2 = f"https://api.z-api.io/instances/{ZAPI_INST_AT}/token/{ZAPI_TOK_AT}/contacts"
+            print(f"Tentando endpoint alternativo: {url2}")
+            res = requests.get(url2, timeout=15)
+            print(f"Status Z-API (contacts): {res.status_code}")
+            
+            if res.status_code != 200:
+                return JSONResponse({"sucesso": False, "erro": f"Z-API retornou status {res.status_code}. Verifique se a instância está conectada."}, 500)
+        
+        data = res.json()
+        print(f"Resposta Z-API: {type(data)}")
+        
+        grupos = []
+        
+        # Processa resposta
+        if isinstance(data, dict):
+            chats = data.get('chats', []) or data.get('contacts', [])
+        else:
+            chats = data
+        
+        print(f"Total de chats: {len(chats)}")
+        
+        for chat in chats:
+            try:
+                # ID do chat
+                chat_id = chat.get('id', '')
                 
-                if (data.sucesso) {
-                    token = data.token;
-                    usuarioLogado = data.usuario;
-                    localStorage.setItem("eva-token", token);
-                    erroEl.style.display = 'none';
-                    iniciarApp();
-                } else {
-                    erroEl.style.display = 'block';
-                    erroEl.textContent = data.erro || 'Erro ao fazer login';
-                }
-            } catch (e) {
-                erroEl.style.display = 'block';
-                erroEl.textContent = 'Erro de conexão';
-            }
-        }
-
-        async function fazerLogout() {
-            try {
-                await fetch(`${API}/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-            } catch (e) {}
-            localStorage.removeItem("eva-token");
-            location.reload();
-        }
-
-        function iniciarApp() {
-            document.getElementById("login-screen").style.display = "none";
-            document.getElementById("app-content").style.display = "flex";
-            document.getElementById("usuario-nome").textContent = usuarioLogado.nome;
-            document.getElementById("usuario-perfil").textContent = usuarioLogado.perfil;
-            document.getElementById("avatar").textContent = usuarioLogado.nome[0].toUpperCase();
-            
-            ajustarMenuPorPerfil();
-            carregarTudo();
-            verificarStatusZapi();
-            atualizarLimiteInfo();
-            carregarStatusRobo();
-            
-            setInterval(carregarConversas, 5000);
-            setInterval(verificarStatusZapi, 30000);
-            setInterval(atualizarLimiteInfo, 10000);
-            setInterval(() => { if (paginaAtual === 'campanhas') carregarCampanhas(); }, 3000);
-        }
-
-        async function carregarStatusRobo() {
-            try {
-                const res = await api(`${API}/sistema/robo`);
-                const data = await res.json();
-                if (data.sucesso) {
-                    const ativo = data.ativo;
-                    document.getElementById('robo-toggle').checked = ativo;
-                    document.getElementById('robo-status-text').textContent = ativo ? 'Robô: ATIVO' : 'Robô: PAUSADO';
-                    document.getElementById('robo-toggle-container').style.background = ativo ? 'var(--color-background-success)' : 'var(--color-background-warning)';
-                    document.getElementById('robo-toggle-container').style.color = ativo ? 'var(--color-text-success)' : 'var(--color-text-warning)';
-                }
-            } catch (e) {}
-        }
-
-        async function toggleRobo() {
-            const checkbox = document.getElementById('robo-toggle');
-            const ativo = checkbox.checked;
-            
-            if (!confirm(ativo ? '✅ Ativar robô?\n\nEVA voltará a responder automaticamente.' : '⏸️ Pausar robô?\n\nEVA NÃO responderá automaticamente.\nSó atendentes humanos.')) {
-                checkbox.checked = !ativo;
-                return;
-            }
-            
-            try {
-                const res = await api(`${API}/sistema/robo`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ ativo })
-                });
-                const data = await res.json();
-                if (data.sucesso) {
-                    carregarStatusRobo();
-                    alert(ativo ? '✅ Robô ATIVADO!\nEVA responde automaticamente.' : '⏸️ Robô PAUSADO!\nSó atendentes humanos respondem.');
-                } else {
-                    checkbox.checked = !ativo;
-                    alert('Erro: ' + (data.erro || 'desconhecido'));
-                }
-            } catch (e) {
-                checkbox.checked = !ativo;
-                alert('Erro ao alterar status do robô');
-            }
-        }
-
-        function ajustarMenuPorPerfil() {
-            const perfil = usuarioLogado.perfil;
-            
-            // Esconde tudo primeiro
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.add('hidden'));
-            
-            // Esconde/mostra toggle robô (só admin)
-            if (perfil !== 'admin') {
-                document.getElementById('robo-toggle-container').style.display = 'none';
-            }
-            
-            if (perfil === 'admin') {
-                // Admin vê tudo
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('hidden'));
-                mudarPagina('conversas');
-                
-                // Solicita permissão de notificação
-                if (Notification.permission === 'default') {
-                    Notification.requestPermission();
-                }
-            } else if (perfil === 'atendente') {
-                // conversas + notificacoes
-                document.getElementById('nav-conversas').classList.remove('hidden');
-                document.getElementById('nav-notificacoes').classList.remove('hidden');
-                mudarPagina('conversas');
-                
-                // Solicita permissão de notificação
-                if (Notification.permission === 'default') {
-                    Notification.requestPermission();
-                }
-            } else if (perfil === 'marketing') {
-                // Marketing: contatos, templates, campanhas, anti-ban (SEM notificacoes)
-                document.getElementById('nav-contatos').classList.remove('hidden');
-                document.getElementById('nav-templates').classList.remove('hidden');
-                document.getElementById('nav-campanhas').classList.remove('hidden');
-                document.getElementById('nav-antiban').classList.remove('hidden');
-                mudarPagina('campanhas');
-            }
-        }
-
-        function mudarPagina(pagina) {
-            paginaAtual = pagina;
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('ativo'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('ativo'));
-            document.getElementById(`page-${pagina}`).classList.add('ativo');
-            document.getElementById(`nav-${pagina}`).classList.add('ativo');
-            document.getElementById('pagina-titulo').textContent = {
-                conversas: 'Conversas', notificacoes: 'Notificações', contatos: 'Contatos', templates: 'Templates',
-                campanhas: 'Disparos', antiban: 'Anti-Ban', usuarios: 'Usuários',
-                config: 'Configurações', relatorios: 'Relatórios'
-            }[pagina];
-            
-            if (pagina === 'contatos') carregarContatos();
-            if (pagina === 'notificacoes') carregarNotificacoes();
-            if (pagina === 'templates') carregarTemplates();
-            if (pagina === 'campanhas') carregarCampanhas();
-            if (pagina === 'antiban') carregarConfigAntiban();
-            if (pagina === 'usuarios') carregarUsuarios();
-            if (pagina === 'config') { carregarConfigZapi(); carregarConfigNotificacao(); }
-            if (pagina === 'relatorios') carregarRelatorios();
-        }
-
-        function api(url, options = {}) {
-            return fetch(url, {
-                ...options,
-                credentials: 'include',
-                headers: {
-                    ...options.headers,
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-        }
-
-        function mudarTabConversa(tab) {
-            tabConversaAtual = tab;
-            document.querySelectorAll('#page-conversas .btn').forEach(b => {
-                if (b.id && b.id.startsWith('tab-')) {
-                    b.classList.remove('btn-primary');
-                    b.style.background = '#e2e8f0';
-                    b.style.color = 'var(--dark)';
-                }
-            });
-            const btn = document.getElementById(`tab-${tab}`);
-            btn.classList.add('btn-primary');
-            btn.style.background = '';
-            btn.style.color = '';
-            renderizarConversas();
-        }
-
-        async function carregarTudo() {
-            await carregarConversas();
-        }
-
-        async function verificarStatusZapi() {
-            try {
-                const res = await api(`${API}/zapi/status`);
-                const data = await res.json();
-                
-                const atendEl = document.getElementById('status-zapi-atend');
-                if (data.atendimento.conectado && data.atendimento.data?.connected) {
-                    atendEl.className = 'status-zapi online';
-                    atendEl.innerHTML = '<i class="fas fa-circle"></i> Atend: ON';
-                } else {
-                    atendEl.className = 'status-zapi offline';
-                    atendEl.innerHTML = '<i class="fas fa-circle"></i> Atend: OFF';
-                }
-                
-                const dispEl = document.getElementById('status-zapi-disp');
-                if (data.disparos.conectado && data.disparos.data?.connected) {
-                    dispEl.className = 'status-zapi online';
-                    dispEl.innerHTML = '<i class="fas fa-circle"></i> Disp: ON';
-                } else {
-                    dispEl.className = 'status-zapi offline';
-                    dispEl.innerHTML = '<i class="fas fa-circle"></i> Disp: OFF';
-                }
-            } catch (e) {}
-        }
-
-        async function atualizarLimiteInfo() {
-            try {
-                const res = await api(`${API}/antiban/config`);
-                const data = await res.json();
-                if (data.sucesso && data.config) {
-                    configAntiban = data.config;
-                    const enviados = data.envios_hoje;
-                    const limite = data.config.limite_diario;
-                    const percent = (enviados / limite * 100).toFixed(0);
-                    const el = document.getElementById('limite-info');
-                    document.getElementById('limite-texto').textContent = `${enviados} / ${limite}`;
-                    if (percent >= 90) el.className = 'limite-info bloqueado';
-                    else if (percent >= 70) el.className = 'limite-info alerta';
-                    else el.className = 'limite-info';
-                }
-            } catch (e) {}
-        }
-
-        async function carregarConversas() {
-            try {
-                const [resA, resF] = await Promise.all([api(`${API}/conversas/abertas`), api(`${API}/conversas/fechadas`)]);
-                const dataA = await resA.json();
-                const dataF = await resF.json();
-                conversasAbertas = dataA.conversas || [];
-                conversasFechadas = dataF.conversas || [];
-                
-                // Detecta nova conversa e toca som
-                if (conversasAbertas.length > ultimaContagemAbertas && ultimaContagemAbertas > 0) {
-                    if (!somNotificacao) somNotificacao = criarSomNotificacao();
-                    somNotificacao();
+                # Verifica se é grupo (termina com @g.us)
+                if '@g.us' in str(chat_id):
+                    nome = chat.get('name', '') or chat.get('pushname', '') or chat.get('formattedTitle', '') or 'Sem nome'
                     
-                    // Notificação do navegador (se permitido)
-                    if (Notification.permission === 'granted') {
-                        new Notification('🔔 Nova conversa EVA!', {
-                            body: `${conversasAbertas.length} conversa(s) aberta(s)`,
-                            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%236C63FF"/><text x="50" y="65" font-size="50" text-anchor="middle" fill="white">EVA</text></svg>'
-                        });
-                    }
-                }
-                
-                ultimaContagemAbertas = conversasAbertas.length;
-                
-                document.getElementById('count-abertos').textContent = conversasAbertas.length;
-                document.getElementById('count-fechados').textContent = conversasFechadas.length;
-                document.getElementById('badge-conversas').textContent = conversasAbertas.length;
-                renderizarConversas();
-            } catch (e) {}
-        }
-
-        function renderizarConversas() {
-            const conversas = tabConversaAtual === 'abertos' ? conversasAbertas : conversasFechadas;
-            const grid = document.getElementById('grid-conversas');
-            if (conversas.length === 0) {
-                grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><i class="fas fa-inbox"></i><p>Nenhuma conversa</p></div>`;
-                return;
-            }
-            grid.innerHTML = conversas.map(c => {
-                const badgeResp = c.minha_responsabilidade ? '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:50%;margin-left:6px;vertical-align:middle" title="Você é responsável por este hotel"></span>' : '';
-                return `
-                <div class="conversa-card" style="${c.minha_responsabilidade ? 'border-left:3px solid #ef4444' : ''}">
-                    <div class="conversa-header">
-                        <div>
-                            <div class="conversa-numero"><i class="fas fa-phone"></i> ${c.numero_cliente || '-'}${badgeResp}</div>
-                            ${c.nome_cliente ? `<div class="conversa-nome">${c.nome_cliente}</div>` : ''}
-                            <div class="conversa-tempo">${formatarData(c.criado_em)}</div>
-                            ${c.fechado_por_nome ? `<div style="font-size:10px;opacity:0.8;margin-top:4px">Fechado por: ${c.fechado_por_nome}</div>` : ''}
-                        </div>
-                        <span style="background:rgba(255,255,255,0.3);padding:4px 10px;border-radius:12px;font-size:11px;height:fit-content">${c.total_mensagens || 0} msg</span>
-                    </div>
-                    <div class="conversa-body">${c.ultima_mensagem ? `<div class="mensagem">${c.ultima_mensagem.substring(0,150)}</div>` : '<p style="color:#a0aec0;text-align:center">Sem mensagens</p>'}</div>
-                    <div class="conversa-footer">
-                        <button class="btn btn-primary btn-sm" style="flex:1" onclick="abrirConversa(${c.id})"><i class="fas fa-eye"></i> Abrir</button>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        async function abrirConversa(id) {
-            const res = await api(`${API}/conversas/${id}/mensagens`);
-            const data = await res.json();
-            if (!data.sucesso) return;
-            conversaSelecionada = id;
-            const chat = data.mensagens.map(m => `
-                <div class="mensagem mensagem-${m.remetente}">
-                    <div class="mensagem-label">${m.remetente === 'cliente' ? '👤 Cliente' : m.remetente === 'eva' ? '🤖 EVA' : '👨‍💼 ' + (m.usuario_nome || 'Atendente')}</div>
-                    <div style="white-space:pre-wrap">${m.conteudo}</div>
-                    <div style="font-size:11px;opacity:0.6;margin-top:4px">${new Date(m.criado_em).toLocaleTimeString('pt-BR')}</div>
-                </div>
-            `).join('');
-            document.getElementById('modal-chat').innerHTML = chat;
-            document.getElementById('modal-resposta').value = '';
-            document.getElementById('modal-observacoes').value = '';
-            document.getElementById('modal-conversa').classList.add('ativo');
-            setTimeout(() => {
-                const chatEl = document.getElementById('modal-chat');
-                chatEl.scrollTop = chatEl.scrollHeight;
-            }, 100);
-        }
-
-        async function enviarResposta() {
-            if (!conversaSelecionada) return;
-            const mensagem = document.getElementById('modal-resposta').value;
-            if (!mensagem.trim()) return;
-            
-            const res = await api(`${API}/conversas/${conversaSelecionada}/responder`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ mensagem })
-            });
-            const data = await res.json();
-            if (data.sucesso) {
-                document.getElementById('modal-resposta').value = '';
-                abrirConversa(conversaSelecionada);
-            } else {
-                alert('Erro: ' + (data.erro || 'desconhecido'));
-            }
-        }
-
-        async function fecharAtendimentoModal() {
-            if (!conversaSelecionada) return;
-            if (!confirm('Fechar este atendimento?')) return;
-            
-            await api(`${API}/conversas/${conversaSelecionada}/fechar`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ observacoes: document.getElementById('modal-observacoes').value })
-            });
-            fecharModal('modal-conversa');
-            carregarConversas();
-        }
-
-        // CONTATOS
-        async function carregarNotificacoes() {
-            const res = await api(`${API}/notificacoes`);
-            const d = await res.json();
-            if (!d.sucesso) return;
-            const tb = document.getElementById('tabela-notificacoes');
-            if (d.notificacoes.length === 0) {
-                tb.innerHTML = '<tr><td colspan="4" class="empty"><i class="fas fa-bell-slash"></i><p>Nenhuma notificação enviada</p></td></tr>';
-                return;
-            }
-            tb.innerHTML = d.notificacoes.map(n => {
-                const dt = new Date(n.enviado_em);
-                const dtF = dt.toLocaleString('pt-BR');
-                const msgPrev = n.mensagem_original.length > 100 ? n.mensagem_original.substring(0,100) + '...' : n.mensagem_original;
-                return `<tr>
-                    <td>${dtF}</td>
-                    <td><strong>${n.hotel_nome}</strong><br><small style="color:var(--gray)">${n.hotel_numero}</small></td>
-                    <td>${n.usuario_nome}</td>
-                    <td>${msgPrev}</td>
-                </tr>`;
-            }).join('');
-        }
-
-        async function carregarContatos() {
-            const res = await api(`${API}/contatos`);
-            const data = await res.json();
-            contatos = data.contatos || [];
-            renderizarContatos();
-        }
-
-        function renderizarContatos() {
-            const busca = (document.getElementById('busca-contatos')?.value || '').toLowerCase();
-            const filtrados = contatos.filter(c => c.nome.toLowerCase().includes(busca) || c.numero.includes(busca));
-            const tbody = document.getElementById('tabela-contatos');
-            if (filtrados.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="empty"><i class="fas fa-address-book"></i><p>Nenhum contato</p></td></tr>`;
-                return;
-            }
-            tbody.innerHTML = filtrados.map(c => `
-                <tr>
-                    <td><strong>${c.nome}</strong></td>
-                    <td>${c.numero}</td>
-                    <td>${c.email || '-'}</td>
-                    <td>${c.tags || '-'}</td>
-                    <td>
-                        <button class="btn btn-sm" style="background:var(--warning);color:white;margin-right:0.5rem" onclick="editarContato(${c.id})"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-danger btn-sm" onclick="deletarContato(${c.id})"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function filtrarContatos() { renderizarContatos(); }
-
-        function abrirModalContato() {
-            contatoEditandoId = null;
-            ['contato-nome', 'contato-numero', 'contato-email', 'contato-tags', 'contato-conhecimento'].forEach(id => document.getElementById(id).value = '');
-            carregarUsuariosSelect();
-            document.getElementById('modal-contato').classList.add('ativo');
-        }
-
-        async function carregarUsuariosSelect() {
-            const res = await api(`${API}/usuarios`);
-            const data = await res.json();
-            if (!data.sucesso) return;
-            const select = document.getElementById('contato-responsaveis');
-            select.innerHTML = '';
-            data.usuarios.filter(u => u.perfil === 'atendente' || u.perfil === 'admin').forEach(u => {
-                const opt = document.createElement('option');
-                opt.value = u.id;
-                opt.textContent = `${u.nome} (${u.perfil})`;
-                select.appendChild(opt);
-            });
-        }
-
-        let contatoEditandoId = null;
+                    # Tenta pegar número de participantes
+                    num_participantes = 0
+                    if 'groupMetadata' in chat:
+                        num_participantes = len(chat['groupMetadata'].get('participants', []))
+                    
+                    grupos.append({
+                        'id': chat_id,
+                        'nome': nome,
+                        'participantes': num_participantes
+                    })
+                    print(f"Grupo encontrado: {nome} ({chat_id})")
+                    
+            except Exception as e2:
+                print(f"Erro ao processar chat: {str(e2)}")
+                continue
         
-        async function editarContato(id) {
-            const contato = contatos.find(c => c.id === id);
-            if (!contato) return;
-            
-            contatoEditandoId = id;
-            document.getElementById('contato-nome').value = contato.nome;
-            document.getElementById('contato-numero').value = contato.numero;
-            document.getElementById('contato-email').value = contato.email || '';
-            document.getElementById('contato-tags').value = contato.tags || '';
-            document.getElementById('contato-conhecimento').value = contato.conhecimento_ia || '';
-            
-            await carregarUsuariosSelect();
-            
-            // Seleciona responsáveis salvos
-            if (contato.responsaveis) {
-                try {
-                    const resp = JSON.parse(contato.responsaveis);
-                    const select = document.getElementById('contato-responsaveis');
-                    Array.from(select.options).forEach(opt => {
-                        opt.selected = resp.includes(parseInt(opt.value));
-                    });
-                } catch (e) {}
-            }
-            
-            document.getElementById('modal-contato').classList.add('ativo');
-        }
-
-        async function salvarContato() {
-            const select = document.getElementById('contato-responsaveis');
-            const responsaveis = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
-            const dados = {
-                nome: document.getElementById('contato-nome').value,
-                numero: document.getElementById('contato-numero').value,
-                email: document.getElementById('contato-email').value,
-                tags: document.getElementById('contato-tags').value,
-                conhecimento_ia: document.getElementById('contato-conhecimento').value,
-                responsaveis: responsaveis
-            };
-            if (!dados.nome || !dados.numero) { alert('Preencha nome e número'); return; }
-            
-            let res;
-            if (contatoEditandoId) {
-                // Editando
-                res = await api(`${API}/contatos/${contatoEditandoId}`, {
-                    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
-                });
-            } else {
-                // Criando
-                res = await api(`${API}/contatos`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
-                });
-            }
-            
-            const data = await res.json();
-            if (data.sucesso) { 
-                contatoEditandoId = null;
-                fecharModal('modal-contato'); 
-                carregarContatos(); 
-            }
-            else alert(data.erro);
-        }
-
-        async function deletarContato(id) {
-            if (!confirm('Deletar?')) return;
-            await api(`${API}/contatos/${id}`, { method: 'DELETE' });
-            carregarContatos();
-        }
-
-        function abrirModalImportar() { document.getElementById('modal-importar').classList.add('ativo'); }
-
-        async function importarCSV() {
-            const file = document.getElementById('arquivo-csv').files[0];
-            if (!file) { alert('Selecione arquivo'); return; }
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await fetch(`${API}/contatos/importar`, { method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${token}` } });
-            const data = await res.json();
-            if (data.sucesso) {
-                alert(`${data.importados} importados! ${data.erros} erros.`);
-                fecharModal('modal-importar');
-                carregarContatos();
-            }
-        }
-
-        // TEMPLATES
-        async function carregarTemplates() {
-            const res = await api(`${API}/templates`);
-            const data = await res.json();
-            templates = data.templates || [];
-            renderizarTemplates();
-        }
-
-        function renderizarTemplates() {
-            const grid = document.getElementById('grid-templates');
-            if (templates.length === 0) {
-                grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><i class="fas fa-file-alt"></i><p>Nenhum template</p></div>`;
-                return;
-            }
-            grid.innerHTML = templates.map(t => `
-                <div class="card" style="padding:1.5rem">
-                    <h4>${t.nome}</h4>
-                    <span class="status-badge status-finalizada">${t.categoria}</span>
-                    <p style="margin-top:1rem;font-size:13px;color:var(--gray);min-height:60px;white-space:pre-wrap">${t.conteudo.substring(0,150)}${t.conteudo.length > 150 ? '...' : ''}</p>
-                    <button class="btn btn-danger btn-sm" onclick="deletarTemplate(${t.id})" style="margin-top:1rem"><i class="fas fa-trash"></i> Deletar</button>
-                </div>
-            `).join('');
-        }
-
-        function abrirModalTemplate() {
-            document.getElementById('template-nome').value = '';
-            document.getElementById('template-conteudo').value = '';
-            document.getElementById('modal-template').classList.add('ativo');
-        }
-
-        async function salvarTemplate() {
-            const dados = {
-                nome: document.getElementById('template-nome').value,
-                conteudo: document.getElementById('template-conteudo').value,
-                categoria: document.getElementById('template-categoria').value
-            };
-            if (!dados.nome || !dados.conteudo) { alert('Preencha tudo'); return; }
-            await api(`${API}/templates`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
-            });
-            fecharModal('modal-template');
-            carregarTemplates();
-        }
-
-        async function deletarTemplate(id) {
-            if (!confirm('Deletar?')) return;
-            await api(`${API}/templates/${id}`, { method: 'DELETE' });
-            carregarTemplates();
-        }
-
-        // CAMPANHAS
-        async function carregarCampanhas() {
-            const res = await api(`${API}/campanhas`);
-            const data = await res.json();
-            campanhas = data.campanhas || [];
-            renderizarCampanhas();
-        }
-
-        function renderizarCampanhas() {
-            const tbody = document.getElementById('tabela-campanhas');
-            if (campanhas.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="empty"><i class="fas fa-paper-plane"></i><p>Nenhuma</p></td></tr>`;
-                return;
-            }
-            tbody.innerHTML = campanhas.map(c => {
-                const prog = c.total_contatos > 0 ? ((c.enviadas + c.falhadas) / c.total_contatos * 100) : 0;
-                return `
-                    <tr>
-                        <td><strong>${c.nome}</strong>${c.imagem_url ? ' <i class="fas fa-image" style="color:var(--info)"></i>' : ''}</td>
-                        <td style="font-size:12px">${c.criado_por_nome || '-'}</td>
-                        <td>${c.total_contatos}</td>
-                        <td style="color:var(--success)">${c.enviadas}</td>
-                        <td><span class="status-badge status-${c.status}">${c.status}</span></td>
-                        <td><div class="progress"><div class="progress-bar" style="width:${prog}%"></div></div><small>${Math.round(prog)}%</small></td>
-                        <td style="font-size:12px">${formatarData(c.criado_em)}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        async function abrirModalCampanha() {
-            await carregarContatos();
-            await carregarTemplates();
-            await atualizarLimiteInfo();
-            
-            document.getElementById('campanha-nome').value = '';
-            document.getElementById('campanha-mensagem').value = '';
-            document.getElementById('campanha-template').value = '';
-            imagemUploadUrl = null;
-            contatosCsv = [];
-            document.getElementById('imagem-preview-container').innerHTML = '';
-            document.getElementById('csv-preview').innerHTML = '';
-            
-            const select = document.getElementById('campanha-template');
-            select.innerHTML = '<option value="">Selecione ou escreva manualmente</option>' +
-                templates.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
-            
-            const lista = document.getElementById('lista-contatos-checkbox');
-            if (contatos.length === 0) {
-                lista.innerHTML = '<p style="color:var(--gray)">Nenhum contato. Cadastre primeiro ou use CSV!</p>';
-            } else {
-                lista.innerHTML = contatos.map(c => `
-                    <label class="checkbox-item">
-                        <input type="checkbox" value="${c.id}" onchange="atualizarContagemSelecionados()">
-                        <div><strong>${c.nome}</strong><div style="font-size:12px;color:var(--gray)">${c.numero}</div></div>
-                    </label>
-                `).join('');
-            }
-            
-            atualizarContagemSelecionados();
-            mudarTabContato('cadastrados');
-            document.getElementById('modal-campanha').classList.add('ativo');
-        }
-
-        function mudarTabContato(tab) {
-            tabContatoAtual = tab;
-            document.querySelectorAll('.tab-contato').forEach(t => t.classList.remove('ativo'));
-            event?.target?.closest('.tab-contato')?.classList.add('ativo');
-            document.getElementById('tab-cadastrados').style.display = tab === 'cadastrados' ? 'block' : 'none';
-            document.getElementById('tab-csv').style.display = tab === 'csv' ? 'block' : 'none';
-        }
-
-        async function processarCSVCampanha(input) {
-            const file = input.files[0];
-            if (!file) return;
-            
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            const preview = document.getElementById('csv-preview');
-            preview.innerHTML = '<p>📤 Processando...</p>';
-            
-            try {
-                const res = await fetch(`${API}/contatos/preview-csv`, {
-                    method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                
-                if (data.sucesso) {
-                    contatosCsv = data.contatos;
-                    preview.innerHTML = `
-                        <div style="background:#c6f6d5;color:#22543d;padding:1rem;border-radius:8px;margin-top:1rem">
-                            ✅ <strong>${data.total} contatos carregados!</strong>
-                            <div style="margin-top:0.5rem;font-size:12px;max-height:150px;overflow-y:auto">
-                                ${contatosCsv.slice(0, 10).map(c => `• ${c.nome} (${c.numero})`).join('<br>')}
-                                ${contatosCsv.length > 10 ? `<br>... e mais ${contatosCsv.length - 10}` : ''}
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    preview.innerHTML = `<p style="color:var(--danger)">❌ ${data.erro}</p>`;
-                }
-            } catch (e) {
-                preview.innerHTML = `<p style="color:var(--danger)">❌ ${e.message}</p>`;
-            }
-        }
-
-        async function uploadImagem(input) {
-            const file = input.files[0];
-            if (!file) return;
-            if (file.size > 5 * 1024 * 1024) { alert('Máx 5MB'); return; }
-            
-            const formData = new FormData();
-            formData.append('file', file);
-            const container = document.getElementById('imagem-preview-container');
-            container.innerHTML = '<p>📤 Enviando...</p>';
-            
-            try {
-                const res = await fetch(`${API}/upload/imagem`, {
-                    method: 'POST', body: formData, headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                if (data.sucesso) {
-                    imagemUploadUrl = data.url;
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        container.innerHTML = `<div class="imagem-preview"><img src="${e.target.result}"><button onclick="removerImagem()">✕</button></div>`;
-                    };
-                    reader.readAsDataURL(file);
-                }
-            } catch (e) {}
-        }
-
-        function removerImagem() {
-            imagemUploadUrl = null;
-            document.getElementById('imagem-preview-container').innerHTML = '';
-            document.getElementById('campanha-imagem').value = '';
-        }
-
-        function usarTemplate() {
-            const id = document.getElementById('campanha-template').value;
-            if (id) {
-                const t = templates.find(t => t.id == id);
-                if (t) document.getElementById('campanha-mensagem').value = t.conteudo;
-            }
-        }
-
-        function selecionarTodosContatos() {
-            document.querySelectorAll('#lista-contatos-checkbox input').forEach(i => i.checked = true);
-            atualizarContagemSelecionados();
-        }
-
-        function desmarcarTodosContatos() {
-            document.querySelectorAll('#lista-contatos-checkbox input').forEach(i => i.checked = false);
-            atualizarContagemSelecionados();
-        }
-
-        function atualizarContagemSelecionados() {
-            const total = document.querySelectorAll('#lista-contatos-checkbox input:checked').length;
-            document.getElementById('contatos-selecionados').textContent = `${total} selecionados`;
-        }
-
-        async function dispararCampanha() {
-            const nome = document.getElementById('campanha-nome').value;
-            const mensagem = document.getElementById('campanha-mensagem').value;
-            const template_id = document.getElementById('campanha-template').value || null;
-            const contato_ids = Array.from(document.querySelectorAll('#lista-contatos-checkbox input:checked')).map(i => parseInt(i.value));
-            
-            if (!nome || !mensagem) { alert('Preencha nome e mensagem'); return; }
-            
-            const total = contato_ids.length + contatosCsv.length;
-            if (total === 0) { alert('Selecione contatos ou suba CSV'); return; }
-            
-            if (!confirm(`Disparar para ${total} contatos?`)) return;
-            
-            const res = await api(`${API}/campanhas`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ nome, mensagem, template_id, contato_ids, contatos_csv: contatosCsv, imagem_url: imagemUploadUrl })
-            });
-            const data = await res.json();
-            if (data.sucesso) {
-                alert('✅ Campanha iniciada!');
-                fecharModal('modal-campanha');
-                mudarPagina('campanhas');
-            } else {
-                alert('❌ ' + (data.erro || 'Erro'));
-            }
-        }
-
-        // ANTI-BAN
-        async function carregarConfigAntiban() {
-            const res = await api(`${API}/antiban/config`);
-            const data = await res.json();
-            if (data.sucesso && data.config) {
-                const c = data.config;
-                document.getElementById('config-limite-diario').value = c.limite_diario;
-                document.getElementById('config-limite-hora').value = c.limite_por_hora;
-                document.getElementById('config-delay-min').value = c.delay_min;
-                document.getElementById('config-delay-max').value = c.delay_max;
-                document.getElementById('config-pausa-cada').value = c.pausa_a_cada;
-                document.getElementById('config-pausa-segundos').value = c.pausa_segundos;
-                document.getElementById('config-horario-inicio').value = c.horario_inicio;
-                document.getElementById('config-horario-fim').value = c.horario_fim;
-                document.getElementById('antiban-ativo').checked = c.ativo === 1;
-                
-                const enviados = data.envios_hoje;
-                const limite = c.limite_diario;
-                const percent = (enviados / limite * 100).toFixed(0);
-                document.getElementById('uso-grande').textContent = `${enviados} / ${limite}`;
-                document.getElementById('uso-texto').textContent = `Pode enviar mais ${data.disponivel_hoje} hoje`;
-                document.getElementById('uso-progress-bar').style.width = `${Math.min(percent, 100)}%`;
-            }
-        }
-
-        async function salvarConfigAntiban() {
-            const dados = {
-                limite_diario: parseInt(document.getElementById('config-limite-diario').value),
-                limite_por_hora: parseInt(document.getElementById('config-limite-hora').value),
-                delay_min: parseInt(document.getElementById('config-delay-min').value),
-                delay_max: parseInt(document.getElementById('config-delay-max').value),
-                pausa_a_cada: parseInt(document.getElementById('config-pausa-cada').value),
-                pausa_segundos: parseInt(document.getElementById('config-pausa-segundos').value),
-                horario_inicio: document.getElementById('config-horario-inicio').value,
-                horario_fim: document.getElementById('config-horario-fim').value,
-                ativo: document.getElementById('antiban-ativo').checked
-            };
-            await api(`${API}/antiban/config`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
-            });
-            alert('✅ Salvo!');
-            atualizarLimiteInfo();
-            carregarConfigAntiban();
-        }
-
-        function usarConfigSegura() {
-            document.getElementById('config-limite-diario').value = 50;
-            document.getElementById('config-limite-hora').value = 15;
-            document.getElementById('config-delay-min').value = 5;
-            document.getElementById('config-delay-max').value = 10;
-            document.getElementById('config-pausa-cada').value = 20;
-            document.getElementById('config-pausa-segundos').value = 120;
-            alert('🛡️ Aplicado! Salve.');
-        }
-
-        function usarConfigAgressiva() {
-            if (!confirm('⚠️ Maior risco!')) return;
-            document.getElementById('config-limite-diario').value = 300;
-            document.getElementById('config-delay-min').value = 2;
-            document.getElementById('config-delay-max').value = 5;
-            alert('🚀 Aplicado! Salve.');
-        }
-
-        // USUÁRIOS
-        async function carregarUsuarios() {
-            const res = await api(`${API}/usuarios`);
-            const data = await res.json();
-            const tbody = document.getElementById('tabela-usuarios');
-            if (!data.usuarios || data.usuarios.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="empty"><i class="fas fa-users"></i><p>Nenhum usuário</p></td></tr>`;
-                return;
-            }
-            tbody.innerHTML = data.usuarios.map(u => `
-                <tr>
-                    <td><strong>${u.nome}</strong></td>
-                    <td>${u.email}</td>
-                    <td><span class="perfil-badge perfil-${u.perfil}">${u.perfil}</span></td>
-                    <td>${u.ativo ? '✅ Ativo' : '❌ Inativo'}</td>
-                    <td style="font-size:12px">${u.ultimo_login ? formatarData(u.ultimo_login) : 'Nunca'}</td>
-                    <td>
-                        <button class="btn btn-sm" style="background:var(--warning);color:white;margin-right:0.5rem" onclick="editarUsuario(${u.id})"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-warning btn-sm" onclick="toggleAtivo(${u.id}, ${u.ativo ? 0 : 1})">${u.ativo ? '🔒' : '🔓'}</button>
-                        ${u.id !== usuarioLogado.id ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario(${u.id})"><i class="fas fa-trash"></i></button>` : ''}
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        let usuarioEditandoId = null;
+        print(f"Total de grupos encontrados: {len(grupos)}")
         
-        async function editarUsuario(id) {
-            const res = await api(`${API}/usuarios`);
-            const data = await res.json();
-            const usuario = data.usuarios.find(u => u.id === id);
-            if (!usuario) return;
-            
-            usuarioEditandoId = id;
-            document.getElementById('usuario-novo-nome').value = usuario.nome;
-            document.getElementById('usuario-novo-email').value = usuario.email;
-            document.getElementById('usuario-novo-senha').value = '';
-            document.getElementById('usuario-novo-whatsapp').value = usuario.whatsapp || '';
-            document.getElementById('usuario-novo-perfil').value = usuario.perfil;
-            
-            document.getElementById('modal-usuario').classList.add('ativo');
-        }
+        if len(grupos) == 0:
+            return JSONResponse({"sucesso": False, "erro": "Nenhum grupo encontrado. Verifique se o número está em algum grupo no WhatsApp."}, 400)
+        
+        return {"sucesso": True, "grupos": grupos}
+        
+    except Exception as e:
+        print(f"ERRO LISTAR GRUPOS: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"sucesso": False, "erro": f"Erro ao conectar com Z-API: {str(e)}"}, 500)
 
-        function abrirModalUsuario() {
-            usuarioEditandoId = null;
-            ['usuario-novo-nome', 'usuario-novo-email', 'usuario-novo-senha', 'usuario-novo-whatsapp'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('modal-usuario').classList.add('ativo');
-        }
+@app.get("/api/notificacao/config")
+async def get_config_notificacao(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM config_notificacao WHERE id = 1")
+    config = c.fetchone()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "config": dict(config) if config else {}}
 
-        async function salvarUsuario() {
-            const dados = {
-                nome: document.getElementById('usuario-novo-nome').value,
-                email: document.getElementById('usuario-novo-email').value,
-                senha: document.getElementById('usuario-novo-senha').value,
-                perfil: document.getElementById('usuario-novo-perfil').value,
-                whatsapp: document.getElementById('usuario-novo-whatsapp').value
-            };
-            
-            let res;
-            if (usuarioEditandoId) {
-                // Editando - senha é opcional
-                if (!dados.nome || !dados.email) { alert('Preencha nome e email'); return; }
-                const payload = { nome: dados.nome, email: dados.email, perfil: dados.perfil, whatsapp: dados.whatsapp };
-                if (dados.senha) payload.senha = dados.senha;
-                
-                res = await api(`${API}/usuarios/${usuarioEditandoId}`, {
-                    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
-                });
-            } else {
-                // Criando - senha é obrigatória
-                if (!dados.nome || !dados.email || !dados.senha) { alert('Preencha tudo'); return; }
-                res = await api(`${API}/usuarios`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
-                });
-            }
-            
-            const data = await res.json();
-            if (data.sucesso) { 
-                usuarioEditandoId = null;
-                fecharModal('modal-usuario'); 
-                carregarUsuarios(); 
-            } else {
-                alert(data.erro);
-            }
-        }
+@app.post("/api/notificacao/config")
+async def salvar_config_notificacao(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    conn = db()
+    c = conn.cursor()
+    c.execute("UPDATE config_notificacao SET grupo_id = %s, grupo_nome = %s, ativo = %s, enviar_individual = %s WHERE id = 1",
+        (d.get('grupo_id'), d.get('grupo_nome'), 1 if d.get('ativo') else 0, 1 if d.get('enviar_individual') else 0))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
 
-        async function toggleAtivo(id, ativo) {
-            await api(`${API}/usuarios/${id}`, {
-                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ativo: ativo === 1 })
-            });
-            carregarUsuarios();
-        }
+@app.get("/api/listas")
+async def get_listas(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM listas_transmissao ORDER BY nome")
+    listas = [dict(r) for r in c.fetchall()]
+    c.close()
+    conn.close()
+    return {"sucesso": True, "listas": listas}
 
-        async function deletarUsuario(id) {
-            if (!confirm('Deletar usuário?')) return;
-            await api(`${API}/usuarios/${id}`, { method: 'DELETE' });
-            carregarUsuarios();
-        }
+@app.post("/api/listas")
+async def criar_lista(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    nome = d.get("nome", "")
+    hoteis_ids = d.get("hoteis_ids", [])
+    if not nome or not hoteis_ids:
+        return JSONResponse({"sucesso": False, "erro": "Nome e hotéis obrigatórios"}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("INSERT INTO listas_transmissao (nome, hoteis_ids) VALUES (%s, %s)", (nome, json.dumps(hoteis_ids)))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
 
-        // CONFIG Z-API
-        async function carregarConfigZapi() {
-            const res = await api(`${API}/config/zapi`);
-            const data = await res.json();
-            if (data.configs) {
-                if (data.configs.atendimento) {
-                    document.getElementById('zapi-atend-instance').value = data.configs.atendimento.instance_id || '';
-                    document.getElementById('zapi-atend-token').value = data.configs.atendimento.token || '';
-                    document.getElementById('zapi-atend-client').value = data.configs.atendimento.client_token || '';
-                }
-                if (data.configs.disparos) {
-                    document.getElementById('zapi-disp-instance').value = data.configs.disparos.instance_id || '';
-                    document.getElementById('zapi-disp-token').value = data.configs.disparos.token || '';
-                    document.getElementById('zapi-disp-client').value = data.configs.disparos.client_token || '';
-                }
-            }
-        }
+@app.put("/api/listas/{lid}")
+async def atualizar_lista(lid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    nome = d.get("nome", "")
+    hoteis_ids = d.get("hoteis_ids", [])
+    if not nome or not hoteis_ids:
+        return JSONResponse({"sucesso": False, "erro": "Nome e hotéis obrigatórios"}, 400)
+    conn = db()
+    c = conn.cursor()
+    c.execute("UPDATE listas_transmissao SET nome = %s, hoteis_ids = %s WHERE id = %s", (nome, json.dumps(hoteis_ids), lid))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
 
-        async function salvarZapi(tipo) {
-            const prefix = tipo === 'atendimento' ? 'zapi-atend' : 'zapi-disp';
-            const dados = {
-                tipo,
-                instance_id: document.getElementById(`${prefix}-instance`).value,
-                token: document.getElementById(`${prefix}-token`).value,
-                client_token: document.getElementById(`${prefix}-client`).value
-            };
-            const res = await api(`${API}/config/zapi`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados)
-            });
-            const data = await res.json();
-            if (data.sucesso) { alert(`✅ Z-API ${tipo} salva!`); verificarStatusZapi(); }
-        }
+@app.delete("/api/listas/{lid}")
+async def deletar_lista(lid: int, req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    conn = db()
+    c = conn.cursor()
+    c.execute("DELETE FROM listas_transmissao WHERE id = %s", (lid,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return {"sucesso": True}
 
-        // RELATÓRIOS
-        async function carregarRelatorios() {
-            const res = await api(`${API}/relatorios`);
-            const data = await res.json();
-            const r = data.relatorios;
-            
-            // Mostra botão export só para Admin
-            if (usuarioLogado.perfil === 'admin') {
-                document.getElementById('btn-export').style.display = 'block';
-            }
-            
-            document.getElementById('stats-cards').innerHTML = `
-                <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-num">${r.totalConversas}</div><div class="stat-label">Conversas</div></div>
-                <div class="stat-card"><div class="stat-icon">📬</div><div class="stat-num" style="color:var(--warning)">${r.abertos}</div><div class="stat-label">Abertas</div></div>
-                <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-num" style="color:var(--success)">${r.fechados}</div><div class="stat-label">Fechadas</div></div>
-                <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-num" style="color:var(--info)">${r.tempoMedioMinutos}</div><div class="stat-label">Tempo Médio</div></div>
-                <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-num">${r.totalContatos}</div><div class="stat-label">Contatos</div></div>
-                <div class="stat-card"><div class="stat-icon">📢</div><div class="stat-num">${r.totalCampanhas}</div><div class="stat-label">Campanhas</div></div>
-                <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-num" style="color:var(--success)">${r.totalEnviadas}</div><div class="stat-label">Enviadas</div></div>
-                <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-num" style="color:var(--primary)">${r.enviadosHoje}</div><div class="stat-label">Hoje</div></div>
-            `;
-            
-            // Top Atendentes
-            const topEl = document.getElementById('top-atendentes');
-            if (r.topAtendentes && r.topAtendentes.length > 0) {
-                topEl.innerHTML = r.topAtendentes.map((a, i) => `
-                    <div style="display:flex;justify-content:space-between;padding:0.75rem;border-bottom:1px solid var(--border)">
-                        <div><strong>${i+1}º</strong> ${a.fechado_por_nome}</div>
-                        <div style="color:var(--success);font-weight:600">${a.total} atendimentos</div>
-                    </div>
-                `).join('');
-            } else {
-                topEl.innerHTML = '<p style="color:var(--gray)">Sem dados ainda</p>';
-            }
-            
-            // Top Hotéis
-            const topHoteisEl = document.getElementById('top-hoteis');
-            if (r.topHoteis && r.topHoteis.length > 0) {
-                topHoteisEl.innerHTML = r.topHoteis.map((h, i) => `
-                    <div style="display:flex;justify-content:space-between;padding:0.75rem;border-bottom:1px solid var(--border)">
-                        <div><strong>${i+1}º</strong> ${h.nome_cliente}</div>
-                        <div style="color:var(--primary);font-weight:600">${h.total} chamados</div>
-                    </div>
-                `).join('');
-            } else {
-                topHoteisEl.innerHTML = '<p style="color:var(--gray)">Sem dados ainda</p>';
-            }
-            
-            // Por Motivo
-            const motivoEl = document.getElementById('por-motivo');
-            if (r.porMotivo && r.porMotivo.length > 0) {
-                motivoEl.innerHTML = r.porMotivo.map(m => `
-                    <div style="display:flex;justify-content:space-between;padding:0.75rem;border-bottom:1px solid var(--border)">
-                        <div>${m.motivo}</div>
-                        <div style="color:var(--info);font-weight:600">${m.total} chamados</div>
-                    </div>
-                `).join('');
-            } else {
-                motivoEl.innerHTML = '<p style="color:var(--gray)">Sem dados ainda</p>';
-            }
-        }
+@app.post("/api/transmissao")
+async def lista_transmissao(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False, "erro": "Apenas Admin pode usar Lista de Transmissão"}, 403)
+    
+    d = await req.json()
+    mensagem = d.get("mensagem", "")
+    lista_id = d.get("lista_id", None)
+    
+    if not mensagem:
+        return JSONResponse({"sucesso": False, "erro": "Mensagem vazia"}, 400)
+    
+    if not lista_id:
+        return JSONResponse({"sucesso": False, "erro": "Selecione uma lista"}, 400)
+    
+    conn = db()
+    c = conn.cursor()
+    
+    # Busca lista
+    c.execute("SELECT hoteis_ids FROM listas_transmissao WHERE id = %s", (lista_id,))
+    lista = c.fetchone()
+    if not lista:
+        c.close()
+        conn.close()
+        return JSONResponse({"sucesso": False, "erro": "Lista não encontrada"}, 400)
+    
+    hoteis_ids = json.loads(lista['hoteis_ids'])
+    
+    # Busca hotéis
+    placeholders = ','.join(['%s'] * len(hoteis_ids))
+    c.execute(f"SELECT nome, numero FROM contatos WHERE id IN ({placeholders}) ORDER BY nome", tuple(hoteis_ids))
+    hoteis = c.fetchall()
+    c.close()
+    conn.close()
+    
+    if not hoteis:
+        return JSONResponse({"sucesso": False, "erro": "Nenhum hotel na lista"}, 400)
+    
+    # Envia para todos
+    enviados = 0
+    falhados = 0
+    
+    for hotel in hoteis:
+        msg_final = f"📢 *AVISO EASY HOTÉIS*\n\n{mensagem}\n\n---\nMensagem enviada para lista selecionada."
+        result = enviar(hotel['numero'], msg_final, "atendimento")
+        
+        if result.get("ok"):
+            enviados += 1
+            await asyncio.sleep(2)  # Delay entre envios
+        else:
+            falhados += 1
+    
+    return {"sucesso": True, "enviados": enviados, "falhados": falhados, "total": len(hoteis)}
 
-        let listaEditandoId = null;
-        let todasListas = [];
-        
-        async function carregarListas() {
-            try {
-                const res = await api(`${API}/listas`);
-                const data = await res.json();
-                if (data.sucesso) {
-                    todasListas = data.listas || [];
-                    renderizarListas();
-                }
-            } catch (e) {}
-        }
-        
-        function renderizarListas() {
-            const container = document.getElementById('lista-listas');
-            const select = document.getElementById('transmissao-lista');
-            
-            if (todasListas.length === 0) {
-                container.innerHTML = '<p style="color:var(--gray);padding:1rem;text-align:center">Nenhuma lista criada</p>';
-                select.innerHTML = '<option value="">Nenhuma lista disponível</option>';
-                return;
-            }
-            
-            container.innerHTML = todasListas.map(l => {
-                const numHoteis = JSON.parse(l.hoteis_ids).length;
-                return `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem;border-bottom:1px solid var(--border)">
-                        <div>
-                            <strong>${l.nome}</strong>
-                            <span style="color:var(--gray);font-size:12px;margin-left:0.5rem">(${numHoteis} hotéis)</span>
-                        </div>
-                        <div>
-                            <button class="btn btn-sm" style="background:var(--warning);color:white;margin-right:0.5rem" onclick="editarLista(${l.id})"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-danger btn-sm" onclick="deletarLista(${l.id})"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            select.innerHTML = '<option value="">Selecione uma lista</option>' + todasListas.map(l => `<option value="${l.id}">${l.nome}</option>`).join('');
-        }
-        
-        async function abrirTransmissao() {
-            await carregarListas();
-            document.getElementById('modal-transmissao').classList.add('ativo');
-            document.getElementById('transmissao-msg').value = '';
-            document.getElementById('transmissao-lista').value = '';
-        }
-        
-        async function abrirModalNovaLista() {
-            listaEditandoId = null;
-            document.getElementById('lista-nome').value = '';
-            
-            // Carrega hotéis disponíveis
-            const select = document.getElementById('lista-hoteis');
-            select.innerHTML = contatos.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-            
-            document.getElementById('modal-lista').classList.add('ativo');
-        }
-        
-        async function editarLista(id) {
-            const lista = todasListas.find(l => l.id === id);
-            if (!lista) return;
-            
-            listaEditandoId = id;
-            document.getElementById('lista-nome').value = lista.nome;
-            
-            const hoteisIds = JSON.parse(lista.hoteis_ids);
-            const select = document.getElementById('lista-hoteis');
-            select.innerHTML = contatos.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-            
-            Array.from(select.options).forEach(opt => {
-                opt.selected = hoteisIds.includes(parseInt(opt.value));
-            });
-            
-            document.getElementById('modal-lista').classList.add('ativo');
-        }
-        
-        async function salvarLista() {
-            const nome = document.getElementById('lista-nome').value;
-            const select = document.getElementById('lista-hoteis');
-            const hoteisIds = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
-            
-            if (!nome || hoteisIds.length === 0) {
-                alert('Preencha nome e selecione pelo menos 1 hotel');
-                return;
-            }
-            
-            let res;
-            if (listaEditandoId) {
-                res = await api(`${API}/listas/${listaEditandoId}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ nome, hoteis_ids: hoteisIds })
-                });
-            } else {
-                res = await api(`${API}/listas`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ nome, hoteis_ids: hoteisIds })
-                });
-            }
-            
-            const data = await res.json();
-            if (data.sucesso) {
-                fecharModal('modal-lista');
-                listaEditandoId = null;
-                await carregarListas();
-            } else {
-                alert(data.erro || 'Erro ao salvar lista');
-            }
-        }
-        
-        async function deletarLista(id) {
-            if (!confirm('Deletar esta lista?')) return;
-            
-            const res = await api(`${API}/listas/${id}`, { method: 'DELETE' });
-            const data = await res.json();
-            if (data.sucesso) {
-                await carregarListas();
-            }
-        }
-        
-        async function enviarTransmissao() {
-            const msg = document.getElementById('transmissao-msg').value;
-            const listaId = document.getElementById('transmissao-lista').value;
-            
-            if (!msg) {
-                alert('Digite a mensagem');
-                return;
-            }
-            
-            if (!listaId) {
-                alert('Selecione uma lista');
-                return;
-            }
-            
-            const lista = todasListas.find(l => l.id == listaId);
-            const numHoteis = lista ? JSON.parse(lista.hoteis_ids).length : 0;
-            
-            if (!confirm(`⚠️ Confirma envio para ${numHoteis} hotéis da lista "${lista.nome}"?`)) {
-                return;
-            }
-            
-            try {
-                const res = await api(`${API}/transmissao`, {
-                    method: 'POST',
-                    body: JSON.stringify({ mensagem: msg, lista_id: parseInt(listaId) })
-                });
-                const data = await res.json();
-                if (data.sucesso) {
-                    alert(`✅ Transmissão enviada!\n\nEnviados: ${data.enviados}\nFalhados: ${data.falhados}\nTotal: ${data.total}`);
-                    fecharModal('modal-transmissao');
-                } else {
-                    alert('❌ ' + (data.erro || 'Erro ao enviar'));
-                }
-            } catch (e) {
-                alert('❌ Erro ao enviar transmissão');
-            }
-        }
+@app.get("/api/sistema/robo")
+async def get_robo(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    return {"sucesso": True, "ativo": robo_on()}
 
-        async function exportarExcel() {
-            try {
-                const res = await api(`${API}/relatorios/export`);
-                const data = await res.json();
-                if (data.sucesso) {
-                    // Converte base64 para blob XLSX
-                    const binaryString = atob(data.data);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
-                    }
-                    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = data.filename;
-                    link.click();
-                    alert('✅ Relatório exportado com sucesso!');
-                } else {
-                    alert('❌ Erro ao exportar');
-                }
-            } catch (e) {
-                alert('❌ Erro ao exportar');
-            }
-        }
-        
+@app.post("/api/sistema/robo")
+async def toggle_robo_api(req: Request):
+    u = get_user(req)
+    if not u or u['perfil'] != 'admin': return JSONResponse({"sucesso": False}, 403)
+    d = await req.json()
+    on = d.get("ativo", True)
+    ok = toggle_robo(on)
+    if ok: log_acao(u['id'], "toggle_robo", f"{'on' if on else 'off'}")
+    return {"sucesso": ok, "ativo": on}
 
-        function fecharModal(id) { document.getElementById(id).classList.remove('ativo'); }
-        function formatarData(data) {
-            if (!data) return '-';
-            return new Date(data).toLocaleString('pt-BR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        }
-        
-        // Notificações em Grupo
-        async function carregarConfigNotificacao() {
-            const res = await api(`${API}/notificacao/config`);
-            const data = await res.json();
-            if (data.sucesso && data.config) {
-                document.getElementById('grupo-id').value = data.config.grupo_id || '';
-                document.getElementById('grupo-nome').value = data.config.grupo_nome || '';
-                document.getElementById('grupo-ativo').checked = data.config.ativo;
-                document.getElementById('grupo-individual').checked = data.config.enviar_individual;
-            }
-        }
-        
-        async function listarGrupos() {
-            try {
-                const res = await api(`${API}/zapi/grupos`);
-                const data = await res.json();
-                if (!data.sucesso) {
-                    alert('❌ Erro ao buscar grupos');
-                    return;
-                }
-                
-                if (data.grupos.length === 0) {
-                    alert('ℹ️ Nenhum grupo encontrado. Verifique se a EVA está em algum grupo no WhatsApp.');
-                    return;
-                }
-                
-                const lista = document.getElementById('lista-grupos');
-                lista.innerHTML = data.grupos.map(g => `
-                    <div onclick="selecionarGrupo('${g.id}', '${g.nome}')" style="padding:15px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f5f5ff'" onmouseout="this.style.background='white'">
-                        <div style="font-weight:bold">${g.nome}</div>
-                        <div style="font-size:12px;color:var(--gray)">${g.participantes} participantes</div>
-                    </div>
-                `).join('');
-                
-                document.getElementById('modal-grupos').classList.add('ativo');
-            } catch (e) {
-                alert('❌ Erro ao listar grupos');
-            }
-        }
-        
-        function selecionarGrupo(id, nome) {
-            document.getElementById('grupo-id').value = id;
-            document.getElementById('grupo-nome').value = nome;
-            fecharModal('modal-grupos');
-            alert(`✅ Grupo "${nome}" selecionado!\n\nAgora ative as notificações e salve.`);
-        }
-        
-        async function salvarConfigNotificacao() {
-            const dados = {
-                grupo_id: document.getElementById('grupo-id').value,
-                grupo_nome: document.getElementById('grupo-nome').value,
-                ativo: document.getElementById('grupo-ativo').checked,
-                enviar_individual: document.getElementById('grupo-individual').checked
-            };
-            
-            if (dados.ativo && !dados.grupo_id) {
-                alert('⚠️ Selecione um grupo antes de ativar!');
-                return;
-            }
-            
-            try {
-                const res = await api(`${API}/notificacao/config`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(dados)
-                });
-                const data = await res.json();
-                if (data.sucesso) {
-                    alert('✅ Configuração salva com sucesso!');
-                } else {
-                    alert('❌ Erro ao salvar');
-                }
-            } catch (e) {
-                alert('❌ Erro ao salvar configuração');
-            }
-        }
-        
-        // Enter pra logar
-        document.getElementById('login-senha').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') fazerLogin();
-        });
-    </script>
-</body>
-</html>
+@app.get("/api/notificacoes")
+async def list_notifs(req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    conn = db()
+    c = conn.cursor()
+    if u['perfil'] == 'admin':
+        c.execute("SELECT * FROM notificacoes ORDER BY enviado_em DESC LIMIT 100")
+    else:
+        c.execute("SELECT * FROM notificacoes WHERE usuario_id = %s ORDER BY enviado_em DESC LIMIT 100", (u['id'],))
+    rows = c.fetchall()
+    c.close()
+    conn.close()
+    return {"sucesso": True, "notificacoes": [dict(r) for r in rows]}
+
+if __name__ == "__main__":
+    print("="*40)
+    print("EVA v5 - PostgreSQL")
+    print("="*40)
+    init()
+    print(f"Porta: {PORT}")
+    print("Login: admin@easy.com / admin123")
+    print("="*40)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
