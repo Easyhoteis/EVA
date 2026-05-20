@@ -331,7 +331,24 @@ async def login(req: Request):
     c.close()
     conn.close()
     log_acao(u['id'], "login", "ok")
-    return {"sucesso": True, "token": tok, "usuario": {"id": u['id'], "nome": u['nome'], "email": u['email'], "perfil": u['perfil']}}
+    
+    # Cria response com cookie
+    response = JSONResponse({
+        "sucesso": True, 
+        "token": tok, 
+        "usuario": {"id": u['id'], "nome": u['nome'], "email": u['email'], "perfil": u['perfil']}
+    })
+    
+    # Seta cookie (mobile)
+    response.set_cookie(
+        key="token",
+        value=tok,
+        httponly=True,
+        samesite="lax",
+        max_age=30*24*60*60  # 30 dias
+    )
+    
+    return response
 
 @app.post("/api/logout")
 async def logout(req: Request):
