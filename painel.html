@@ -710,6 +710,45 @@ Procedimentos:
         let tabContatoAtual = 'cadastrados';
         let conversaSelecionada = null;
         let conversasAbertas = [], conversasFechadas = [];
+        let ultimaContagemAbertas = 0;
+        let somNotificacao = null;
+        
+        // Cria som de notificação
+        function criarSomNotificacao() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const duracao = 0.3;
+            
+            return function tocar() {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duracao);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duracao);
+                
+                // Segunda nota
+                setTimeout(() => {
+                    const osc2 = audioContext.createOscillator();
+                    const gain2 = audioContext.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioContext.destination);
+                    osc2.frequency.value = 1000;
+                    osc2.type = 'sine';
+                    gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duracao);
+                    osc2.start(audioContext.currentTime);
+                    osc2.stop(audioContext.currentTime + duracao);
+                }, 150);
+            };
+        }
         let contatos = [], templates = [], campanhas = [];
         let configAntiban = null;
         let imagemUploadUrl = null;
@@ -851,11 +890,21 @@ Procedimentos:
                 // Admin vê tudo
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('hidden'));
                 mudarPagina('conversas');
+                
+                // Solicita permissão de notificação
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
             } else if (perfil === 'atendente') {
                 // conversas + notificacoes
                 document.getElementById('nav-conversas').classList.remove('hidden');
                 document.getElementById('nav-notificacoes').classList.remove('hidden');
                 mudarPagina('conversas');
+                
+                // Solicita permissão de notificação
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
             } else if (perfil === 'marketing') {
                 // Marketing: contatos, templates, campanhas, anti-ban (SEM notificacoes)
                 document.getElementById('nav-contatos').classList.remove('hidden');
@@ -968,6 +1017,23 @@ Procedimentos:
                 const dataF = await resF.json();
                 conversasAbertas = dataA.conversas || [];
                 conversasFechadas = dataF.conversas || [];
+                
+                // Detecta nova conversa e toca som
+                if (conversasAbertas.length > ultimaContagemAbertas && ultimaContagemAbertas > 0) {
+                    if (!somNotificacao) somNotificacao = criarSomNotificacao();
+                    somNotificacao();
+                    
+                    // Notificação do navegador (se permitido)
+                    if (Notification.permission === 'granted') {
+                        new Notification('🔔 Nova conversa EVA!', {
+                            body: `${conversasAbertas.length} conversa(s) aberta(s)`,
+                            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%236C63FF"/><text x="50" y="65" font-size="50" text-anchor="middle" fill="white">EVA</text></svg>'
+                        });
+                    }
+                }
+                
+                ultimaContagemAbertas = conversasAbertas.length;
+                
                 document.getElementById('count-abertos').textContent = conversasAbertas.length;
                 document.getElementById('count-fechados').textContent = conversasFechadas.length;
                 document.getElementById('badge-conversas').textContent = conversasAbertas.length;
