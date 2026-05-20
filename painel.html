@@ -940,6 +940,7 @@ Procedimentos:
         function api(url, options = {}) {
             return fetch(url, {
                 ...options,
+                credentials: 'include',
                 headers: {
                     ...options.headers,
                     'Authorization': `Bearer ${token}`
