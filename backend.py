@@ -821,10 +821,15 @@ async def criar_contato(req: Request):
         c.close()
         conn.close()
         return {"sucesso": True}
-    except:
+    except Exception as e:
         c.close()
         conn.close()
-        return JSONResponse({"sucesso": False, "erro": "Numero ja cadastrado"}, 400)
+        erro_msg = str(e)
+        if "duplicate key" in erro_msg or "unique constraint" in erro_msg:
+            return JSONResponse({"sucesso": False, "erro": "Numero ja cadastrado"}, 400)
+        else:
+            print(f"ERRO CRIAR CONTATO: {erro_msg}")
+            return JSONResponse({"sucesso": False, "erro": f"Erro ao salvar: {erro_msg}"}, 400)
 
 @app.put("/api/contatos/{cid}")
 async def editar_contato(cid: int, req: Request):
