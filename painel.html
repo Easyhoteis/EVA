@@ -174,6 +174,7 @@
         .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 1.5rem; color: var(--text-primary); }
         .modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
         .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+        #filtros-fechados { display: none; } /* Esconde por padrão, mostra só em Fechados */
         .search-box { flex: 1; max-width: 400px; position: relative; }
         .search-box input { padding-left: 2.5rem; }
         .search-box i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--gray); }
@@ -364,6 +365,20 @@
                 <div id="page-conversas" class="page">
                     <div class="toolbar">
                         <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..."></div>
+                        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap" id="filtros-fechados">
+                            <input type="date" id="filtro-data-inicio" style="width:auto;padding:0.5rem;font-size:13px" title="Data Início">
+                            <input type="date" id="filtro-data-fim" style="width:auto;padding:0.5rem;font-size:13px" title="Data Fim">
+                            <select id="filtro-ordenacao" style="width:auto;padding:0.5rem;font-size:13px">
+                                <option value="recente">Mais Recente</option>
+                                <option value="antigo">Mais Antigo</option>
+                            </select>
+                            <button class="btn btn-sm btn-info" onclick="aplicarFiltros()" style="padding:0.5rem 1rem">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                            <button class="btn btn-sm" onclick="limparFiltros()" style="background:#e2e8f0;color:var(--dark);padding:0.5rem 1rem">
+                                <i class="fas fa-times"></i> Limpar
+                            </button>
+                        </div>
                         <div>
                             <button class="btn btn-primary btn-sm" onclick="mudarTabConversa('abertos')" id="tab-abertos">
                                 <i class="fas fa-inbox"></i> Abertos <span id="count-abertos">0</span>
@@ -1058,6 +1073,13 @@ Procedimentos:
             btn.classList.add('btn-primary');
             btn.style.background = '';
             btn.style.color = '';
+            
+            // Mostra/esconde filtros
+            const filtros = document.getElementById('filtros-fechados');
+            if (filtros) {
+                filtros.style.display = tab === 'fechados' ? 'flex' : 'none';
+            }
+            
             renderizarConversas();
         }
 
@@ -1140,7 +1162,36 @@ Procedimentos:
         }
 
         function renderizarConversas() {
-            const conversas = tabConversaAtual === 'abertos' ? conversasAbertas : conversasFechadas;
+            let conversas = tabConversaAtual === 'abertos' ? conversasAbertas : conversasFechadas;
+            
+            // Se for aba fechados, aplica filtros
+            if (tabConversaAtual === 'fechados') {
+                const dataInicio = document.getElementById('filtro-data-inicio')?.value;
+                const dataFim = document.getElementById('filtro-data-fim')?.value;
+                const ordenacao = document.getElementById('filtro-ordenacao')?.value || 'recente';
+                
+                // Filtro por data
+                if (dataInicio) {
+                    conversas = conversas.filter(c => {
+                        const dataFechamento = new Date(c.fechado_em).toISOString().split('T')[0];
+                        return dataFechamento >= dataInicio;
+                    });
+                }
+                if (dataFim) {
+                    conversas = conversas.filter(c => {
+                        const dataFechamento = new Date(c.fechado_em).toISOString().split('T')[0];
+                        return dataFechamento <= dataFim;
+                    });
+                }
+                
+                // Ordenação
+                conversas = [...conversas].sort((a, b) => {
+                    const dateA = new Date(a.fechado_em || a.criado_em);
+                    const dateB = new Date(b.fechado_em || b.criado_em);
+                    return ordenacao === 'recente' ? dateB - dateA : dateA - dateB;
+                });
+            }
+            
             const grid = document.getElementById('grid-conversas');
             if (conversas.length === 0) {
                 grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><i class="fas fa-inbox"></i><p>Nenhuma conversa</p></div>`;
@@ -1148,13 +1199,16 @@ Procedimentos:
             }
             grid.innerHTML = conversas.map(c => {
                 const badgeResp = c.minha_responsabilidade ? '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:50%;margin-left:6px;vertical-align:middle" title="Você é responsável por este hotel"></span>' : '';
+                const dataExibir = c.fechado_em ? formatarData(c.fechado_em) : formatarData(c.criado_em);
+                const labelData = c.fechado_em ? 'Fechado em' : 'Criado em';
+                
                 return `
                 <div class="conversa-card" style="${c.minha_responsabilidade ? 'border-left:3px solid #ef4444' : ''}">
                     <div class="conversa-header">
                         <div>
                             <div class="conversa-numero"><i class="fas fa-phone"></i> ${c.numero_cliente || '-'}${badgeResp}</div>
                             ${c.nome_cliente ? `<div class="conversa-nome">${c.nome_cliente}</div>` : ''}
-                            <div class="conversa-tempo">${formatarData(c.criado_em)}</div>
+                            <div class="conversa-tempo">${labelData}: ${dataExibir}</div>
                             ${c.fechado_por_nome ? `<div style="font-size:10px;opacity:0.8;margin-top:4px">Fechado por: ${c.fechado_por_nome}</div>` : ''}
                         </div>
                         <span style="background:rgba(255,255,255,0.3);padding:4px 10px;border-radius:12px;font-size:11px;height:fit-content">${c.total_mensagens || 0} msg</span>
@@ -1165,6 +1219,17 @@ Procedimentos:
                     </div>
                 </div>`;
             }).join('');
+        }
+        
+        function aplicarFiltros() {
+            renderizarConversas();
+        }
+        
+        function limparFiltros() {
+            document.getElementById('filtro-data-inicio').value = '';
+            document.getElementById('filtro-data-fim').value = '';
+            document.getElementById('filtro-ordenacao').value = 'recente';
+            renderizarConversas();
         }
 
         async function abrirConversa(id) {
