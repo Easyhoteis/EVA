@@ -91,7 +91,7 @@
         .page.ativo { display: block; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; transition: all 0.3s; }
+        .card { background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); overflow: hidden; transition: all 0.3s; border: 1px solid var(--border-color); }
         .card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
         .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; }
         .stat-icon { font-size: 28px; margin-bottom: 0.5rem; }
@@ -103,6 +103,7 @@
         .conversa-nome { font-size: 12px; opacity: 0.9; margin-top: 2px; }
         .conversa-tempo { font-size: 11px; opacity: 0.9; }
         .conversa-body { flex: 1; padding: 1rem; overflow-y: auto; background: #fafbfc; font-size: 13px; }
+        [data-theme="dark"] .conversa-body { background: #2d3748; color: var(--text-primary); }
         .conversa-footer { padding: 1rem; background: white; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
         .btn { padding: 0.65rem 1.25rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s; }
         .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
@@ -120,7 +121,8 @@
         tr:hover { background: #f9fafb; }
         .form-group { margin-bottom: 1rem; }
         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 13px; }
-        input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; background: var(--bg-primary); color: var(--text-primary); }
+        [data-theme="dark"] input::placeholder, [data-theme="dark"] textarea::placeholder { color: var(--text-tertiary); }
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
         textarea { resize: vertical; min-height: 100px; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
@@ -132,12 +134,18 @@
         .search-box { flex: 1; max-width: 400px; position: relative; }
         .search-box input { padding-left: 2.5rem; }
         .search-box i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--gray); }
-        .mensagem { margin-bottom: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 13px; }
-        .mensagem-cliente { background: #e0e7ff; border-left: 3px solid var(--primary); }
-        .mensagem-eva { background: #dbeafe; border-left: 3px solid var(--info); }
-        .mensagem-atendente { background: #c6f6d5; border-left: 3px solid var(--success); }
+        .mensagem { margin-bottom: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 13px; color: var(--text-primary); }
+        .mensagem-cliente { background: #e0e7ff; border-left: 3px solid var(--primary); color: #1a202c; }
+        .mensagem-eva { background: #dbeafe; border-left: 3px solid var(--info); color: #1a202c; }
+        .mensagem-atendente { background: #c6f6d5; border-left: 3px solid var(--success); color: #1a202c; }
+        
+        /* Modo escuro - mensagens mais vibrantes */
+        [data-theme="dark"] .mensagem-cliente { background: #4c51bf; color: #f7fafc; }
+        [data-theme="dark"] .mensagem-eva { background: #3182ce; color: #f7fafc; }
+        [data-theme="dark"] .mensagem-atendente { background: #38a169; color: #f7fafc; }
         .mensagem-label { font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 0.25rem; opacity: 0.7; }
         .modal-chat { height: 350px; overflow-y: auto; padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1rem; }
+        [data-theme="dark"] .modal-chat { background: #2d3748; }
         .responder-area { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
         .responder-area textarea { flex: 1; min-height: 60px; }
         .checkbox-list { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
