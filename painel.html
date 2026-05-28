@@ -1237,6 +1237,21 @@ Procedimentos:
             const data = await res.json();
             if (!data.sucesso) return;
             conversaSelecionada = id;
+            
+            // Busca dados da conversa (nome + telefone)
+            const todasConversas = [...conversasAbertas, ...conversasFechadas];
+            const conv = todasConversas.find(c => c.id === id);
+            const nome = conv?.nome_cliente || 'Sem nome';
+            const telefone = conv?.numero_cliente || '';
+            
+            // Atualiza título com nome e telefone
+            document.getElementById('modal-conversa-titulo').innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <span>📞 ${nome}</span>
+                    <span style="font-size:14px;font-weight:400;color:var(--text-secondary)">${telefone}</span>
+                </div>
+            `;
+            
             const chat = data.mensagens.map(m => `
                 <div class="mensagem mensagem-${m.remetente}">
                     <div class="mensagem-label">${m.remetente === 'cliente' ? '👤 Cliente' : m.remetente === 'eva' ? '🤖 EVA' : '👨‍💼 ' + (m.usuario_nome || 'Atendente')}</div>
