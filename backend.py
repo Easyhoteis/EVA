@@ -493,6 +493,11 @@ async def save_cfg_zapi(req: Request):
 async def webhook(req: Request):
     d = await req.json()
     if d.get("fromMe"): return {"success": True}
+    
+    # Ignora mensagens de grupos
+    if d.get("isGroup") or "@g.us" in str(d.get("phone", "")) or "-group" in str(d.get("phone", "")):
+        return {"success": True}
+    
     num = d.get("phone")
     nome = d.get("senderName", "")
     msg = d.get("text", {}).get("message") if d.get("text") else None
