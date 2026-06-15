@@ -7,6 +7,7 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 import psycopg2
+import psycopg2.pool
 from psycopg2.extras import RealDictCursor
 
 load_dotenv()
@@ -39,12 +40,31 @@ app.add_middleware(
 )
 app.mount("/uploads", StaticFiles(directory=UPLOAD), name="uploads")
 
+# Connection Pool - reutiliza conexões (muito mais rápido!)
+db_pool = None
+
+def get_pool():
+    global db_pool
+    if db_pool is None or db_pool.closed:
+        db_pool = psycopg2.pool.SimpleConnectionPool(
+            1, 10,
+            DATABASE_URL,
+            cursor_factory=RealDictCursor
+        )
+    return db_pool
+
 def db():
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-    # Configura timezone para Brasília
+    conn = get_pool().getconn()
     with conn.cursor() as c:
         c.execute("SET TIME ZONE 'America/Sao_Paulo'")
     return conn
+
+def db_close(conn):
+    """Devolve conexão ao pool"""
+    try:
+        get_pool().putconn(conn)
+    except:
+        pass
 
 def hash_pass(s): return hashlib.sha256(s.encode()).hexdigest()
 def token(): return secrets.token_urlsafe(32)
@@ -142,7 +162,7 @@ def init():
         c.executemany("INSERT INTO templates (nome, conteudo, categoria) VALUES (%s, %s, %s)", temps)
         conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
 
 def valid_token(tok):
     if not tok: return None
@@ -151,7 +171,7 @@ def valid_token(tok):
     c.execute("SELECT u.id, u.email, u.nome, u.perfil, u.ativo FROM sessoes s JOIN usuarios u ON s.usuario_id = u.id WHERE s.token = %s", (tok,))
     r = c.fetchone()
     c.close()
-    conn.close()
+    db_close(conn)
     return dict(r) if r and r['ativo'] else None
 
 def get_user(req):
@@ -171,7 +191,7 @@ def log_acao(uid, acao, det=""):
     c.execute("INSERT INTO logs (usuario_id, acao, detalhes) VALUES (%s, %s, %s)", (uid, acao, det))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
 
 def get_zapi(tipo="atendimento"):
     conn = db()
@@ -179,7 +199,7 @@ def get_zapi(tipo="atendimento"):
     c.execute("SELECT * FROM config_zapi WHERE tipo = %s", (tipo,))
     r = c.fetchone()
     c.close()
-    conn.close()
+    db_close(conn)
     return dict(r) if r else None
 
 def enviar(num, msg, tipo="atendimento"):
@@ -218,7 +238,7 @@ def cfg_antiban():
     c.execute("SELECT * FROM config_antiban WHERE id = 1")
     r = c.fetchone()
     c.close()
-    conn.close()
+    db_close(conn)
     return dict(r) if r else None
 
 def envios_hj():
@@ -227,7 +247,7 @@ def envios_hj():
     c.execute("SELECT total FROM envios_diarios WHERE data = %s", (date.today().isoformat(),))
     r = c.fetchone()
     c.close()
-    conn.close()
+    db_close(conn)
     return r['total'] if r else 0
 
 def add_envio():
@@ -237,7 +257,7 @@ def add_envio():
     c.execute("INSERT INTO envios_diarios (data, total) VALUES (%s, 1) ON CONFLICT(data) DO UPDATE SET total = envios_diarios.total + 1", (hj,))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
 
 def pode_enviar():
     cfg = cfg_antiban()
@@ -257,7 +277,7 @@ def robo_on():
     c.execute("SELECT valor FROM config_sistema WHERE chave = 'robo_ativo'")
     r = c.fetchone()
     c.close()
-    conn.close()
+    db_close(conn)
     return r['valor'] == '1' if r else True
 
 def toggle_robo(on):
@@ -267,7 +287,7 @@ def toggle_robo(on):
     c.execute("INSERT INTO config_sistema (chave, valor) VALUES ('robo_ativo', %s) ON CONFLICT(chave) DO UPDATE SET valor = %s", (v, v))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return True
 
 def ia(msg, conhec="", hotel="Hotel", num_msg=1):
@@ -332,14 +352,14 @@ async def login(req: Request):
     u = c.fetchone()
     if not u or u['senha_hash'] != hash_pass(senha): 
         c.close()
-        conn.close()
+        db_close(conn)
         return JSONResponse({"sucesso": False, "erro": "Email ou senha incorretos"}, 401)
     tok = token()
     c.execute("INSERT INTO sessoes (token, usuario_id) VALUES (%s, %s)", (tok, u['id']))
     c.execute("UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = %s", (u['id'],))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     log_acao(u['id'], "login", "ok")
     
     # Cria response com cookie
@@ -370,7 +390,7 @@ async def logout(req: Request):
         c.execute("DELETE FROM sessoes WHERE token = %s", (tok,))
         conn.commit()
         c.close()
-        conn.close()
+        db_close(conn)
     return {"sucesso": True}
 
 @app.get("/api/me")
@@ -387,7 +407,7 @@ async def list_users(req: Request):
     c.execute("SELECT id, email, nome, perfil, ativo, criado_em, ultimo_login FROM usuarios ORDER BY nome")
     rows = c.fetchall()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "usuarios": [dict(r) for r in rows]}
 
 @app.post("/api/usuarios")
@@ -409,11 +429,11 @@ async def criar_user(req: Request):
         conn.commit()
         log_acao(u['id'], "criar_user", f"{email}")
         c.close()
-        conn.close()
+        db_close(conn)
         return {"sucesso": True}
     except Exception as e:
         c.close()
-        conn.close()
+        db_close(conn)
         print(f"ERRO AO CRIAR USUARIO: {str(e)}")
         return JSONResponse({"sucesso": False, "erro": str(e)}, 400)
 
@@ -444,7 +464,7 @@ async def update_user(uid: int, req: Request):
         conn.commit()
         print(f"UPDATE executado! Linhas afetadas: {c.rowcount}")
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.delete("/api/usuarios/{uid}")
@@ -458,7 +478,7 @@ async def del_user(uid: int, req: Request):
     c.execute("DELETE FROM sessoes WHERE usuario_id = %s", (uid,))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.get("/api/config/zapi")
@@ -470,7 +490,7 @@ async def get_cfg_zapi(req: Request):
     c.execute("SELECT * FROM config_zapi")
     rows = c.fetchall()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "configs": {r['tipo']: dict(r) for r in rows}}
 
 @app.post("/api/config/zapi")
@@ -486,7 +506,7 @@ async def save_cfg_zapi(req: Request):
         (tipo, d.get("instance_id"), d.get("token"), d.get("client_token"), d.get("instance_id"), d.get("token"), d.get("client_token")))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.post("/webhook/zapi")
@@ -544,7 +564,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
                 enviar(num, f"✅ Confirmado! Avisei o {hotel_nome} que foi concluído e fechei o atendimento.", "atendimento")
             
             c.close()
-            conn.close()
+            db_close(conn)
             return {"success": True, "tipo": "conclusao_atendente"}
     
     # verifica se conversa foi fechada (cliente agradecendo depois)
@@ -566,7 +586,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
             c.execute("UPDATE conversas SET status = 'fechado', fechado_em = CURRENT_TIMESTAMP WHERE id = %s", (conv_fechada['id'],))
             conn.commit()
             c.close()
-            conn.close()
+            db_close(conn)
             enviar(num, resp, "atendimento")
             return {"success": True, "tipo": "agradecimento_pos_fechamento"}
         else:
@@ -584,7 +604,7 @@ Qualquer dúvida, estamos à disposição! 😊"""
         c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "cliente", msg))
         conn.commit()
         c.close()
-        conn.close()
+        db_close(conn)
         return {"success": True, "robo": "pausado"}
     
     c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (num,))
@@ -735,7 +755,7 @@ Responda aqui quando concluir!"""
             print("SEM RESPONSÁVEIS PARA NOTIFICAR")
     
     c.close()
-    conn.close()
+    db_close(conn)
     return {"success": True}
 
 @app.get("/api/conversas/abertas")
@@ -762,7 +782,7 @@ async def conv_abertas(req: Request):
         convs.append(conv)
     
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "conversas": convs, "total": len(convs)}
 
 @app.get("/api/conversas/fechadas")
@@ -771,10 +791,10 @@ async def conv_fechadas(req: Request):
     if not u: return JSONResponse({"sucesso": False}, 401)
     conn = db()
     c = conn.cursor()
-    c.execute("SELECT c.*, (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens FROM conversas c WHERE status = 'fechado' ORDER BY fechado_em DESC")
+    c.execute("SELECT c.*, (SELECT COUNT(*) FROM mensagens WHERE conversa_id = c.id) as total_mensagens FROM conversas c WHERE status = 'fechado' ORDER BY fechado_em DESC LIMIT 200")
     rows = c.fetchall()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "conversas": [dict(r) for r in rows], "total": len(rows)}
 
 @app.get("/api/conversas/{cid}/mensagens")
@@ -786,7 +806,7 @@ async def msgs(cid: int, req: Request):
     c.execute("SELECT * FROM mensagens WHERE conversa_id = %s ORDER BY criado_em", (cid,))
     rows = c.fetchall()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "mensagens": [dict(r) for r in rows]}
 
 @app.post("/api/conversas/{cid}/fechar")
@@ -810,7 +830,7 @@ async def fechar(cid: int, req: Request):
             enviar(num, f"*{u['nome']}:*\nObrigado! Atendimento encerrado. 😊", "atendimento")
     
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.post("/api/conversas/{cid}/responder")
@@ -826,14 +846,14 @@ async def responder(cid: int, req: Request):
     r = c.fetchone()
     if not r:
         c.close()
-        conn.close()
+        db_close(conn)
         return JSONResponse({"sucesso": False}, 404)
     num = r['numero_cliente']
     msg_final = f"*{u['nome']}:*\n{msg}"
     c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo, usuario_nome) VALUES (%s, %s, %s, %s)", (cid, "atendente", msg_final, u['nome']))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "envio": enviar(num, msg_final, "atendimento")}
 
 @app.get("/api/contatos")
@@ -845,7 +865,7 @@ async def list_contatos(req: Request):
     c.execute("SELECT * FROM contatos ORDER BY nome")
     rows = c.fetchall()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "contatos": [dict(r) for r in rows], "total": len(rows)}
 
 @app.post("/api/contatos")
@@ -863,11 +883,11 @@ async def criar_contato(req: Request):
             (d["nome"], d["numero"], d.get("email", ""), d.get("tags", ""), d.get("observacoes", ""), d.get("conhecimento_ia", ""), resp_json))
         conn.commit()
         c.close()
-        conn.close()
+        db_close(conn)
         return {"sucesso": True}
     except Exception as e:
         c.close()
-        conn.close()
+        db_close(conn)
         erro_msg = str(e)
         if "duplicate key" in erro_msg or "unique constraint" in erro_msg:
             return JSONResponse({"sucesso": False, "erro": "Numero ja cadastrado"}, 400)
@@ -890,11 +910,11 @@ async def editar_contato(cid: int, req: Request):
             (d["nome"], d["numero"], d.get("email", ""), d.get("tags", ""), d.get("conhecimento_ia", ""), resp_json, cid))
         conn.commit()
         c.close()
-        conn.close()
+        db_close(conn)
         return {"sucesso": True}
     except Exception as e:
         c.close()
-        conn.close()
+        db_close(conn)
         print(f"ERRO EDITAR CONTATO: {str(e)}")
         return JSONResponse({"sucesso": False, "erro": str(e)}, 400)
 
@@ -907,7 +927,7 @@ async def del_contato(cid: int, req: Request):
     c.execute("DELETE FROM contatos WHERE id = %s", (cid,))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.post("/api/contatos/importar")
@@ -930,7 +950,7 @@ async def importar(file: UploadFile = File(...)):
             except: err += 1
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "importados": imp, "erros": err}
 
 @app.post("/api/contatos/preview-csv")
@@ -965,7 +985,7 @@ async def list_temps(req: Request):
     c.execute("SELECT * FROM templates ORDER BY nome")
     rows = c.fetchall()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "templates": [dict(r) for r in rows]}
 
 @app.post("/api/templates")
@@ -979,7 +999,7 @@ async def criar_temp(req: Request):
     c.execute("INSERT INTO templates (nome, conteudo, categoria) VALUES (%s, %s, %s)", (d["nome"], d["conteudo"], d.get("categoria", "geral")))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.delete("/api/templates/{tid}")
@@ -991,7 +1011,7 @@ async def del_temp(tid: int, req: Request):
     c.execute("DELETE FROM templates WHERE id = %s", (tid,))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.get("/api/campanhas")
@@ -1003,7 +1023,7 @@ async def list_camps(req: Request):
     c.execute("SELECT * FROM campanhas ORDER BY criado_em DESC")
     rows = c.fetchall()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "campanhas": [dict(r) for r in rows]}
 
 @app.post("/api/campanhas")
@@ -1037,7 +1057,7 @@ async def criar_camp(req: Request):
         c.execute("INSERT INTO envios (campanha_id, contato_id, numero, nome, status) VALUES (%s, NULL, %s, %s, 'pendente')", (cid, cont['numero'], cont['nome']))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     asyncio.create_task(processar(cid))
     return {"sucesso": True, "campanha_id": cid}
 
@@ -1050,7 +1070,7 @@ async def processar(cid):
     camp = c.fetchone()
     if not camp: 
         c.close()
-        conn.close()
+        db_close(conn)
         return
     msg_base, img = camp['mensagem'], camp['imagem_url']
     cfg = cfg_antiban()
@@ -1086,7 +1106,7 @@ async def processar(cid):
     c.execute("UPDATE campanhas SET status = 'finalizada', finalizado_em = CURRENT_TIMESTAMP WHERE id = %s", (cid,))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
 
 @app.get("/api/antiban/config")
 async def get_antiban(req: Request):
@@ -1108,7 +1128,7 @@ async def save_antiban(req: Request):
          d.get("horario_inicio","08:00"), d.get("horario_fim","20:00"), 1 if d.get("ativo",True) else 0))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.get("/api/relatorios")
@@ -1143,7 +1163,7 @@ async def relat(req: Request):
     por_motivo = [dict(r) for r in c.fetchall()]
     
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "relatorios": {"totalConversas": total_conv, "abertos": abertos, "fechados": fechados, "tempoMedioMinutos": tempo_med,
         "totalContatos": conts, "totalCampanhas": camps, "totalEnviadas": env, "enviadosHoje": envios_hj(), "topAtendentes": top,
         "topHoteis": top_hoteis, "porMotivo": por_motivo}}
@@ -1171,7 +1191,7 @@ async def export_excel(req: Request):
     conversas = c.fetchall()
     
     c.close()
-    conn.close()
+    db_close(conn)
     
     # Cria workbook
     wb = Workbook()
@@ -1344,7 +1364,7 @@ async def get_config_notificacao(req: Request):
     c.execute("SELECT * FROM config_notificacao WHERE id = 1")
     config = c.fetchone()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "config": dict(config) if config else {}}
 
 @app.post("/api/notificacao/config")
@@ -1358,7 +1378,7 @@ async def salvar_config_notificacao(req: Request):
         (d.get('grupo_id'), d.get('grupo_nome'), 1 if d.get('ativo') else 0, 1 if d.get('enviar_individual') else 0))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.get("/api/listas")
@@ -1370,7 +1390,7 @@ async def get_listas(req: Request):
     c.execute("SELECT * FROM listas_transmissao ORDER BY nome")
     listas = [dict(r) for r in c.fetchall()]
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "listas": listas}
 
 @app.post("/api/listas")
@@ -1387,7 +1407,7 @@ async def criar_lista(req: Request):
     c.execute("INSERT INTO listas_transmissao (nome, hoteis_ids) VALUES (%s, %s)", (nome, json.dumps(hoteis_ids)))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.put("/api/listas/{lid}")
@@ -1404,7 +1424,7 @@ async def atualizar_lista(lid: int, req: Request):
     c.execute("UPDATE listas_transmissao SET nome = %s, hoteis_ids = %s WHERE id = %s", (nome, json.dumps(hoteis_ids), lid))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.delete("/api/listas/{lid}")
@@ -1416,7 +1436,7 @@ async def deletar_lista(lid: int, req: Request):
     c.execute("DELETE FROM listas_transmissao WHERE id = %s", (lid,))
     conn.commit()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True}
 
 @app.post("/api/transmissao")
@@ -1442,7 +1462,7 @@ async def lista_transmissao(req: Request):
     lista = c.fetchone()
     if not lista:
         c.close()
-        conn.close()
+        db_close(conn)
         return JSONResponse({"sucesso": False, "erro": "Lista não encontrada"}, 400)
     
     hoteis_ids = json.loads(lista['hoteis_ids'])
@@ -1452,7 +1472,7 @@ async def lista_transmissao(req: Request):
     c.execute(f"SELECT nome, numero FROM contatos WHERE id IN ({placeholders}) ORDER BY nome", tuple(hoteis_ids))
     hoteis = c.fetchall()
     c.close()
-    conn.close()
+    db_close(conn)
     
     if not hoteis:
         return JSONResponse({"sucesso": False, "erro": "Nenhum hotel na lista"}, 400)
@@ -1501,7 +1521,7 @@ async def list_notifs(req: Request):
         c.execute("SELECT * FROM notificacoes WHERE usuario_id = %s ORDER BY enviado_em DESC LIMIT 100", (u['id'],))
     rows = c.fetchall()
     c.close()
-    conn.close()
+    db_close(conn)
     return {"sucesso": True, "notificacoes": [dict(r) for r in rows]}
 
 if __name__ == "__main__":
