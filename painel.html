@@ -1162,6 +1162,13 @@ Procedimentos:
                 const [resA, resF] = await Promise.all([api(`${API}/conversas/abertas`), api(`${API}/conversas/fechadas`)]);
                 const dataA = await resA.json();
                 const dataF = await resF.json();
+                
+                // Debug mobile
+                if (window._debugMode) {
+                    document.getElementById('debug-log').innerHTML += `<br>📡 Abertas: status=${resA.status} sucesso=${dataA.sucesso} total=${(dataA.conversas||[]).length}`;
+                    document.getElementById('debug-log').innerHTML += `<br>📡 Fechadas: status=${resF.status} sucesso=${dataF.sucesso} total=${(dataF.conversas||[]).length}`;
+                }
+                
                 conversasAbertas = dataA.conversas || [];
                 conversasFechadas = dataF.conversas || [];
                 
@@ -1185,7 +1192,12 @@ Procedimentos:
                 document.getElementById('count-fechados').textContent = conversasFechadas.length;
                 document.getElementById('badge-conversas').textContent = conversasAbertas.length;
                 renderizarConversas();
-            } catch (e) {}
+            } catch (e) {
+                // Debug mobile - mostra erro
+                if (window._debugMode) {
+                    document.getElementById('debug-log').innerHTML += `<br>❌ ERRO carregarConversas: ${e.message}`;
+                }
+            }
         }
 
         function renderizarConversas() {
@@ -2356,6 +2368,39 @@ Procedimentos:
         // ============================================
         // MODO ESCURO/CLARO
         // ============================================
+        
+        // DEBUG MODE - triplo clique no logo ativa
+        window._debugMode = false;
+        let _debugClicks = 0;
+        document.addEventListener('DOMContentLoaded', () => {
+            const logo = document.querySelector('.logo-section');
+            if (logo) {
+                logo.addEventListener('click', () => {
+                    _debugClicks++;
+                    setTimeout(() => { _debugClicks = 0; }, 2000);
+                    if (_debugClicks >= 3) {
+                        window._debugMode = !window._debugMode;
+                        let dbg = document.getElementById('debug-panel');
+                        if (!dbg) {
+                            dbg = document.createElement('div');
+                            dbg.id = 'debug-panel';
+                            dbg.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a202c;color:#68d391;font-family:monospace;font-size:12px;padding:10px;max-height:40vh;overflow-y:auto;z-index:99999;border-top:3px solid #68d391';
+                            dbg.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:5px"><strong>🔧 DEBUG MODE</strong><button onclick="this.parentElement.parentElement.remove();window._debugMode=false" style="background:red;color:white;border:none;padding:2px 8px;border-radius:4px;cursor:pointer">X</button></div><div id="debug-log"></div>`;
+                            document.body.appendChild(dbg);
+                        }
+                        const log = document.getElementById('debug-log');
+                        log.innerHTML = `✅ Token: ${token ? token.substring(0,15) + '...' : 'VAZIO!'}`;
+                        log.innerHTML += `<br>👤 Usuário: ${usuarioLogado ? usuarioLogado.nome : 'NÃO LOGADO'}`;
+                        log.innerHTML += `<br>📱 UserAgent: ${navigator.userAgent.substring(0,80)}`;
+                        log.innerHTML += `<br>💾 localStorage token: ${localStorage.getItem('eva-token') ? 'SIM' : 'NÃO'}`;
+                        log.innerHTML += `<br>📊 Abertas: ${conversasAbertas.length} | Fechadas: ${conversasFechadas.length}`;
+                        log.innerHTML += `<br>⏰ ${new Date().toLocaleTimeString()}`;
+                        log.innerHTML += `<br>------- aguardando próximo polling... -------`;
+                        _debugClicks = 0;
+                    }
+                });
+            }
+        });
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
         const themeText = document.getElementById('themeText');
