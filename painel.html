@@ -1158,56 +1158,56 @@ Procedimentos:
         }
 
         async function carregarConversas() {
-            // Debug - confirma que função foi chamada
             if (window._debugMode) {
-                document.getElementById('debug-log').innerHTML += `<br>🔄 [${new Date().toLocaleTimeString()}] Chamando API...`;
-                document.getElementById('debug-log').innerHTML += `<br>🔑 Token usado: ${token ? token.substring(0,10)+'...' : 'VAZIO!!!'}`;
+                document.getElementById('debug-log').innerHTML += `<br>🔄 [${new Date().toLocaleTimeString()}] Carregando...`;
             }
             
+            // Carrega abertas (independente)
             try {
-                const [resA, resF] = await Promise.all([api(`${API}/conversas/abertas`), api(`${API}/conversas/fechadas`)]);
-                
-                if (window._debugMode) {
-                    document.getElementById('debug-log').innerHTML += `<br>📡 Status abertas: ${resA.status} | fechadas: ${resF.status}`;
-                }
-                
+                const resA = await api(`${API}/conversas/abertas`);
                 const dataA = await resA.json();
-                const dataF = await resF.json();
-                
-                if (window._debugMode) {
-                    document.getElementById('debug-log').innerHTML += `<br>📊 Abertas: sucesso=${dataA.sucesso} total=${(dataA.conversas||[]).length}`;
-                    document.getElementById('debug-log').innerHTML += `<br>📊 Fechadas: sucesso=${dataF.sucesso} total=${(dataF.conversas||[]).length}`;
-                    // Scroll pro final
-                    document.getElementById('debug-panel').scrollTop = document.getElementById('debug-panel').scrollHeight;
-                }
-                
-                conversasAbertas = dataA.conversas || [];
-                conversasFechadas = dataF.conversas || [];
-                
-                if (conversasAbertas.length > ultimaContagemAbertas && ultimaContagemAbertas > 0) {
-                    if (!somNotificacao) somNotificacao = criarSomNotificacao();
-                    somNotificacao();
+                if (dataA.sucesso) {
+                    conversasAbertas = dataA.conversas || [];
+                    document.getElementById('count-abertos').textContent = conversasAbertas.length;
+                    document.getElementById('badge-conversas').textContent = conversasAbertas.length;
                     
-                    if (Notification.permission === 'granted') {
-                        new Notification('🔔 Nova conversa EVA!', {
-                            body: `${conversasAbertas.length} conversa(s) aberta(s)`,
-                            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%236C63FF"/><text x="50" y="65" font-size="50" text-anchor="middle" fill="white">EVA</text></svg>'
-                        });
+                    // Som de notificação
+                    if (conversasAbertas.length > ultimaContagemAbertas && ultimaContagemAbertas > 0) {
+                        if (!somNotificacao) somNotificacao = criarSomNotificacao();
+                        somNotificacao();
+                        if (Notification.permission === 'granted') {
+                            new Notification('🔔 Nova conversa EVA!', { body: `${conversasAbertas.length} conversa(s) aberta(s)` });
+                        }
                     }
+                    ultimaContagemAbertas = conversasAbertas.length;
                 }
-                
-                ultimaContagemAbertas = conversasAbertas.length;
-                
-                document.getElementById('count-abertos').textContent = conversasAbertas.length;
-                document.getElementById('count-fechados').textContent = conversasFechadas.length;
-                document.getElementById('badge-conversas').textContent = conversasAbertas.length;
-                renderizarConversas();
+                if (window._debugMode) {
+                    document.getElementById('debug-log').innerHTML += `<br>📡 Abertas: ${conversasAbertas.length}`;
+                }
             } catch (e) {
                 if (window._debugMode) {
-                    document.getElementById('debug-log').innerHTML += `<br>❌ ERRO: ${e.message}`;
-                    document.getElementById('debug-panel').scrollTop = document.getElementById('debug-panel').scrollHeight;
+                    document.getElementById('debug-log').innerHTML += `<br>❌ Erro abertas: ${e.message}`;
                 }
             }
+            
+            // Carrega fechadas (independente)
+            try {
+                const resF = await api(`${API}/conversas/fechadas`);
+                const dataF = await resF.json();
+                if (dataF.sucesso) {
+                    conversasFechadas = dataF.conversas || [];
+                    document.getElementById('count-fechados').textContent = conversasFechadas.length;
+                }
+                if (window._debugMode) {
+                    document.getElementById('debug-log').innerHTML += `<br>📡 Fechadas: ${conversasFechadas.length}`;
+                }
+            } catch (e) {
+                if (window._debugMode) {
+                    document.getElementById('debug-log').innerHTML += `<br>❌ Erro fechadas: ${e.message}`;
+                }
+            }
+            
+            renderizarConversas();
         }
 
         function renderizarConversas() {
