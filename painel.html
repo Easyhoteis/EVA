@@ -2394,18 +2394,53 @@ Procedimentos:
                         if (!dbg) {
                             dbg = document.createElement('div');
                             dbg.id = 'debug-panel';
-                            dbg.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a202c;color:#68d391;font-family:monospace;font-size:12px;padding:10px;max-height:40vh;overflow-y:auto;z-index:99999;border-top:3px solid #68d391';
-                            dbg.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:5px"><strong>🔧 DEBUG MODE</strong><button onclick="this.parentElement.parentElement.remove();window._debugMode=false" style="background:red;color:white;border:none;padding:2px 8px;border-radius:4px;cursor:pointer">X</button></div><div id="debug-log"></div>`;
+                            dbg.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a202c;color:#68d391;font-family:monospace;font-size:12px;padding:10px;max-height:50vh;overflow-y:auto;z-index:99999;border-top:3px solid #68d391';
+                            dbg.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:5px"><strong>🔧 DEBUG MODE</strong><button onclick="this.parentElement.parentElement.remove();window._debugMode=false" style="background:red;color:white;border:none;padding:2px 8px;border-radius:4px;cursor:pointer">X</button></div><div id="debug-log">Carregando...</div>`;
                             document.body.appendChild(dbg);
                         }
+                        
+                        // TESTE DIRETO DA API
                         const log = document.getElementById('debug-log');
                         log.innerHTML = `✅ Token: ${token ? token.substring(0,15) + '...' : 'VAZIO!'}`;
                         log.innerHTML += `<br>👤 Usuário: ${usuarioLogado ? usuarioLogado.nome : 'NÃO LOGADO'}`;
-                        log.innerHTML += `<br>📱 UserAgent: ${navigator.userAgent.substring(0,80)}`;
-                        log.innerHTML += `<br>💾 localStorage token: ${localStorage.getItem('eva-token') ? 'SIM' : 'NÃO'}`;
-                        log.innerHTML += `<br>📊 Abertas: ${conversasAbertas.length} | Fechadas: ${conversasFechadas.length}`;
-                        log.innerHTML += `<br>⏰ ${new Date().toLocaleTimeString()}`;
-                        log.innerHTML += `<br>------- aguardando próximo polling... -------`;
+                        log.innerHTML += `<br>💾 localStorage: ${localStorage.getItem('eva-token') ? 'SIM' : 'NÃO'}`;
+                        log.innerHTML += `<br>📊 Arrays: Abertas=${conversasAbertas.length} Fechadas=${conversasFechadas.length}`;
+                        log.innerHTML += `<br><br>🧪 TESTANDO API AGORA...`;
+                        
+                        // Teste 1: chamada direta SEM credentials
+                        fetch(`${API}/conversas/abertas`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        })
+                        .then(r => {
+                            log.innerHTML += `<br>📡 Teste1 (sem credentials): status=${r.status}`;
+                            return r.json();
+                        })
+                        .then(d => {
+                            log.innerHTML += `<br>📋 Resultado: sucesso=${d.sucesso} total=${(d.conversas||[]).length}`;
+                            if (d.conversas && d.conversas.length > 0) {
+                                log.innerHTML += `<br>🏨 1ª conversa: ${d.conversas[0].nome_cliente || d.conversas[0].numero_cliente}`;
+                            }
+                        })
+                        .catch(e => {
+                            log.innerHTML += `<br>❌ Teste1 ERRO: ${e.message}`;
+                        });
+                        
+                        // Teste 2: chamada COM credentials (como api() faz)
+                        fetch(`${API}/conversas/abertas`, {
+                            credentials: 'include',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        })
+                        .then(r => {
+                            log.innerHTML += `<br><br>📡 Teste2 (com credentials): status=${r.status}`;
+                            return r.json();
+                        })
+                        .then(d => {
+                            log.innerHTML += `<br>📋 Resultado: sucesso=${d.sucesso} total=${(d.conversas||[]).length}`;
+                        })
+                        .catch(e => {
+                            log.innerHTML += `<br>❌ Teste2 ERRO: ${e.message}`;
+                        });
+                        
                         _debugClicks = 0;
                     }
                 });
