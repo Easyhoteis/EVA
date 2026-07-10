@@ -2335,7 +2335,7 @@ Procedimentos:
             }
             
             try {
-                const res = await api(`${API}/conversas/nova`, {
+                const res = await api(`${API}/nova-conversa`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ contato_id: contatoSelecionadoId, mensagem: msg })
