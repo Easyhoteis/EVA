@@ -380,6 +380,9 @@
                             </button>
                         </div>
                         <div>
+                            <button class="btn btn-sm" style="background:var(--success);color:white;margin-right:0.5rem" onclick="abrirNovaConversa()">
+                                <i class="fas fa-plus"></i> Nova Conversa
+                            </button>
                             <button class="btn btn-primary btn-sm" onclick="mudarTabConversa('abertos')" id="tab-abertos">
                                 <i class="fas fa-inbox"></i> Abertos <span id="count-abertos">0</span>
                             </button>
@@ -600,6 +603,30 @@
             <div class="modal-actions">
                 <button class="btn btn-success btn-block" onclick="fecharAtendimentoModal()"><i class="fas fa-check"></i> Fechar Atendimento</button>
                 <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-conversa')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NOVA CONVERSA -->
+    <div class="modal" id="modal-nova-conversa">
+        <div class="modal-content">
+            <div class="modal-title"><i class="fas fa-plus-circle"></i> Nova Conversa</div>
+            <div class="form-group">
+                <label>Selecione o Contato</label>
+                <input type="text" id="busca-contato-nova" placeholder="Buscar por nome ou número..." oninput="filtrarContatosNova()">
+                <div id="lista-contatos-nova" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:0.5rem"></div>
+            </div>
+            <div id="contato-selecionado-info" style="display:none;background:var(--bg-secondary);padding:1rem;border-radius:8px;margin-bottom:1rem;border:2px solid var(--success)">
+                <strong id="contato-sel-nome" style="color:var(--text-primary)"></strong><br>
+                <span id="contato-sel-numero" style="color:var(--text-secondary);font-size:14px"></span>
+            </div>
+            <div class="form-group">
+                <label>Mensagem</label>
+                <textarea id="nova-conversa-msg" placeholder="Digite a mensagem que será enviada pelo WhatsApp..." style="min-height:120px"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-success btn-block" onclick="enviarNovaConversa()"><i class="fas fa-paper-plane"></i> Enviar Mensagem</button>
+                <button class="btn btn-block" style="background:#e2e8f0;color:var(--dark)" onclick="fecharModal('modal-nova-conversa')">Cancelar</button>
             </div>
         </div>
     </div>
@@ -2231,6 +2258,100 @@ Procedimentos:
         document.getElementById('login-senha').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') fazerLogin();
         });
+        
+        // ============================================
+        // NOVA CONVERSA
+        // ============================================
+        let contatoSelecionadoId = null;
+        let todosContatosCache = [];
+        
+        async function abrirNovaConversa() {
+            contatoSelecionadoId = null;
+            document.getElementById('contato-selecionado-info').style.display = 'none';
+            document.getElementById('nova-conversa-msg').value = '';
+            document.getElementById('busca-contato-nova').value = '';
+            
+            // Carrega contatos
+            try {
+                const res = await api(`${API}/contatos`);
+                const data = await res.json();
+                if (data.sucesso) {
+                    todosContatosCache = data.contatos;
+                    renderizarContatosNova(data.contatos);
+                }
+            } catch(e) {}
+            
+            document.getElementById('modal-nova-conversa').classList.add('ativo');
+        }
+        
+        function renderizarContatosNova(contatos) {
+            const lista = document.getElementById('lista-contatos-nova');
+            if (contatos.length === 0) {
+                lista.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-tertiary)">Nenhum contato encontrado</div>';
+                return;
+            }
+            lista.innerHTML = contatos.map(c => `
+                <div onclick="selecionarContatoNova(${c.id}, '${(c.nome || '').replace(/'/g, "\\'")}', '${c.numero}')" 
+                     style="padding:0.75rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;transition:background 0.2s"
+                     onmouseover="this.style.background='var(--bg-tertiary)'" 
+                     onmouseout="this.style.background=''"
+                     id="contato-item-${c.id}">
+                    <div>
+                        <strong style="color:var(--text-primary)">${c.nome || 'Sem nome'}</strong><br>
+                        <span style="font-size:13px;color:var(--text-secondary)">${c.numero}</span>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:var(--text-tertiary)"></i>
+                </div>
+            `).join('');
+        }
+        
+        function filtrarContatosNova() {
+            const busca = document.getElementById('busca-contato-nova').value.toLowerCase();
+            const filtrados = todosContatosCache.filter(c => 
+                (c.nome || '').toLowerCase().includes(busca) || 
+                (c.numero || '').includes(busca)
+            );
+            renderizarContatosNova(filtrados);
+        }
+        
+        function selecionarContatoNova(id, nome, numero) {
+            contatoSelecionadoId = id;
+            document.getElementById('contato-sel-nome').textContent = nome;
+            document.getElementById('contato-sel-numero').textContent = numero;
+            document.getElementById('contato-selecionado-info').style.display = 'block';
+            document.getElementById('lista-contatos-nova').style.display = 'none';
+            document.getElementById('busca-contato-nova').style.display = 'none';
+        }
+        
+        async function enviarNovaConversa() {
+            if (!contatoSelecionadoId) {
+                alert('Selecione um contato!');
+                return;
+            }
+            const msg = document.getElementById('nova-conversa-msg').value.trim();
+            if (!msg) {
+                alert('Digite uma mensagem!');
+                return;
+            }
+            
+            try {
+                const res = await api(`${API}/conversas/nova`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contato_id: contatoSelecionadoId, mensagem: msg })
+                });
+                const data = await res.json();
+                if (data.sucesso) {
+                    alert('✅ Mensagem enviada com sucesso!');
+                    fecharModal('modal-nova-conversa');
+                    carregarConversas();
+                } else {
+                    alert('❌ Erro: ' + (data.erro || 'Falha ao enviar'));
+                }
+            } catch(e) {
+                alert('❌ Erro de conexão');
+            }
+        }
         
         // ============================================
         // MODO ESCURO/CLARO
