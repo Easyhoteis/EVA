@@ -7,7 +7,6 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 import psycopg2
-import psycopg2.pool
 from psycopg2.extras import RealDictCursor
 
 load_dotenv()
@@ -40,29 +39,16 @@ app.add_middleware(
 )
 app.mount("/uploads", StaticFiles(directory=UPLOAD), name="uploads")
 
-# Connection Pool - reutiliza conexões (muito mais rápido!)
-db_pool = None
-
-def get_pool():
-    global db_pool
-    if db_pool is None or db_pool.closed:
-        db_pool = psycopg2.pool.SimpleConnectionPool(
-            1, 10,
-            DATABASE_URL,
-            cursor_factory=RealDictCursor
-        )
-    return db_pool
-
 def db():
-    conn = get_pool().getconn()
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     with conn.cursor() as c:
         c.execute("SET TIME ZONE 'America/Sao_Paulo'")
     return conn
 
 def db_close(conn):
-    """Devolve conexão ao pool"""
+    """Fecha conexão"""
     try:
-        get_pool().putconn(conn)
+        conn.close()
     except:
         pass
 
@@ -865,7 +851,7 @@ async def responder(cid: int, req: Request):
     db_close(conn)
     return {"sucesso": True, "envio": enviar(num, msg_final, "atendimento")}
 
-@app.post("/api/conversas/nova")
+@app.post("/api/nova-conversa")
 async def nova_conversa(req: Request):
     """Cria conversa iniciada pelo painel (EVA não responde automaticamente)"""
     u = get_user(req)
@@ -895,8 +881,13 @@ async def nova_conversa(req: Request):
         cid = conv_existente['id']
     else:
         # Cria conversa nova com origem = 'painel'
-        c.execute("INSERT INTO conversas (numero_cliente, nome_cliente, motivo, origem) VALUES (%s, %s, %s, %s) RETURNING id",
-            (contato['numero'], contato['nome'], 'Contato Ativo', 'painel'))
+        try:
+            c.execute("INSERT INTO conversas (numero_cliente, nome_cliente, motivo, origem) VALUES (%s, %s, %s, %s) RETURNING id",
+                (contato['numero'], contato['nome'], 'Contato Ativo', 'painel'))
+        except:
+            conn.rollback()
+            c.execute("INSERT INTO conversas (numero_cliente, nome_cliente, motivo) VALUES (%s, %s, %s) RETURNING id",
+                (contato['numero'], contato['nome'], 'Contato Ativo'))
         cid = c.fetchone()['id']
     
     # Salva mensagem
