@@ -40,7 +40,7 @@ app.add_middleware(
 app.mount("/uploads", StaticFiles(directory=UPLOAD), name="uploads")
 
 def db():
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor, connect_timeout=10, sslmode='require')
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor, connect_timeout=10)
     with conn.cursor() as c:
         c.execute("SET TIME ZONE 'America/Sao_Paulo'")
     return conn
