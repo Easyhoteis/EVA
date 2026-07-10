@@ -40,7 +40,7 @@ app.add_middleware(
 app.mount("/uploads", StaticFiles(directory=UPLOAD), name="uploads")
 
 def db():
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor, connect_timeout=10, sslmode='require')
     with conn.cursor() as c:
         c.execute("SET TIME ZONE 'America/Sao_Paulo'")
     return conn
@@ -640,10 +640,10 @@ Qualquer dúvida, estamos à disposição! 😊"""
     conn.commit()
     
     # Conta mensagens ANTES de responder pra decidir se responde
-    c.execute("SELECT criado_em, origem FROM conversas WHERE id = %s", (cid,))
+    c.execute("SELECT * FROM conversas WHERE id = %s", (cid,))
     conv_data = c.fetchone()
     conv_criado = conv_data['criado_em']
-    conv_origem = conv_data.get('origem', 'whatsapp')
+    conv_origem = conv_data.get('origem', 'whatsapp') if conv_data else 'whatsapp'
     
     c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' AND criado_em >= %s", (cid, conv_criado))
     num_msgs = c.fetchone()['count']
