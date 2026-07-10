@@ -1158,26 +1158,36 @@ Procedimentos:
         }
 
         async function carregarConversas() {
+            // Debug - confirma que função foi chamada
+            if (window._debugMode) {
+                document.getElementById('debug-log').innerHTML += `<br>🔄 [${new Date().toLocaleTimeString()}] Chamando API...`;
+                document.getElementById('debug-log').innerHTML += `<br>🔑 Token usado: ${token ? token.substring(0,10)+'...' : 'VAZIO!!!'}`;
+            }
+            
             try {
                 const [resA, resF] = await Promise.all([api(`${API}/conversas/abertas`), api(`${API}/conversas/fechadas`)]);
+                
+                if (window._debugMode) {
+                    document.getElementById('debug-log').innerHTML += `<br>📡 Status abertas: ${resA.status} | fechadas: ${resF.status}`;
+                }
+                
                 const dataA = await resA.json();
                 const dataF = await resF.json();
                 
-                // Debug mobile
                 if (window._debugMode) {
-                    document.getElementById('debug-log').innerHTML += `<br>📡 Abertas: status=${resA.status} sucesso=${dataA.sucesso} total=${(dataA.conversas||[]).length}`;
-                    document.getElementById('debug-log').innerHTML += `<br>📡 Fechadas: status=${resF.status} sucesso=${dataF.sucesso} total=${(dataF.conversas||[]).length}`;
+                    document.getElementById('debug-log').innerHTML += `<br>📊 Abertas: sucesso=${dataA.sucesso} total=${(dataA.conversas||[]).length}`;
+                    document.getElementById('debug-log').innerHTML += `<br>📊 Fechadas: sucesso=${dataF.sucesso} total=${(dataF.conversas||[]).length}`;
+                    // Scroll pro final
+                    document.getElementById('debug-panel').scrollTop = document.getElementById('debug-panel').scrollHeight;
                 }
                 
                 conversasAbertas = dataA.conversas || [];
                 conversasFechadas = dataF.conversas || [];
                 
-                // Detecta nova conversa e toca som
                 if (conversasAbertas.length > ultimaContagemAbertas && ultimaContagemAbertas > 0) {
                     if (!somNotificacao) somNotificacao = criarSomNotificacao();
                     somNotificacao();
                     
-                    // Notificação do navegador (se permitido)
                     if (Notification.permission === 'granted') {
                         new Notification('🔔 Nova conversa EVA!', {
                             body: `${conversasAbertas.length} conversa(s) aberta(s)`,
@@ -1193,9 +1203,9 @@ Procedimentos:
                 document.getElementById('badge-conversas').textContent = conversasAbertas.length;
                 renderizarConversas();
             } catch (e) {
-                // Debug mobile - mostra erro
                 if (window._debugMode) {
-                    document.getElementById('debug-log').innerHTML += `<br>❌ ERRO carregarConversas: ${e.message}`;
+                    document.getElementById('debug-log').innerHTML += `<br>❌ ERRO: ${e.message}`;
+                    document.getElementById('debug-panel').scrollTop = document.getElementById('debug-panel').scrollHeight;
                 }
             }
         }
