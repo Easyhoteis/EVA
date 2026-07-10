@@ -92,6 +92,13 @@ def init():
     except:
         conn.rollback()
     
+    # Adiciona coluna origem se não existir (whatsapp ou painel)
+    try:
+        c.execute("ALTER TABLE conversas ADD COLUMN origem TEXT DEFAULT 'whatsapp'")
+        conn.commit()
+    except:
+        conn.rollback()
+    
     c.execute("CREATE TABLE IF NOT EXISTS mensagens (id SERIAL PRIMARY KEY, conversa_id INTEGER NOT NULL, remetente TEXT NOT NULL, conteudo TEXT NOT NULL, usuario_nome TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     c.execute("CREATE TABLE IF NOT EXISTS contatos (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, numero TEXT UNIQUE NOT NULL, email TEXT, tags TEXT, observacoes TEXT, conhecimento_ia TEXT, responsaveis TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     
@@ -647,14 +654,16 @@ Qualquer dúvida, estamos à disposição! 😊"""
     conn.commit()
     
     # Conta mensagens ANTES de responder pra decidir se responde
-    c.execute("SELECT criado_em FROM conversas WHERE id = %s", (cid,))
-    conv_criado = c.fetchone()['criado_em']
+    c.execute("SELECT criado_em, origem FROM conversas WHERE id = %s", (cid,))
+    conv_data = c.fetchone()
+    conv_criado = conv_data['criado_em']
+    conv_origem = conv_data.get('origem', 'whatsapp')
     
     c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' AND criado_em >= %s", (cid, conv_criado))
     num_msgs = c.fetchone()['count']
     
-    # SÓ RESPONDE SE ESTÁ EM CONTATOS E É 1ª, 2ª OU 3ª MENSAGEM
-    if cont and num_msgs <= 3:
+    # SÓ RESPONDE SE: está em contatos, é 1ª/2ª/3ª msg, E conversa NÃO foi iniciada pelo painel
+    if cont and num_msgs <= 3 and conv_origem != 'painel':
         resp = ia(msg, conhec, hotel, num_msgs)
         c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo) VALUES (%s, %s, %s)", (cid, "eva", resp))
         conn.commit()
@@ -855,6 +864,53 @@ async def responder(cid: int, req: Request):
     c.close()
     db_close(conn)
     return {"sucesso": True, "envio": enviar(num, msg_final, "atendimento")}
+
+@app.post("/api/conversas/nova")
+async def nova_conversa(req: Request):
+    """Cria conversa iniciada pelo painel (EVA não responde automaticamente)"""
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    d = await req.json()
+    contato_id = d.get("contato_id")
+    mensagem = d.get("mensagem", "")
+    if not contato_id or not mensagem: return JSONResponse({"sucesso": False, "erro": "Contato e mensagem obrigatórios"}, 400)
+    
+    conn = db()
+    c = conn.cursor()
+    
+    # Busca contato
+    c.execute("SELECT * FROM contatos WHERE id = %s", (contato_id,))
+    contato = c.fetchone()
+    if not contato:
+        c.close()
+        db_close(conn)
+        return JSONResponse({"sucesso": False, "erro": "Contato não encontrado"}, 404)
+    
+    # Verifica se já tem conversa aberta com esse número
+    c.execute("SELECT id FROM conversas WHERE numero_cliente = %s AND status = 'aberto' LIMIT 1", (contato['numero'],))
+    conv_existente = c.fetchone()
+    
+    if conv_existente:
+        # Já tem conversa aberta, usa ela
+        cid = conv_existente['id']
+    else:
+        # Cria conversa nova com origem = 'painel'
+        c.execute("INSERT INTO conversas (numero_cliente, nome_cliente, motivo, origem) VALUES (%s, %s, %s, %s) RETURNING id",
+            (contato['numero'], contato['nome'], 'Contato Ativo', 'painel'))
+        cid = c.fetchone()['id']
+    
+    # Salva mensagem
+    msg_final = f"*{u['nome']}:*\n{mensagem}"
+    c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo, usuario_nome) VALUES (%s, %s, %s, %s)",
+        (cid, "atendente", msg_final, u['nome']))
+    conn.commit()
+    c.close()
+    db_close(conn)
+    
+    # Envia pelo WhatsApp
+    resultado = enviar(contato['numero'], msg_final, "atendimento")
+    
+    return {"sucesso": True, "conversa_id": cid, "envio": resultado}
 
 @app.get("/api/contatos")
 async def list_contatos(req: Request):
