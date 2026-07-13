@@ -1,7 +1,7 @@
 fastapi
 uvicorn
-python-dotenv
+gunicorn
+psycopg2-binary
 requests
 python-multipart
-psycopg2-binary
-openpyxl
+python-dotenv
