@@ -214,7 +214,7 @@ def status_zapi(tipo="atendimento"):
     cfg = get_zapi(tipo)
     if not cfg: return {"conectado": False}
     try:
-        r = requests.get(f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/status", headers={"Client-Token": cfg['client_token']}, timeout=10)
+        r = requests.get(f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/status", headers={"Client-Token": cfg['client_token']}, timeout=5)
         return {"conectado": r.status_code == 200, "data": r.json() if r.status_code == 200 else None}
     except: return {"conectado": False}
 
