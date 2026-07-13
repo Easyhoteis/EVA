@@ -961,14 +961,18 @@ Procedimentos:
             document.getElementById("avatar").textContent = usuarioLogado.nome[0].toUpperCase();
             
             ajustarMenuPorPerfil();
+            
+            // IMPORTANTE: Carrega conversas PRIMEIRO (rápido - só banco)
             carregarTudo();
-            verificarStatusZapi();
-            atualizarLimiteInfo();
-            carregarStatusRobo();
+            
+            // DEPOIS: Status Z-API e outros (pode demorar - chama API externa)
+            setTimeout(() => { verificarStatusZapi(); }, 5000);
+            setTimeout(() => { atualizarLimiteInfo(); }, 3000);
+            setTimeout(() => { carregarStatusRobo(); }, 2000);
             
             setInterval(carregarConversas, 15000);
-            setInterval(verificarStatusZapi, 30000);
-            setInterval(atualizarLimiteInfo, 10000);
+            setInterval(verificarStatusZapi, 60000);
+            setInterval(atualizarLimiteInfo, 30000);
             setInterval(() => { if (paginaAtual === 'campanhas') carregarCampanhas(); }, 3000);
         }
 
