@@ -597,7 +597,17 @@
             <div class="modal-chat" id="modal-chat"></div>
             <div class="responder-area">
                 <textarea id="modal-resposta" placeholder="Digite sua resposta..."></textarea>
-                <button class="btn btn-primary" onclick="enviarResposta()" style="height:fit-content;align-self:flex-end"><i class="fas fa-paper-plane"></i></button>
+                <div style="display:flex;gap:0.5rem;align-items:flex-end">
+                    <button class="btn" onclick="document.getElementById('input-arquivo').click()" style="background:var(--bg-tertiary);color:var(--text-primary);padding:0.5rem" title="Enviar documento"><i class="fas fa-paperclip"></i></button>
+                    <button class="btn" onclick="document.getElementById('input-imagem').click()" style="background:var(--bg-tertiary);color:var(--text-primary);padding:0.5rem" title="Enviar imagem"><i class="fas fa-image"></i></button>
+                    <button class="btn" id="btn-gravar" onclick="toggleGravacao()" style="background:var(--bg-tertiary);color:var(--text-primary);padding:0.5rem" title="Gravar áudio"><i class="fas fa-microphone"></i></button>
+                    <button class="btn btn-primary" onclick="enviarResposta()" style="padding:0.5rem 1rem"><i class="fas fa-paper-plane"></i></button>
+                </div>
+                <input type="file" id="input-arquivo" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" onchange="enviarArquivo(this, 'documento')">
+                <input type="file" id="input-imagem" style="display:none" accept="image/*" onchange="enviarArquivo(this, 'imagem')">
+            </div>
+            <div id="gravando-info" style="display:none;background:#fed7d7;color:#c53030;padding:0.75rem;border-radius:8px;text-align:center;margin-top:0.5rem;font-weight:600">
+                🔴 Gravando áudio... <span id="tempo-gravacao">0s</span> — Clique no microfone para parar e enviar
             </div>
             <div class="form-group"><label>Observações</label><textarea id="modal-observacoes" style="min-height:60px"></textarea></div>
             <div class="modal-actions">
@@ -2284,6 +2294,123 @@ Procedimentos:
         document.getElementById('login-senha').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') fazerLogin();
         });
+        
+        // ============================================
+        // ENVIO DE ARQUIVOS E ÁUDIO
+        // ============================================
+        
+        let gravando = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let timerGravacao = null;
+        let tempoGrav = 0;
+        
+        async function enviarArquivo(input, tipo) {
+            if (!conversaSelecionada || !input.files[0]) return;
+            const file = input.files[0];
+            
+            // Limite de 10MB
+            if (file.size > 10 * 1024 * 1024) {
+                alert('❌ Arquivo muito grande! Máximo 10MB.');
+                input.value = '';
+                return;
+            }
+            
+            // Converte para base64
+            const base64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+            
+            const legenda = tipo === 'imagem' ? prompt('Legenda da imagem (opcional):') || '' : '';
+            
+            try {
+                const res = await api(`${API}/conversas/${conversaSelecionada}/enviar-arquivo`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        tipo: tipo,
+                        arquivo: base64,
+                        nome: file.name,
+                        legenda: legenda
+                    })
+                });
+                const data = await res.json();
+                if (data.sucesso) {
+                    abrirConversa(conversaSelecionada);
+                } else {
+                    alert('❌ Erro ao enviar: ' + (data.erro || 'desconhecido'));
+                }
+            } catch(e) {
+                alert('❌ Erro de conexão ao enviar arquivo');
+            }
+            input.value = '';
+        }
+        
+        async function toggleGravacao() {
+            if (gravando) {
+                // Para gravação
+                mediaRecorder.stop();
+                gravando = false;
+                clearInterval(timerGravacao);
+                document.getElementById('btn-gravar').style.background = 'var(--bg-tertiary)';
+                document.getElementById('gravando-info').style.display = 'none';
+            } else {
+                // Inicia gravação
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    tempoGrav = 0;
+                    
+                    mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                    
+                    mediaRecorder.onstop = async () => {
+                        stream.getTracks().forEach(t => t.stop());
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/ogg' });
+                        
+                        // Converte para base64
+                        const base64 = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result.split(',')[1]);
+                            reader.readAsDataURL(audioBlob);
+                        });
+                        
+                        // Envia
+                        try {
+                            const res = await api(`${API}/conversas/${conversaSelecionada}/enviar-arquivo`, {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ tipo: 'audio', arquivo: base64, nome: 'audio.ogg' })
+                            });
+                            const data = await res.json();
+                            if (data.sucesso) {
+                                abrirConversa(conversaSelecionada);
+                            } else {
+                                alert('❌ Erro ao enviar áudio');
+                            }
+                        } catch(e) {
+                            alert('❌ Erro de conexão ao enviar áudio');
+                        }
+                    };
+                    
+                    mediaRecorder.start();
+                    gravando = true;
+                    document.getElementById('btn-gravar').style.background = '#f56565';
+                    document.getElementById('btn-gravar').style.color = 'white';
+                    document.getElementById('gravando-info').style.display = 'block';
+                    
+                    timerGravacao = setInterval(() => {
+                        tempoGrav++;
+                        document.getElementById('tempo-gravacao').textContent = tempoGrav + 's';
+                    }, 1000);
+                    
+                } catch(e) {
+                    alert('❌ Não foi possível acessar o microfone. Permita o acesso nas configurações do navegador.');
+                }
+            }
+        }
         
         // ============================================
         // NOVA CONVERSA
