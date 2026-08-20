@@ -2360,7 +2360,19 @@ Procedimentos:
                 // Inicia gravação
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
+                    // Tenta gravar em formato compatível com WhatsApp
+                    let mimeType = 'audio/ogg;codecs=opus';
+                    if (!MediaRecorder.isTypeSupported(mimeType)) {
+                        mimeType = 'audio/webm;codecs=opus';
+                    }
+                    if (!MediaRecorder.isTypeSupported(mimeType)) {
+                        mimeType = 'audio/webm';
+                    }
+                    if (!MediaRecorder.isTypeSupported(mimeType)) {
+                        mimeType = 'audio/mp4';
+                    }
+                    
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
                     audioChunks = [];
                     tempoGrav = 0;
                     
