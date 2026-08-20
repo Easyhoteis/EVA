@@ -243,14 +243,14 @@ def enviar_audio_zapi(num, audio_base64, tipo="atendimento"):
     if not cfg: return {"ok": False}
     n = num.replace("+","").replace(" ","").replace("-","")
     url = f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/send-audio"
-    # Remove prefixo data:...;base64, se veio do frontend
+    # Envia base64 puro - Z-API converte pro formato correto
     if "base64," in audio_base64:
         audio_base64 = audio_base64.split("base64,")[1]
-    payload = {"phone": n, "audio": f"data:audio/mp3;base64,{audio_base64}"}
+    payload = {"phone": n, "audio": audio_base64}
     try:
         r = requests.post(url, json=payload, headers={"Content-Type": "application/json", "Client-Token": cfg['client_token']}, timeout=60)
-        return {"ok": r.status_code == 200, "status": r.status_code}
-    except: return {"ok": False}
+        return {"ok": r.status_code == 200, "status": r.status_code, "resp": r.text[:200]}
+    except Exception as e: return {"ok": False, "erro": str(e)}
 
 def status_zapi(tipo="atendimento"):
     cfg = get_zapi(tipo)
