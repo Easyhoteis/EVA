@@ -595,13 +595,13 @@
         <div class="modal-content">
             <div class="modal-title" id="modal-conversa-titulo">Conversa</div>
             <div class="modal-chat" id="modal-chat"></div>
-            <div class="responder-area">
-                <textarea id="modal-resposta" placeholder="Digite sua resposta..."></textarea>
-                <div style="display:flex;gap:0.5rem;align-items:flex-end">
-                    <button class="btn" onclick="document.getElementById('input-arquivo').click()" style="background:var(--bg-tertiary);color:var(--text-primary);padding:0.5rem" title="Enviar documento"><i class="fas fa-paperclip"></i></button>
-                    <button class="btn" onclick="document.getElementById('input-imagem').click()" style="background:var(--bg-tertiary);color:var(--text-primary);padding:0.5rem" title="Enviar imagem"><i class="fas fa-image"></i></button>
-                    <button class="btn" id="btn-gravar" onclick="toggleGravacao()" style="background:var(--bg-tertiary);color:var(--text-primary);padding:0.5rem" title="Gravar áudio"><i class="fas fa-microphone"></i></button>
-                    <button class="btn btn-primary" onclick="enviarResposta()" style="padding:0.5rem 1rem"><i class="fas fa-paper-plane"></i></button>
+            <div class="responder-area" style="flex-wrap:wrap">
+                <textarea id="modal-resposta" placeholder="Digite sua resposta..." style="width:100%"></textarea>
+                <div style="display:flex;gap:0.5rem;align-items:center;width:100%;justify-content:flex-start">
+                    <button class="btn" onclick="document.getElementById('input-arquivo').click()" style="background:var(--bg-tertiary);color:var(--text-primary);padding:0.5rem 0.75rem;font-size:16px" title="Documento"><i class="fas fa-paperclip"></i></button>
+                    <button class="btn" onclick="document.getElementById('input-imagem').click()" style="background:var(--bg-tertiary);color:var(--text-primary);padding:0.5rem 0.75rem;font-size:16px" title="Imagem"><i class="fas fa-image"></i></button>
+                    <button class="btn" id="btn-gravar" onclick="toggleGravacao()" style="background:var(--bg-tertiary);color:var(--text-primary);padding:0.5rem 0.75rem;font-size:16px" title="Áudio"><i class="fas fa-microphone"></i></button>
+                    <button class="btn btn-primary" onclick="enviarResposta()" style="padding:0.5rem 1rem;margin-left:auto"><i class="fas fa-paper-plane"></i> Enviar</button>
                 </div>
                 <input type="file" id="input-arquivo" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" onchange="enviarArquivo(this, 'documento')">
                 <input type="file" id="input-imagem" style="display:none" accept="image/*" onchange="enviarArquivo(this, 'imagem')">
