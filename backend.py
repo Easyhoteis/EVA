@@ -229,7 +229,13 @@ def enviar_documento(num, doc_base64, nome_arquivo, tipo="atendimento"):
     cfg = get_zapi(tipo)
     if not cfg: return {"ok": False}
     n = num.replace("+","").replace(" ","").replace("-","")
-    url = f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/send-document/pdf"
+    ext = nome_arquivo.split(".")[-1].lower() if "." in nome_arquivo else "pdf"
+    url = f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/send-document/{ext}"
+    # Adiciona prefixo se não tem
+    if not doc_base64.startswith("data:"):
+        mimetypes = {"pdf":"application/pdf","doc":"application/msword","docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document","xls":"application/vnd.ms-excel","xlsx":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","txt":"text/plain","csv":"text/csv"}
+        mime = mimetypes.get(ext, "application/octet-stream")
+        doc_base64 = f"data:{mime};base64,{doc_base64}"
     payload = {"phone": n, "document": doc_base64, "fileName": nome_arquivo}
     try:
         r = requests.post(url, json=payload, headers={"Content-Type": "application/json", "Client-Token": cfg['client_token']}, timeout=60)
@@ -241,6 +247,9 @@ def enviar_audio_zapi(num, audio_base64, tipo="atendimento"):
     if not cfg: return {"ok": False}
     n = num.replace("+","").replace(" ","").replace("-","")
     url = f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/send-audio"
+    # Adiciona prefixo se não tem
+    if not audio_base64.startswith("data:"):
+        audio_base64 = f"data:audio/ogg;base64,{audio_base64}"
     payload = {"phone": n, "audio": audio_base64}
     try:
         r = requests.post(url, json=payload, headers={"Content-Type": "application/json", "Client-Token": cfg['client_token']}, timeout=60)
