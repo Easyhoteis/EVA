@@ -225,6 +225,28 @@ def enviar_img(num, img, leg="", tipo="disparos"):
         return {"ok": r.status_code == 200}
     except: return {"ok": False}
 
+def enviar_documento(num, doc_base64, nome_arquivo, tipo="atendimento"):
+    cfg = get_zapi(tipo)
+    if not cfg: return {"ok": False}
+    n = num.replace("+","").replace(" ","").replace("-","")
+    url = f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/send-document/pdf"
+    payload = {"phone": n, "document": doc_base64, "fileName": nome_arquivo}
+    try:
+        r = requests.post(url, json=payload, headers={"Content-Type": "application/json", "Client-Token": cfg['client_token']}, timeout=60)
+        return {"ok": r.status_code == 200}
+    except: return {"ok": False}
+
+def enviar_audio_zapi(num, audio_base64, tipo="atendimento"):
+    cfg = get_zapi(tipo)
+    if not cfg: return {"ok": False}
+    n = num.replace("+","").replace(" ","").replace("-","")
+    url = f"https://api.z-api.io/instances/{cfg['instance_id']}/token/{cfg['token']}/send-audio"
+    payload = {"phone": n, "audio": audio_base64}
+    try:
+        r = requests.post(url, json=payload, headers={"Content-Type": "application/json", "Client-Token": cfg['client_token']}, timeout=60)
+        return {"ok": r.status_code == 200}
+    except: return {"ok": False}
+
 def status_zapi(tipo="atendimento"):
     cfg = get_zapi(tipo)
     if not cfg: return {"conectado": False}
@@ -858,6 +880,55 @@ async def responder(cid: int, req: Request):
     c.close()
     pass  # conexao reutilizada
     return {"sucesso": True, "envio": enviar(num, msg_final, "atendimento")}
+
+@app.post("/api/conversas/{cid}/enviar-arquivo")
+async def enviar_arquivo(cid: int, req: Request):
+    u = get_user(req)
+    if not u: return JSONResponse({"sucesso": False}, 401)
+    d = await req.json()
+    tipo_arquivo = d.get("tipo", "")  # documento, audio, imagem
+    arquivo_base64 = d.get("arquivo", "")
+    nome_arquivo = d.get("nome", "arquivo")
+    legenda = d.get("legenda", "")
+    
+    if not tipo_arquivo or not arquivo_base64:
+        return JSONResponse({"sucesso": False, "erro": "Tipo e arquivo obrigatórios"}, 400)
+    
+    conn = db()
+    c = conn.cursor()
+    c.execute("SELECT numero_cliente FROM conversas WHERE id = %s", (cid,))
+    conv = c.fetchone()
+    if not conv:
+        c.close()
+        conn.close()
+        return JSONResponse({"sucesso": False, "erro": "Conversa não encontrada"}, 404)
+    
+    num = conv['numero_cliente']
+    
+    # Envia via Z-API conforme tipo
+    if tipo_arquivo == "documento":
+        resultado = enviar_documento(num, arquivo_base64, nome_arquivo)
+        conteudo_msg = f"📎 Documento enviado: {nome_arquivo}"
+    elif tipo_arquivo == "audio":
+        resultado = enviar_audio_zapi(num, arquivo_base64)
+        conteudo_msg = "🎤 Áudio enviado"
+    elif tipo_arquivo == "imagem":
+        resultado = enviar_img(num, arquivo_base64, legenda, "atendimento")
+        conteudo_msg = f"📷 Imagem enviada" + (f": {legenda}" if legenda else "")
+    else:
+        c.close()
+        conn.close()
+        return JSONResponse({"sucesso": False, "erro": "Tipo inválido"}, 400)
+    
+    # Salva no histórico
+    msg_final = f"*{u['nome']}:*\n{conteudo_msg}"
+    c.execute("INSERT INTO mensagens (conversa_id, remetente, conteudo, usuario_nome) VALUES (%s, %s, %s, %s)",
+        (cid, "atendente", msg_final, u['nome']))
+    conn.commit()
+    c.close()
+    conn.close()
+    
+    return {"sucesso": True, "envio": resultado}
 
 @app.post("/api/nova-conversa")
 async def nova_conversa(req: Request):
