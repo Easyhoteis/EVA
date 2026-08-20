@@ -2316,10 +2316,10 @@ Procedimentos:
                 return;
             }
             
-            // Converte para base64
+            // Converte para base64 COM prefixo data URI
             const base64 = await new Promise((resolve) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onload = () => resolve(reader.result);
                 reader.readAsDataURL(file);
             });
             
@@ -2368,12 +2368,12 @@ Procedimentos:
                     
                     mediaRecorder.onstop = async () => {
                         stream.getTracks().forEach(t => t.stop());
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/ogg' });
+                        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
                         
-                        // Converte para base64
+                        // Converte para base64 COM prefixo
                         const base64 = await new Promise((resolve) => {
                             const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result.split(',')[1]);
+                            reader.onload = () => resolve(reader.result);
                             reader.readAsDataURL(audioBlob);
                         });
                         
