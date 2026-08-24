@@ -14,7 +14,7 @@
 # Rodar com:  python enviar_status_diario.py
 # ==============================================================================
 import os
-from datetime import date
+from datetime import date, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 import psycopg2
@@ -30,6 +30,10 @@ ZAPI_GRUPO_ID = os.environ.get("ZAPI_GRUPO_ID")
 
 HOJE = date.today()
 D_INI_MES = date(HOJE.year, HOJE.month, 1)
+if HOJE.month == 12:
+    D_FIM_MES = date(HOJE.year, 12, 31)
+else:
+    D_FIM_MES = date(HOJE.year, HOJE.month + 1, 1) - timedelta(days=1)
 
 
 def fmt_moeda(v):
@@ -40,7 +44,7 @@ def buscar_dados_mes(nome, dominio):
     try:
         token = obter_token(dominio)
         property_code = obter_property_code(dominio, token)
-        dados = buscar_relatorio(dominio, token, D_INI_MES, HOJE, property_code)
+        dados = buscar_relatorio(dominio, token, D_INI_MES, D_FIM_MES, property_code)
         meses = resumo_mensal(dados)
         receita = sum(m["receita"] for m in meses)
         dias_totais = sum(m["dias"] for m in meses) or 1
@@ -120,7 +124,7 @@ def main():
 
     for nome, (dados, erro) in resultados.items():
         if erro:
-            linhas_resumo.append(f"⚠️ {nome}: erro ao buscar dados")
+            linhas_resumo.append(f"⚠️ *{nome}*: erro ao buscar dados\n   ({erro[:200]})")
             continue
 
         meta = buscar_meta(cur, nome)
@@ -159,7 +163,7 @@ def main():
 
     mes_nome = D_INI_MES.strftime("%B/%Y")
     mensagem = f"📊 *Status Diário — {HOJE.strftime('%d/%m/%Y')}*\n"
-    mensagem += f"Acumulado de {mes_nome}:\n\n"
+    mensagem += f"Mês de {mes_nome} (realizado + previsão até o fim do mês):\n\n"
     mensagem += "\n\n".join(linhas_resumo)
 
     if linhas_metas_batidas:
