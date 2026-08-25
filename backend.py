@@ -114,6 +114,13 @@ def init():
     c.execute("CREATE TABLE IF NOT EXISTS listas_transmissao (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, hoteis_ids TEXT NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
     conn.commit()
     
+    # Adiciona coluna lembrete_enviado se não existir
+    try:
+        c.execute("ALTER TABLE conversas ADD COLUMN lembrete_enviado INTEGER DEFAULT 0")
+        conn.commit()
+    except:
+        conn.rollback()
+    
     c.execute("SELECT COUNT(*) as count FROM usuarios")
     if c.fetchone()['count'] == 0:
         c.execute("INSERT INTO usuarios (email, senha_hash, nome, perfil) VALUES (%s, %s, %s, %s)", ("admin@easy.com", hash_pass("admin123"), "Administrador", "admin"))
@@ -1662,3 +1669,70 @@ if __name__ == "__main__":
     print("Login: admin@easy.com / admin123")
     print("="*40)
     uvicorn.run(app, host="0.0.0.0", port=PORT)
+
+# ============================================
+# BACKGROUND TASK - Alerta conversas sem resposta
+# ============================================
+async def verificar_conversas_sem_resposta():
+    """Verifica a cada 60 segundos se tem conversa aberta sem resposta há mais de 2 minutos"""
+    while True:
+        await asyncio.sleep(60)
+        try:
+            conn = db()
+            c = conn.cursor()
+            # Busca conversas abertas sem lembrete enviado
+            c.execute("""
+                SELECT c.id, c.numero_cliente, c.nome_cliente, c.criado_em,
+                    (SELECT MAX(criado_em) FROM mensagens WHERE conversa_id = c.id AND remetente = 'atendente') as ultima_resp_atendente,
+                    (SELECT MAX(criado_em) FROM mensagens WHERE conversa_id = c.id AND remetente = 'cliente') as ultima_msg_cliente
+                FROM conversas c 
+                WHERE c.status = 'aberto' 
+                AND (c.lembrete_enviado = 0 OR c.lembrete_enviado IS NULL)
+            """)
+            conversas = c.fetchall()
+            
+            now = now_br()
+            
+            for conv in conversas:
+                # Se atendente já respondeu, pula
+                if conv['ultima_resp_atendente']:
+                    continue
+                
+                # Se cliente mandou msg há mais de 2 minutos sem resposta
+                if conv['ultima_msg_cliente']:
+                    from datetime import timedelta
+                    tempo_sem_resposta = now - conv['ultima_msg_cliente'].replace(tzinfo=ZoneInfo('America/Sao_Paulo')) if conv['ultima_msg_cliente'].tzinfo is None else now - conv['ultima_msg_cliente']
+                    
+                    if tempo_sem_resposta.total_seconds() > 120:  # 2 minutos
+                        # Busca config grupo
+                        c.execute("SELECT * FROM config_notificacao WHERE id = 1")
+                        config = c.fetchone()
+                        
+                        if config and config['ativo'] and config['grupo_id']:
+                            hotel_nome = conv['nome_cliente'] or conv['numero_cliente']
+                            minutos = int(tempo_sem_resposta.total_seconds() / 60)
+                            
+                            msg_alerta = f"""⚠️ *ALERTA - SEM RESPOSTA!*
+
+🏨 *Hotel:* {hotel_nome}
+📱 *Número:* {conv['numero_cliente']}
+⏰ *Aguardando há:* {minutos} minutos
+
+❗ Nenhum atendente respondeu ainda!
+
+👉 *Acesse:* https://eva-easyhoteis-83036260b078.herokuapp.com/painel"""
+                            
+                            enviar(config['grupo_id'], msg_alerta, "atendimento")
+                        
+                        # Marca lembrete como enviado
+                        c.execute("UPDATE conversas SET lembrete_enviado = 1 WHERE id = %s", (conv['id'],))
+                        conn.commit()
+            
+            c.close()
+            conn.close()
+        except Exception as e:
+            print(f"ERRO verificar_conversas_sem_resposta: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(verificar_conversas_sem_resposta())
