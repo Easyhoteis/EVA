@@ -1675,44 +1675,72 @@ if __name__ == "__main__":
 # ============================================
 async def verificar_conversas_sem_resposta():
     """Verifica a cada 60 segundos se tem conversa aberta sem resposta há mais de 2 minutos"""
+    await asyncio.sleep(30)
+    print("🔔 ALERTA: Sistema de alerta iniciado!")
+    
+    # Cria coluna se não existir
+    try:
+        conn = db()
+        c = conn.cursor()
+        c.execute("ALTER TABLE conversas ADD COLUMN lembrete_enviado INTEGER DEFAULT 0")
+        conn.commit()
+        c.close()
+        print("🔔 ALERTA: Coluna lembrete_enviado criada")
+    except:
+        try: conn.rollback()
+        except: pass
+        print("🔔 ALERTA: Coluna lembrete_enviado já existe")
+    
     while True:
         await asyncio.sleep(60)
         try:
             conn = db()
             c = conn.cursor()
-            # Busca conversas abertas sem lembrete enviado
-            c.execute("""
-                SELECT c.id, c.numero_cliente, c.nome_cliente, c.criado_em,
-                    (SELECT MAX(criado_em) FROM mensagens WHERE conversa_id = c.id AND remetente = 'atendente') as ultima_resp_atendente,
-                    (SELECT MAX(criado_em) FROM mensagens WHERE conversa_id = c.id AND remetente = 'cliente') as ultima_msg_cliente
-                FROM conversas c 
-                WHERE c.status = 'aberto' 
-                AND (c.lembrete_enviado = 0 OR c.lembrete_enviado IS NULL)
-            """)
-            conversas = c.fetchall()
-            
             now = now_br()
+            print(f"🔔 ALERTA: Verificando conversas... {now.strftime('%H:%M:%S')}")
+            
+            c.execute("SELECT c.id, c.numero_cliente, c.nome_cliente FROM conversas c WHERE c.status = 'aberto'")
+            conversas = c.fetchall()
+            print(f"🔔 ALERTA: {len(conversas)} conversa(s) aberta(s)")
             
             for conv in conversas:
-                # Se atendente já respondeu, pula
-                if conv['ultima_resp_atendente']:
+                # Verifica lembrete
+                try:
+                    c.execute("SELECT lembrete_enviado FROM conversas WHERE id = %s", (conv['id'],))
+                    lem = c.fetchone()
+                    if lem and lem.get('lembrete_enviado', 0) == 1:
+                        continue
+                except:
+                    conn.rollback()
+                
+                # Verifica se atendente já respondeu
+                c.execute("SELECT COUNT(*) as count FROM mensagens WHERE conversa_id = %s AND remetente = 'atendente'", (conv['id'],))
+                resp = c.fetchone()
+                if resp['count'] > 0:
                     continue
                 
-                # Se cliente mandou msg há mais de 2 minutos sem resposta
-                if conv['ultima_msg_cliente']:
-                    from datetime import timedelta
-                    tempo_sem_resposta = now - conv['ultima_msg_cliente'].replace(tzinfo=ZoneInfo('America/Sao_Paulo')) if conv['ultima_msg_cliente'].tzinfo is None else now - conv['ultima_msg_cliente']
+                # Pega última mensagem do cliente
+                c.execute("SELECT criado_em FROM mensagens WHERE conversa_id = %s AND remetente = 'cliente' ORDER BY criado_em DESC LIMIT 1", (conv['id'],))
+                ultima = c.fetchone()
+                if not ultima:
+                    continue
+                
+                ultima_msg = ultima['criado_em']
+                if ultima_msg.tzinfo is None:
+                    ultima_msg = ultima_msg.replace(tzinfo=ZoneInfo('America/Sao_Paulo'))
+                
+                tempo = (now - ultima_msg).total_seconds()
+                print(f"🔔 ALERTA: Conversa {conv['id']} - {conv['nome_cliente']} - {int(tempo)}s sem resposta")
+                
+                if tempo > 120:
+                    c.execute("SELECT * FROM config_notificacao WHERE id = 1")
+                    config = c.fetchone()
                     
-                    if tempo_sem_resposta.total_seconds() > 120:  # 2 minutos
-                        # Busca config grupo
-                        c.execute("SELECT * FROM config_notificacao WHERE id = 1")
-                        config = c.fetchone()
+                    if config and config['ativo'] and config['grupo_id']:
+                        hotel_nome = conv['nome_cliente'] or conv['numero_cliente']
+                        minutos = int(tempo / 60)
                         
-                        if config and config['ativo'] and config['grupo_id']:
-                            hotel_nome = conv['nome_cliente'] or conv['numero_cliente']
-                            minutos = int(tempo_sem_resposta.total_seconds() / 60)
-                            
-                            msg_alerta = f"""⚠️ *ALERTA - SEM RESPOSTA!*
+                        msg_alerta = f"""⚠️ *ALERTA - SEM RESPOSTA!*
 
 🏨 *Hotel:* {hotel_nome}
 📱 *Número:* {conv['numero_cliente']}
@@ -1721,17 +1749,21 @@ async def verificar_conversas_sem_resposta():
 ❗ Nenhum atendente respondeu ainda!
 
 👉 *Acesse:* https://eva-easyhoteis-83036260b078.herokuapp.com/painel"""
-                            
-                            enviar(config['grupo_id'], msg_alerta, "atendimento")
                         
-                        # Marca lembrete como enviado
+                        resultado = enviar(config['grupo_id'], msg_alerta, "atendimento")
+                        print(f"🔔 ALERTA ENVIADO: {hotel_nome} - resultado: {resultado}")
+                    else:
+                        print(f"🔔 ALERTA: Config notificação não encontrada ou inativa!")
+                    
+                    try:
                         c.execute("UPDATE conversas SET lembrete_enviado = 1 WHERE id = %s", (conv['id'],))
                         conn.commit()
+                    except:
+                        conn.rollback()
             
             c.close()
-            conn.close()
         except Exception as e:
-            print(f"ERRO verificar_conversas_sem_resposta: {e}")
+            print(f"🔔 ALERTA ERRO: {e}")
 
 @app.on_event("startup")
 async def startup_event():
