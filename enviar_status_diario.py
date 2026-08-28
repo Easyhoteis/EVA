@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 import psycopg2
 import requests
 
-from hits_api import HOTEIS_HITS, obter_token, obter_property_code, buscar_relatorio, resumo_mensal
+from hits_api import HOTEIS_HITS, obter_token, obter_property_code, buscar_relatorio, resumo_mensal, tem_dados_relevantes
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 ZAPI_INSTANCE_ID = os.environ.get("ZAPI_INSTANCE_ID")
@@ -35,6 +35,13 @@ if HOJE.month == 12:
 else:
     D_FIM_MES = date(HOJE.year, HOJE.month + 1, 1) - timedelta(days=1)
 
+# mesmo período, mas do ano passado (pra comparação)
+D_INI_MES_ANT = date(HOJE.year - 1, HOJE.month, 1)
+if HOJE.month == 12:
+    D_FIM_MES_ANT = date(HOJE.year - 1, 12, 31)
+else:
+    D_FIM_MES_ANT = date(HOJE.year - 1, HOJE.month + 1, 1) - timedelta(days=1)
+
 _cache_metas = {}  # preenchido durante o loop principal, usado pelo gerar_html_relatorio
 
 
@@ -46,14 +53,36 @@ def buscar_dados_mes(nome, dominio):
     try:
         token = obter_token(dominio)
         property_code = obter_property_code(dominio, token, nome)
-        dados = buscar_relatorio(dominio, token, D_INI_MES, D_FIM_MES, property_code)
-        meses = resumo_mensal(dados)
-        receita = sum(m["receita"] for m in meses)
-        dias_totais = sum(m["dias"] for m in meses) or 1
-        occ = sum(m["ocupacao"] * m["dias"] for m in meses) / dias_totais / 100  # vira decimal (0.31)
-        diarias_validas = [m["diaria_media"] for m in meses if m["diaria_media"] > 0]
+
+        dados_at = buscar_relatorio(dominio, token, D_INI_MES, D_FIM_MES, property_code)
+        meses_at = resumo_mensal(dados_at)
+        receita = sum(m["receita"] for m in meses_at)
+        dias_totais = sum(m["dias"] for m in meses_at) or 1
+        occ = sum(m["ocupacao"] * m["dias"] for m in meses_at) / dias_totais / 100
+        diarias_validas = [m["diaria_media"] for m in meses_at if m["diaria_media"] > 0]
         dm = sum(diarias_validas) / len(diarias_validas) if diarias_validas else 0.0
-        return nome, {"receita": receita, "dm": dm, "occ": occ}, None
+
+        # mesmo período do ano passado, pra comparação
+        receita_ant = dm_ant = occ_ant = None
+        tem_ano_anterior = False
+        try:
+            dados_an = buscar_relatorio(dominio, token, D_INI_MES_ANT, D_FIM_MES_ANT, property_code)
+            meses_an = resumo_mensal(dados_an)
+            tem_ano_anterior = tem_dados_relevantes(meses_an)
+            if tem_ano_anterior:
+                receita_ant = sum(m["receita"] for m in meses_an)
+                dias_ant = sum(m["dias"] for m in meses_an) or 1
+                occ_ant = sum(m["ocupacao"] * m["dias"] for m in meses_an) / dias_ant / 100
+                diarias_an_validas = [m["diaria_media"] for m in meses_an if m["diaria_media"] > 0]
+                dm_ant = sum(diarias_an_validas) / len(diarias_an_validas) if diarias_an_validas else None
+        except Exception:
+            pass  # se der erro no ano passado, segue só com o ano atual
+
+        return nome, {
+            "receita": receita, "dm": dm, "occ": occ,
+            "receita_ant": receita_ant, "dm_ant": dm_ant, "occ_ant": occ_ant,
+            "tem_ano_anterior": tem_ano_anterior,
+        }, None
     except Exception as e:
         return nome, None, str(e)
 
@@ -127,11 +156,21 @@ def gerar_html_relatorio(resultados, mes_nome_completo, linhas_metas_batidas):
 
         meta = _cache_metas.get(nome)
 
+        def linha_comparativo_ano(dados=dados):
+            if not (dados.get("tem_ano_anterior") and dados.get("receita_ant")):
+                return ""
+            var_receita = ((dados["receita"] - dados["receita_ant"]) / dados["receita_ant"] * 100) if dados["receita_ant"] else 0
+            ok_var = var_receita >= 0
+            return f"""<div class="linha-metrica"><span class="rotulo">{'📈' if ok_var else '📉'} vs. {HOJE.year - 1}</span>
+                <span class="valor {'ok' if ok_var else 'baixo'}">{fmt_moeda(dados['receita_ant'])}
+                <span class="meta-info">({'+' if ok_var else ''}{var_receita:.0f}%)</span></span></div>"""
+
         if not meta or not meta.get("receita"):
             cards += f"""
             <div class="hotel-card sem-meta">
                 <div class="hotel-nome">🏨 {nome} <span class="tag-sem-meta">sem meta</span></div>
                 <div class="linha-metrica"><span class="rotulo">💰 Receita</span><span class="valor">{fmt_moeda(dados['receita'])}</span></div>
+                {linha_comparativo_ano()}
             </div>"""
             continue
 
@@ -167,6 +206,7 @@ def gerar_html_relatorio(resultados, mes_nome_completo, linhas_metas_batidas):
             {linha_meta_hotel}
             {linha_dm}
             {linha_occ}
+            {linha_comparativo_ano()}
         </div>"""
 
     return f"""<!DOCTYPE html>
@@ -288,7 +328,13 @@ def main():
         meta = buscar_meta(cur, nome)
         _cache_metas[nome] = meta  # guarda pra reaproveitar no HTML
         if not meta:
-            linhas_resumo.append(f"🏨 *{nome}*: {fmt_moeda(dados['receita'])} (sem meta cadastrada)")
+            linha_sem_meta = f"🏨 *{nome}*: {fmt_moeda(dados['receita'])} (sem meta cadastrada)"
+            if dados.get("tem_ano_anterior") and dados.get("receita_ant"):
+                var_receita = ((dados["receita"] - dados["receita_ant"]) / dados["receita_ant"] * 100) if dados["receita_ant"] else 0
+                sinal_var = "📈" if var_receita >= 0 else "📉"
+                linha_sem_meta += (f"\n   {sinal_var} vs. mesmo período {HOJE.year - 1}: {fmt_moeda(dados['receita_ant'])} "
+                                   f"({'+' if var_receita >= 0 else ''}{var_receita:.0f}%)")
+            linhas_resumo.append(linha_sem_meta)
             continue
 
         # linha de receita
@@ -303,6 +349,13 @@ def main():
             diff_dm = dados["dm"] - meta["dm"]
             sinal_dm = "✅" if diff_dm >= 0 else "🔻"
             linha += f"\n   🛏️ Diária Média: {fmt_moeda(dados['dm'])} {sinal_dm} (meta: {fmt_moeda(meta['dm'])})"
+
+        # linha comparando com o mesmo período do ano passado
+        if dados.get("tem_ano_anterior") and dados.get("receita_ant"):
+            var_receita = ((dados["receita"] - dados["receita_ant"]) / dados["receita_ant"] * 100) if dados["receita_ant"] else 0
+            sinal_var = "📈" if var_receita >= 0 else "📉"
+            linha += (f"\n   {sinal_var} vs. mesmo período {HOJE.year - 1}: {fmt_moeda(dados['receita_ant'])} "
+                      f"({'+' if var_receita >= 0 else ''}{var_receita:.0f}%)")
 
         # linha de OCC
         if meta.get("occ"):
