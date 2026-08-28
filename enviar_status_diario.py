@@ -161,9 +161,25 @@ def gerar_html_relatorio(resultados, mes_nome_completo, linhas_metas_batidas):
                 return ""
             var_receita = ((dados["receita"] - dados["receita_ant"]) / dados["receita_ant"] * 100) if dados["receita_ant"] else 0
             ok_var = var_receita >= 0
-            return f"""<div class="linha-metrica"><span class="rotulo">{'📈' if ok_var else '📉'} vs. {HOJE.year - 1}</span>
+            html = f"""<div class="linha-metrica"><span class="rotulo">{'📈' if ok_var else '📉'} Receita vs. {HOJE.year - 1}</span>
                 <span class="valor {'ok' if ok_var else 'baixo'}">{fmt_moeda(dados['receita_ant'])}
                 <span class="meta-info">({'+' if ok_var else ''}{var_receita:.0f}%)</span></span></div>"""
+
+            if dados.get("dm_ant"):
+                var_dm = ((dados["dm"] - dados["dm_ant"]) / dados["dm_ant"] * 100) if dados["dm_ant"] else 0
+                ok_dm_ano = var_dm >= 0
+                html += f"""<div class="linha-metrica"><span class="rotulo">{'📈' if ok_dm_ano else '📉'} Diária vs. {HOJE.year - 1}</span>
+                    <span class="valor {'ok' if ok_dm_ano else 'baixo'}">{fmt_moeda(dados['dm_ant'])}
+                    <span class="meta-info">({'+' if ok_dm_ano else ''}{var_dm:.0f}%)</span></span></div>"""
+
+            if dados.get("occ_ant"):
+                var_occ = dados["occ"] - dados["occ_ant"]
+                ok_occ_ano = var_occ >= 0
+                html += f"""<div class="linha-metrica"><span class="rotulo">{'📈' if ok_occ_ano else '📉'} Ocupação vs. {HOJE.year - 1}</span>
+                    <span class="valor {'ok' if ok_occ_ano else 'baixo'}">{fmt_pct(dados['occ_ant'])}
+                    <span class="meta-info">({'+' if ok_occ_ano else ''}{var_occ*100:.1f}p.p.)</span></span></div>"""
+
+            return html
 
         if not meta or not meta.get("receita"):
             cards += f"""
@@ -314,6 +330,31 @@ def enviar_documento_whatsapp(conteudo_html, nome_arquivo):
     print(f"Envio WhatsApp (HTML) -> status {r.status_code} | {r.text[:200]}")
 
 
+def texto_comparativo_ano(dados):
+    """Monta o trecho de texto comparando receita, DM e OCC com o ano passado."""
+    if not (dados.get("tem_ano_anterior") and dados.get("receita_ant")):
+        return ""
+    texto = ""
+    var_receita = ((dados["receita"] - dados["receita_ant"]) / dados["receita_ant"] * 100) if dados["receita_ant"] else 0
+    sinal_var = "📈" if var_receita >= 0 else "📉"
+    texto += (f"\n   {sinal_var} Receita vs. {HOJE.year - 1}: {fmt_moeda(dados['receita_ant'])} "
+              f"({'+' if var_receita >= 0 else ''}{var_receita:.0f}%)")
+
+    if dados.get("dm_ant"):
+        var_dm = ((dados["dm"] - dados["dm_ant"]) / dados["dm_ant"] * 100) if dados["dm_ant"] else 0
+        sinal_dm_ano = "📈" if var_dm >= 0 else "📉"
+        texto += (f"\n   {sinal_dm_ano} Diária vs. {HOJE.year - 1}: {fmt_moeda(dados['dm_ant'])} "
+                  f"({'+' if var_dm >= 0 else ''}{var_dm:.0f}%)")
+
+    if dados.get("occ_ant"):
+        var_occ = dados["occ"] - dados["occ_ant"]
+        sinal_occ_ano = "📈" if var_occ >= 0 else "📉"
+        texto += (f"\n   {sinal_occ_ano} Ocupação vs. {HOJE.year - 1}: {dados['occ_ant']*100:.1f}% "
+                  f"({'+' if var_occ >= 0 else ''}{var_occ*100:.1f} p.p.)")
+
+    return texto
+
+
 def main():
     faltando = [v for v in ["DATABASE_URL", "ZAPI_INSTANCE_ID", "ZAPI_TOKEN", "ZAPI_CLIENT_TOKEN", "ZAPI_GRUPO_ID"]
                 if not os.environ.get(v)]
@@ -348,11 +389,7 @@ def main():
         _cache_metas[nome] = meta  # guarda pra reaproveitar no HTML
         if not meta:
             linha_sem_meta = f"🏨 *{nome}*: {fmt_moeda(dados['receita'])} (sem meta cadastrada)"
-            if dados.get("tem_ano_anterior") and dados.get("receita_ant"):
-                var_receita = ((dados["receita"] - dados["receita_ant"]) / dados["receita_ant"] * 100) if dados["receita_ant"] else 0
-                sinal_var = "📈" if var_receita >= 0 else "📉"
-                linha_sem_meta += (f"\n   {sinal_var} vs. mesmo período {HOJE.year - 1}: {fmt_moeda(dados['receita_ant'])} "
-                                   f"({'+' if var_receita >= 0 else ''}{var_receita:.0f}%)")
+            linha_sem_meta += texto_comparativo_ano(dados)
             linhas_resumo.append(linha_sem_meta)
             continue
 
@@ -369,18 +406,14 @@ def main():
             sinal_dm = "✅" if diff_dm >= 0 else "🔻"
             linha += f"\n   🛏️ Diária Média: {fmt_moeda(dados['dm'])} {sinal_dm} (meta: {fmt_moeda(meta['dm'])})"
 
-        # linha comparando com o mesmo período do ano passado
-        if dados.get("tem_ano_anterior") and dados.get("receita_ant"):
-            var_receita = ((dados["receita"] - dados["receita_ant"]) / dados["receita_ant"] * 100) if dados["receita_ant"] else 0
-            sinal_var = "📈" if var_receita >= 0 else "📉"
-            linha += (f"\n   {sinal_var} vs. mesmo período {HOJE.year - 1}: {fmt_moeda(dados['receita_ant'])} "
-                      f"({'+' if var_receita >= 0 else ''}{var_receita:.0f}%)")
-
         # linha de OCC
         if meta.get("occ"):
             diff_occ = dados["occ"] - meta["occ"]
             sinal_occ = "✅" if diff_occ >= 0 else "🔻"
             linha += f"\n   📈 Ocupação: {dados['occ']*100:.1f}% {sinal_occ} (meta: {meta['occ']*100:.1f}%)"
+
+        # comparação com o mesmo período do ano passado (receita, DM e OCC)
+        linha += texto_comparativo_ano(dados)
 
         linhas_resumo.append(linha)
 
