@@ -35,6 +35,8 @@ if HOJE.month == 12:
 else:
     D_FIM_MES = date(HOJE.year, HOJE.month + 1, 1) - timedelta(days=1)
 
+_cache_metas = {}  # preenchido durante o loop principal, usado pelo gerar_html_relatorio
+
 
 def fmt_moeda(v):
     return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -89,12 +91,159 @@ def marcar_notificado(cur, hotel_nome):
     )
 
 
+def gerar_html_relatorio(resultados, mes_nome_completo, linhas_metas_batidas):
+    """Monta a página HTML (cards, cores Easy Hotéis) com o resumo do dia."""
+
+    def fmt_pct(v):
+        return f"{v*100:.1f}".replace(".", ",") + "%"
+
+    total_erros = sum(1 for _, (dados, erro) in resultados.items() if erro)
+
+    html_celebracao = ""
+    if linhas_metas_batidas:
+        itens = "".join(f'<div class="item">🏆 {nome} bateu a meta do mês!</div>' for nome in linhas_metas_batidas)
+        html_celebracao = f"""
+        <div class="celebracao">
+            <div class="titulo">🎉 META BATIDA! 🎉</div>
+            {itens}
+        </div>"""
+
+    cards = ""
+    for nome, (dados, erro) in resultados.items():
+        if erro:
+            cards += f"""
+            <div class="hotel-card erro">
+                <div class="hotel-nome">🏨 {nome} <span class="tag-erro">Erro</span></div>
+                <div class="erro-msg">{erro[:200]}</div>
+            </div>"""
+            continue
+
+        meta = _cache_metas.get(nome)
+        troco = "🏆 " if nome in linhas_metas_batidas else ""
+
+        if not meta or not meta.get("receita"):
+            cards += f"""
+            <div class="hotel-card sem-meta">
+                <div class="hotel-nome">🏨 {nome} <span class="tag-sem-meta">sem meta</span></div>
+                <div class="linha-metrica"><span class="rotulo">💰 Receita</span><span class="valor">{fmt_moeda(dados['receita'])}</span></div>
+            </div>"""
+            continue
+
+        pct_receita = (dados["receita"] / meta["receita"] * 100) if meta["receita"] else 0
+        classe_pct = "pct-ok" if pct_receita >= 100 else "pct-baixo"
+
+        linha_meta_hotel = ""
+        if meta.get("receita_hotel"):
+            pct_hotel = (dados["receita"] / meta["receita_hotel"] * 100) if meta["receita_hotel"] else 0
+            linha_meta_hotel = f'<div class="meta-hotel-extra">meta do hotel: {fmt_moeda(meta["receita_hotel"])} — {pct_hotel:.0f}%</div>'
+
+        linha_dm = ""
+        if meta.get("dm"):
+            ok_dm = dados["dm"] >= meta["dm"]
+            linha_dm = f"""<div class="linha-metrica"><span class="rotulo">🛏️ Diária Média</span>
+                <span class="valor {'ok' if ok_dm else 'baixo'}">{fmt_moeda(dados['dm'])} {'✅' if ok_dm else '🔻'}
+                <span class="meta-info">meta: {fmt_moeda(meta['dm'])}</span></span></div>"""
+
+        linha_occ = ""
+        if meta.get("occ"):
+            ok_occ = dados["occ"] >= meta["occ"]
+            linha_occ = f"""<div class="linha-metrica"><span class="rotulo">📈 Ocupação</span>
+                <span class="valor {'ok' if ok_occ else 'baixo'}">{fmt_pct(dados['occ'])} {'✅' if ok_occ else '🔻'}
+                <span class="meta-info">meta: {fmt_pct(meta['occ'])}</span></span></div>"""
+
+        cards += f"""
+        <div class="hotel-card">
+            <div class="hotel-nome">🏨 {nome} {troco}</div>
+            <div class="linha-metrica"><span class="rotulo">💰 Receita</span>
+                <span class="valor">{fmt_moeda(dados['receita'])} <span class="pct-meta {classe_pct}">{pct_receita:.0f}%</span></span></div>
+            {linha_meta_hotel}
+            {linha_dm}
+            {linha_occ}
+        </div>"""
+
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Status Diário — {HOJE.strftime('%d/%m/%Y')}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ background:#f6f1e7; color:#3d3527; font-family:'Inter',sans-serif; font-size:15px; line-height:1.6; }}
+.header {{ background:linear-gradient(135deg,#f6f1e7 0%,#efe4cf 45%,#e9dcc0 100%); padding:40px 24px 32px; text-align:center; border-bottom:1px solid rgba(46,38,26,0.10); }}
+.brand {{ font-size:12px; letter-spacing:4px; color:#a9762f; text-transform:uppercase; margin-bottom:12px; font-weight:600; }}
+.header h1 {{ font-family:'Fraunces',serif; font-size:28px; font-weight:600; color:#2b2419; margin-bottom:6px; }}
+.header h2 {{ font-size:13px; font-weight:400; color:#756b58; }}
+.badges {{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:18px; }}
+.badge {{ background:rgba(169,118,47,0.10); border:1px solid rgba(46,38,26,0.10); border-radius:20px; padding:6px 14px; font-size:11px; color:#756b58; }}
+.badge b {{ color:#2b2419; }}
+.container {{ max-width:760px; margin:0 auto; padding:28px 18px 50px; }}
+.celebracao {{ background:linear-gradient(135deg,#fff8e8,#fbeecb); border:1px solid rgba(169,118,47,0.3); border-radius:14px; padding:20px 22px; margin-bottom:26px; text-align:center; }}
+.celebracao .titulo {{ font-family:'Fraunces',serif; font-size:18px; font-weight:700; color:#a9762f; margin-bottom:10px; }}
+.celebracao .item {{ font-size:13px; color:#5f7a4f; font-weight:600; padding:3px 0; }}
+.hotel-card {{ background:#fffdf8; border:1px solid rgba(46,38,26,0.08); border-radius:14px; padding:18px 20px; margin-bottom:14px; box-shadow:0 1px 3px rgba(46,38,26,0.05); }}
+.hotel-card.erro {{ border-left:4px solid #b3402f; }}
+.hotel-card.sem-meta {{ opacity:0.85; }}
+.hotel-nome {{ font-family:'Fraunces',serif; font-size:16px; font-weight:600; color:#2b2419; margin-bottom:10px; display:flex; align-items:center; gap:8px; }}
+.tag-erro {{ font-size:10px; font-weight:700; color:#b3402f; background:rgba(179,64,47,0.08); padding:2px 10px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; }}
+.tag-sem-meta {{ font-size:10px; font-weight:700; color:#a89d87; background:rgba(46,38,26,0.05); padding:2px 10px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; }}
+.linha-metrica {{ display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px solid rgba(46,38,26,0.06); font-size:13px; }}
+.linha-metrica:first-of-type {{ border-top:none; }}
+.linha-metrica .rotulo {{ color:#756b58; display:flex; align-items:center; gap:6px; }}
+.linha-metrica .valor {{ font-weight:700; color:#2b2419; }}
+.linha-metrica .meta-info {{ font-size:11px; color:#a89d87; margin-left:6px; font-weight:400; }}
+.ok {{ color:#5f7a4f; }}
+.baixo {{ color:#b3402f; }}
+.pct-meta {{ font-size:12px; font-weight:700; padding:2px 10px; border-radius:12px; }}
+.pct-ok {{ background:rgba(95,122,79,0.12); color:#5f7a4f; }}
+.pct-baixo {{ background:rgba(169,118,47,0.12); color:#a9762f; }}
+.erro-msg {{ font-size:12px; color:#b3402f; background:rgba(179,64,47,0.05); border-radius:8px; padding:8px 12px; margin-top:6px; }}
+.meta-hotel-extra {{ font-size:11px; color:#a89d87; margin-top:2px; }}
+.footer {{ text-align:center; font-size:11px; color:#a89d87; padding-top:20px; }}
+.footer span {{ color:#a9762f; font-weight:600; }}
+</style>
+</head>
+<body>
+<div class="header">
+    <div class="brand">easy hotéis</div>
+    <h1>Status Diário</h1>
+    <h2>{HOJE.strftime('%d/%m/%Y')} · Mês de {mes_nome_completo} (realizado + previsão até o fim do mês)</h2>
+    <div class="badges">
+        <div class="badge">🏨 Hotéis: <b>{len(resultados)}</b></div>
+        <div class="badge">🎉 Metas batidas: <b>{len(linhas_metas_batidas)}</b></div>
+        <div class="badge">⚠️ Erros: <b>{total_erros}</b></div>
+    </div>
+</div>
+<div class="container">
+    {html_celebracao}
+    {cards}
+    <div class="footer">Hits — Painel Multi-Hotéis · <span>easy hotéis</span> · Uso interno e confidencial</div>
+</div>
+</body>
+</html>"""
+
+
 def enviar_whatsapp(mensagem):
     url = f"https://api.z-api.io/instances/{ZAPI_INSTANCE_ID}/token/{ZAPI_TOKEN}/send-text"
     headers = {"Client-Token": ZAPI_CLIENT_TOKEN, "Content-Type": "application/json"}
     payload = {"phone": ZAPI_GRUPO_ID, "message": mensagem}
     r = requests.post(url, json=payload, headers=headers, timeout=20)
-    print(f"Envio WhatsApp -> status {r.status_code} | {r.text[:200]}")
+    print(f"Envio WhatsApp (texto) -> status {r.status_code} | {r.text[:200]}")
+
+
+def enviar_documento_whatsapp(conteudo_html, nome_arquivo):
+    import base64
+    url = f"https://api.z-api.io/instances/{ZAPI_INSTANCE_ID}/token/{ZAPI_TOKEN}/send-document/html"
+    headers = {"Client-Token": ZAPI_CLIENT_TOKEN, "Content-Type": "application/json"}
+    base64_conteudo = base64.b64encode(conteudo_html.encode("utf-8")).decode("utf-8")
+    payload = {
+        "phone": ZAPI_GRUPO_ID,
+        "document": f"data:text/html;base64,{base64_conteudo}",
+        "fileName": nome_arquivo,
+    }
+    r = requests.post(url, json=payload, headers=headers, timeout=30)
+    print(f"Envio WhatsApp (HTML) -> status {r.status_code} | {r.text[:200]}")
 
 
 def main():
@@ -128,6 +277,7 @@ def main():
             continue
 
         meta = buscar_meta(cur, nome)
+        _cache_metas[nome] = meta  # guarda pra reaproveitar no HTML
         if not meta:
             linhas_resumo.append(f"🏨 *{nome}*: {fmt_moeda(dados['receita'])} (sem meta cadastrada)")
             continue
@@ -176,6 +326,11 @@ def main():
     print("----------------\n")
 
     enviar_whatsapp(mensagem)
+
+    # logo em seguida, manda o arquivo HTML bonito
+    html_relatorio = gerar_html_relatorio(resultados, mes_nome, linhas_metas_batidas)
+    nome_arquivo = f"status-diario-{HOJE.strftime('%Y-%m-%d')}.html"
+    enviar_documento_whatsapp(html_relatorio, nome_arquivo)
 
 
 if __name__ == "__main__":
