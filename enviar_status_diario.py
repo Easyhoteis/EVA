@@ -98,6 +98,13 @@ def gerar_html_relatorio(resultados, mes_nome_completo, linhas_metas_batidas):
         return f"{v*100:.1f}".replace(".", ",") + "%"
 
     total_erros = sum(1 for _, (dados, erro) in resultados.items() if erro)
+    total_acima_meta = 0
+    for nome, (dados, erro) in resultados.items():
+        if erro:
+            continue
+        meta_check = _cache_metas.get(nome)
+        if meta_check and meta_check.get("receita") and dados["receita"] >= meta_check["receita"]:
+            total_acima_meta += 1
 
     html_celebracao = ""
     if linhas_metas_batidas:
@@ -119,7 +126,6 @@ def gerar_html_relatorio(resultados, mes_nome_completo, linhas_metas_batidas):
             continue
 
         meta = _cache_metas.get(nome)
-        troco = "🏆 " if nome in linhas_metas_batidas else ""
 
         if not meta or not meta.get("receita"):
             cards += f"""
@@ -131,6 +137,8 @@ def gerar_html_relatorio(resultados, mes_nome_completo, linhas_metas_batidas):
 
         pct_receita = (dados["receita"] / meta["receita"] * 100) if meta["receita"] else 0
         classe_pct = "pct-ok" if pct_receita >= 100 else "pct-baixo"
+        acima_da_meta_hoje = pct_receita >= 100
+        troco = "🏆 " if acima_da_meta_hoje else ""
 
         linha_meta_hotel = ""
         if meta.get("receita_hotel"):
@@ -211,7 +219,8 @@ body {{ background:#f6f1e7; color:#3d3527; font-family:'Inter',sans-serif; font-
     <h2>{HOJE.strftime('%d/%m/%Y')} · Mês de {mes_nome_completo} (realizado + previsão até o fim do mês)</h2>
     <div class="badges">
         <div class="badge">🏨 Hotéis: <b>{len(resultados)}</b></div>
-        <div class="badge">🎉 Metas batidas: <b>{len(linhas_metas_batidas)}</b></div>
+        <div class="badge">🏆 Acima da meta hoje: <b>{total_acima_meta}</b></div>
+        <div class="badge">🎉 Novidade de hoje: <b>{len(linhas_metas_batidas)}</b></div>
         <div class="badge">⚠️ Erros: <b>{total_erros}</b></div>
     </div>
 </div>
