@@ -37,13 +37,13 @@ HOTEIS_HITS = {
     "Larison Ji Paraná":      "larisonhoteis.hitspms.net",
     "Larison Executive":      "larisonhoteis.hitspms.net",
     "Larison Economy":        "larisonhoteis.hitspms.net",
-    "Maximus":                "maximushoteis.hitspms.net",
     "Uberaba":                "uberabaaparthotel.hitspms.net",
     "Plaza Jataí":            "plazahoteljatai.hitspms.net",
     "Sesi Aruanã":            "sesiaruana.hitspms.net",
     "Maper Ouro":             "mardanhotel.hitspms.net",
     "Catuai":                 "catuaihotel.hitspms.net",
     "Vila Verde":             "vilaverdehoteis.hitspms.net",
+    "Spinn Mairiporã":        "hotelspinn.hitspms.net",
 }
 
 # Alguns logins têm MAIS DE UMA propriedade (ex: o grupo Larison tem 3
