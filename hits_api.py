@@ -33,7 +33,27 @@ HOTEIS_HITS = {
     "Terrazzo Bonjardim":     "terrazzobonjardim.hitspms.net",
     "Rei dos Mares Suites":   "reidosmaressuites.hitspms.net",
     "Vale do Jamari":         "valedojamari.hitspms.net",
-    "Shopping de Eventos RP": "shoppingdeeventosrp.hitspms.net",
+    "Villa Boldrin":          "shoppingdeeventosrp.hitspms.net",
+    "Larison Ji Paraná":      "larisonhoteis.hitspms.net",
+    "Larison Executive":      "larisonhoteis.hitspms.net",
+    "Larison Economy":        "larisonhoteis.hitspms.net",
+    "Maximus":                "maximushoteis.hitspms.net",
+    "Uberaba":                "uberabaaparthotel.hitspms.net",
+    "Plaza Jataí":            "plazahoteljatai.hitspms.net",
+    "Sesi Aruanã":            "sesiaruana.hitspms.net",
+    "Maper Ouro":             "mardanhotel.hitspms.net",
+    "Catuai":                 "catuaihotel.hitspms.net",
+    "Vila Verde":             "vilaverdehoteis.hitspms.net",
+}
+
+# Alguns logins têm MAIS DE UMA propriedade (ex: o grupo Larison tem 3
+# unidades no mesmo domínio/login). Pra esses casos, fixamos o código certo
+# aqui em vez de deixar o sistema "adivinhar" a primeira propriedade que
+# aparecer. Descoberto via testar_larison_propriedades.py (GetUserProperties).
+PROPRIEDADE_FIXA = {
+    "Larison Ji Paraná": "1",
+    "Larison Executive": "3",
+    "Larison Economy": "4",
 }
 
 
@@ -115,9 +135,13 @@ def obter_token(dominio_hotel):
     raise RuntimeError("Excedeu o número de redirecionamentos sem achar o token.")
 
 
-def obter_property_code(dominio_hotel, token):
-    """Descobre o código de propriedade (X-API-PROPERTY-CODE) real do hotel,
-    em vez de supor '1' para todos — cada hotel tem o seu."""
+def obter_property_code(dominio_hotel, token, hotel_nome=None):
+    """Descobre o código de propriedade (X-API-PROPERTY-CODE) real do hotel.
+    Se o hotel tiver um código fixo cadastrado (ex: grupo Larison, que tem
+    várias unidades no mesmo login), usa ele direto sem precisar consultar."""
+    if hotel_nome and hotel_nome in PROPRIEDADE_FIXA:
+        return PROPRIEDADE_FIXA[hotel_nome]
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json, text/plain, */*",
