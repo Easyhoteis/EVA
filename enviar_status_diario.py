@@ -216,52 +216,71 @@ def gerar_html_relatorio(resultados, mes_nome_completo, linhas_metas_batidas):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Status Diário — {HOJE.strftime('%d/%m/%Y')}</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-* {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ background:#f6f1e7; color:#3d3527; font-family:'Inter',sans-serif; font-size:15px; line-height:1.6; }}
-.header {{ background:linear-gradient(135deg,#f6f1e7 0%,#efe4cf 45%,#e9dcc0 100%); padding:40px 24px 32px; text-align:center; border-bottom:1px solid rgba(46,38,26,0.10); }}
-.brand {{ font-size:12px; letter-spacing:4px; color:#a9762f; text-transform:uppercase; margin-bottom:12px; font-weight:600; }}
-.header h1 {{ font-family:'Fraunces',serif; font-size:28px; font-weight:600; color:#2b2419; margin-bottom:6px; }}
-.header h2 {{ font-size:13px; font-weight:400; color:#756b58; }}
-.badges {{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:18px; }}
-.badge {{ background:rgba(169,118,47,0.10); border:1px solid rgba(46,38,26,0.10); border-radius:20px; padding:6px 14px; font-size:11px; color:#756b58; }}
-.badge b {{ color:#2b2419; }}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+*, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+:root {{
+    --bg:     #0d0d1a;
+    --card:   #1a1a2e;
+    --border: rgba(255,255,255,0.07);
+    --cyan:   #00bcd4;
+    --red:    #e53935;
+    --orange: #f57c00;
+    --green:  #4caf50;
+    --white:  #ffffff;
+    --gray:   #9ca3af;
+    --gray2:  #6b7280;
+    --text:   #e2e8f0;
+}}
+body {{ background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.6; }}
+.header {{ background: linear-gradient(135deg, #0d0d1a 0%, #1a0a1e 40%, #200a0a 100%); padding: 50px 24px 40px; text-align: center; border-bottom: 1px solid var(--border); position: relative; overflow: hidden; }}
+.header::before {{ content:''; position:absolute; top:-80px; left:-80px; width:400px; height:400px; background:radial-gradient(circle,rgba(0,188,212,0.12) 0%,transparent 70%); pointer-events:none; }}
+.header::after  {{ content:''; position:absolute; bottom:-80px; right:-80px; width:400px; height:400px; background:radial-gradient(circle,rgba(76,175,80,0.12) 0%,transparent 70%); pointer-events:none; }}
+.brand {{ font-size:13px; letter-spacing:4px; color:var(--cyan); text-transform:uppercase; margin-bottom:14px; font-weight:500; }}
+.header h1 {{ font-size:clamp(22px,4vw,32px); font-weight:700; color:var(--white); margin-bottom:6px; }}
+.header h2 {{ font-size:clamp(12px,2vw,14px); font-weight:300; color:var(--gray); letter-spacing:1px; margin-bottom:22px; }}
+.badges {{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }}
+.badge {{ background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:20px; padding:6px 16px; font-size:12px; color:var(--gray); }}
+.badge b {{ color:var(--white); font-weight:600; }}
+.badge.trofeu {{ background:rgba(76,175,80,0.12); border-color:rgba(76,175,80,0.35); }}
+.badge.trofeu b {{ color:var(--green); }}
+.badge.erro {{ background:rgba(229,57,53,0.12); border-color:rgba(229,57,53,0.35); }}
+.badge.erro b {{ color:var(--red); }}
 .container {{ max-width:760px; margin:0 auto; padding:28px 18px 50px; }}
-.celebracao {{ background:linear-gradient(135deg,#fff8e8,#fbeecb); border:1px solid rgba(169,118,47,0.3); border-radius:14px; padding:20px 22px; margin-bottom:26px; text-align:center; }}
-.celebracao .titulo {{ font-family:'Fraunces',serif; font-size:18px; font-weight:700; color:#a9762f; margin-bottom:10px; }}
-.celebracao .item {{ font-size:13px; color:#5f7a4f; font-weight:600; padding:3px 0; }}
-.hotel-card {{ background:#fffdf8; border:1px solid rgba(46,38,26,0.08); border-radius:14px; padding:18px 20px; margin-bottom:14px; box-shadow:0 1px 3px rgba(46,38,26,0.05); }}
-.hotel-card.erro {{ border-left:4px solid #b3402f; }}
-.hotel-card.sem-meta {{ opacity:0.85; }}
-.hotel-nome {{ font-family:'Fraunces',serif; font-size:16px; font-weight:600; color:#2b2419; margin-bottom:10px; display:flex; align-items:center; gap:8px; }}
-.tag-erro {{ font-size:10px; font-weight:700; color:#b3402f; background:rgba(179,64,47,0.08); padding:2px 10px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; }}
-.tag-sem-meta {{ font-size:10px; font-weight:700; color:#a89d87; background:rgba(46,38,26,0.05); padding:2px 10px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; }}
-.linha-metrica {{ display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px solid rgba(46,38,26,0.06); font-size:13px; }}
+.celebracao {{ background:linear-gradient(135deg, rgba(76,175,80,0.1), rgba(0,188,212,0.05)); border:1px solid rgba(76,175,80,0.3); border-radius:14px; padding:22px 26px; margin-bottom:26px; text-align:center; }}
+.celebracao .titulo {{ font-size:17px; font-weight:700; color:var(--green); margin-bottom:10px; }}
+.celebracao .item {{ font-size:13px; color:var(--text); font-weight:500; padding:4px 0; }}
+.hotel-card {{ background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 22px; margin-bottom:14px; }}
+.hotel-card.erro {{ border-left:3px solid var(--red); }}
+.hotel-card.sem-meta {{ opacity:0.75; }}
+.hotel-nome {{ font-size:15px; font-weight:700; color:var(--white); margin-bottom:10px; display:flex; align-items:center; gap:8px; }}
+.tag-erro {{ font-size:10px; font-weight:700; color:var(--red); background:rgba(229,57,53,0.12); padding:2px 10px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; }}
+.tag-sem-meta {{ font-size:10px; font-weight:700; color:var(--gray2); background:rgba(255,255,255,0.05); padding:2px 10px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; }}
+.linha-metrica {{ display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-top:1px solid var(--border); font-size:13px; }}
 .linha-metrica:first-of-type {{ border-top:none; }}
-.linha-metrica .rotulo {{ color:#756b58; display:flex; align-items:center; gap:6px; }}
-.linha-metrica .valor {{ font-weight:700; color:#2b2419; }}
-.linha-metrica .meta-info {{ font-size:11px; color:#a89d87; margin-left:6px; font-weight:400; }}
-.ok {{ color:#5f7a4f; }}
-.baixo {{ color:#b3402f; }}
+.linha-metrica .rotulo {{ color:var(--gray); display:flex; align-items:center; gap:6px; }}
+.linha-metrica .valor {{ font-weight:700; color:var(--white); }}
+.linha-metrica .meta-info {{ font-size:11px; color:var(--gray2); margin-left:6px; font-weight:400; }}
+.ok {{ color:var(--green); }}
+.baixo {{ color:var(--orange); }}
 .pct-meta {{ font-size:12px; font-weight:700; padding:2px 10px; border-radius:12px; }}
-.pct-ok {{ background:rgba(95,122,79,0.12); color:#5f7a4f; }}
-.pct-baixo {{ background:rgba(169,118,47,0.12); color:#a9762f; }}
-.erro-msg {{ font-size:12px; color:#b3402f; background:rgba(179,64,47,0.05); border-radius:8px; padding:8px 12px; margin-top:6px; }}
-.meta-hotel-extra {{ font-size:11px; color:#a89d87; margin-top:2px; }}
-.footer {{ text-align:center; font-size:11px; color:#a89d87; padding-top:20px; }}
-.footer span {{ color:#a9762f; font-weight:600; }}
+.pct-ok {{ background:rgba(76,175,80,0.15); color:var(--green); }}
+.pct-baixo {{ background:rgba(245,124,0,0.15); color:var(--orange); }}
+.erro-msg {{ font-size:12px; color:var(--red); background:rgba(229,57,53,0.06); border-radius:8px; padding:8px 12px; margin-top:6px; }}
+.meta-hotel-extra {{ font-size:11px; color:var(--gray2); margin-top:2px; }}
+.footer {{ text-align:center; font-size:12px; color:var(--gray2); padding-top:20px; }}
+.footer span {{ color:var(--cyan); font-weight:600; }}
 </style>
 </head>
 <body>
 <div class="header">
-    <div class="brand">easy hotéis</div>
+    <div class="brand">easy hotéis · www.easyhoteis.com</div>
     <h1>Status Diário</h1>
     <h2>{HOJE.strftime('%d/%m/%Y')} · Mês de {mes_nome_completo} (realizado + previsão até o fim do mês)</h2>
     <div class="badges">
         <div class="badge">🏨 Hotéis: <b>{len(resultados)}</b></div>
-        <div class="badge">🏆 Acima da meta hoje: <b>{total_acima_meta}</b></div>
+        <div class="badge trofeu">🏆 Acima da meta hoje: <b>{total_acima_meta}</b></div>
         <div class="badge">🎉 Novidade de hoje: <b>{len(linhas_metas_batidas)}</b></div>
-        <div class="badge">⚠️ Erros: <b>{total_erros}</b></div>
+        <div class="badge erro">⚠️ Erros: <b>{total_erros}</b></div>
     </div>
 </div>
 <div class="container">
