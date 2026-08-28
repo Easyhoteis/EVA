@@ -43,7 +43,7 @@ def fmt_moeda(v):
 def buscar_dados_mes(nome, dominio):
     try:
         token = obter_token(dominio)
-        property_code = obter_property_code(dominio, token)
+        property_code = obter_property_code(dominio, token, nome)
         dados = buscar_relatorio(dominio, token, D_INI_MES, D_FIM_MES, property_code)
         meses = resumo_mensal(dados)
         receita = sum(m["receita"] for m in meses)
