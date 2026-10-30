@@ -21,6 +21,7 @@ import psycopg2
 import requests
 
 from hits_api import HOTEIS_HITS, obter_token, obter_property_code, buscar_relatorio, resumo_mensal, tem_dados_relevantes
+from buscar_metas import meta_central_do_hotel  # metas mantidas na Central (tela Metas)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 ZAPI_INSTANCE_ID = os.environ.get("ZAPI_INSTANCE_ID")
@@ -385,7 +386,8 @@ def main():
             linhas_resumo.append(f"⚠️ *{nome}*: erro ao buscar dados\n   ({erro[:200]})")
             continue
 
-        meta = buscar_meta(cur, nome)
+        # primeiro a meta da Central (a que o RM edita); se não tiver, cai na meta antiga do banco da EVA
+        meta = meta_central_do_hotel(nome, HOTEIS_HITS.get(nome), HOJE.year, HOJE.month) or buscar_meta(cur, nome)
         _cache_metas[nome] = meta  # guarda pra reaproveitar no HTML
         if not meta:
             linha_sem_meta = f"🏨 *{nome}*: {fmt_moeda(dados['receita'])} (sem meta cadastrada)"
